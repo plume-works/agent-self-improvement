@@ -1,6 +1,6 @@
 # Claude Self-Improvement
 
-A private Claude Code plugin and local learning engine that turn verified corrections and hard-won workflows into durable, reviewable memory, rules, skills, and hooks.
+A Claude Code plugin and local learning engine that turn verified corrections and hard-won workflows into durable, reviewable memory, rules, skills, and hooks.
 
 The long-term local target covers:
 
@@ -70,4 +70,4 @@ The implementation layout is proposed by Spec-0001 and may change through an exp
 
 ## License
 
-No license has been selected. The repository is private; all rights are reserved until a license is added explicitly.
+No license has been selected. All rights are reserved until a license is added explicitly.
