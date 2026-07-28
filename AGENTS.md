@@ -18,6 +18,8 @@ This repository develops a self-improvement plugin and local learning engine for
 - Never infer that two surfaces share a filesystem, home directory, plugin cache, or process.
 - Do not write directly to Claude configuration, memory, skill, or hook files without the mutation policy and rollback path required by the current phase.
 - Treat Claude-managed auto-memory as read-only until Anthropic documents a supported external mutation contract.
+- Never claim that SQLite metadata and filesystem mutation commit atomically together; use a recoverable mutation journal and reconcile observed hashes.
+- The first release creates one new personal skill from an explicit CLI workflow. Hooks, existing-file edits, VS Code, and Desktop are separately gated increments.
 - Do not store prompts, assistant responses, credentials, environment variables, or transcript bodies in telemetry.
 - Use redacted fixtures in tests. Never copy live Claude transcripts or authentication state into the repository.
 - Prefer deterministic classification filters before invoking an LLM reviewer.

@@ -2,7 +2,7 @@
 
 - **Status:** Proposed, intentionally deferred
 - **Date:** 2026-07-28
-- **Depends on:** Stable local contracts from Phases 1–3, plus each adapter's own prerequisites
+- **Depends on:** Each adapter names only the packaged core contracts and topology seams it consumes
 - **Release model:** Independent environment adapters; no single coupled Phase 4 release
 
 ## Summary
@@ -22,6 +22,8 @@ The local `v0.1`–`v0.3` release remains useful if every Phase 4 adapter is abs
 | Cowork/cloud | Anthropic-hosted or isolated runtime | Account-synced skills and cloned project | Does not read Mac `~/.claude/skills` |
 
 ## Track A: VS Code devcontainers
+
+**Depends on:** Packaged `v0.1` proposal/install/recovery contracts, a Linux engine artifact, and the devcontainer topology seam gate. Automatic updates and curation are not prerequisites.
 
 ### Required topology decision
 
@@ -69,6 +71,8 @@ A devcontainer adapter ships only when:
 
 ## Track B: Desktop Code over SSH
 
+**Depends on:** Packaged `v0.1` proposal/install/recovery contracts plus remote installation and state-location verification. Automatic updates and curation are not prerequisites.
+
 SSH sessions read configuration from the remote host. The adapter therefore installs and stores state remotely unless a separate authenticated service is explicitly configured.
 
 Requirements:
@@ -80,6 +84,8 @@ Requirements:
 - synchronization conflicts require review.
 
 ## Track C: Desktop Chat
+
+**Depends on:** The proposal context/submission protocol from `v0.1` plus verified MCPB packaging. It does not require filesystem mutation, automatic updates, or curation.
 
 Desktop Chat does not expose the Claude Code hook lifecycle. Integration, if desired, shall use a local MCP desktop extension (`.mcpb`) exposing narrow tools such as:
 
@@ -93,6 +99,8 @@ Desktop Chat shall not receive a general-purpose filesystem mutation tool. Candi
 The MCP extension owns local process packaging and transport. The learning engine remains the sole owner of durable state and mutations.
 
 ## Track D: Cowork and cloud sessions
+
+**Depends on:** The versioned artifact export format plus a verified public account/project import seam, if one exists. It does not require Phases 2 or 3.
 
 Cowork and cloud sessions use account-synchronized skills and/or project skills from cloned repositories rather than the Mac's personal `~/.claude/skills`.
 

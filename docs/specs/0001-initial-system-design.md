@@ -4,7 +4,7 @@
 - **Date:** 2026-07-28
 - **Owners:** Claude Self-Improvement maintainers
 - **Target repository:** `chocobot-farm/claude-self-improvement`
-- **First release:** [Spec-0002: Phase 1 — Review-only vertical slice](0002-phase-1-review-only.md)
+- **First release:** [Spec-0002: Phase 1 — Review-only local core](0002-phase-1-review-only.md)
 
 ## Summary
 
@@ -15,8 +15,8 @@ The design deliberately separates:
 - **detection**, which notices that a reusable lesson may exist;
 - **review**, which interprets evidence and proposes a destination and diff;
 - **authorization**, which decides whether a write is permitted;
-- **mutation**, which performs a validated, backed-up, atomic change; and
-- **curation**, which manages lifecycle after enough usage evidence exists.
+- **mutation**, which performs a validated, journaled, recoverable filesystem change; and
+- **curation**, which manages lifecycle after enough engine-owned activity evidence exists.
 
 The first release is review-only. Automatic updates, curation, Desktop Chat/Cowork, SSH, and devcontainers are later independent capabilities.
 
@@ -36,9 +36,9 @@ Without this policy layer, automatic memory tends to accumulate stale task logs,
 
 ## First releasable vertical slice
 
-> Claude completes a substantial task in one local Claude Code surface; a deterministic hook captures one candidate; the user reviews and approves an exact patch; the engine applies it reversibly; a fresh session in a different local surface finds and correctly uses the learned procedure.
+> In the standalone Claude Code CLI, the user explicitly invokes learning; Claude proposes one new uniquely named personal skill; the user approves it; the engine installs it with journaled recovery; and a fresh packaged CLI session deterministically discovers and invokes it.
 
-This is the `v0.1` release boundary. A plugin skeleton, candidate database, mock-only classifier, or command that writes a sample skill is not a release.
+This is the `v0.1` release boundary. Automatic hooks, existing-file edits, project scope, VS Code, and Desktop certification are separately gated increments. A plugin skeleton, candidate database, mock-only classifier, or source-tree command that writes a sample skill is not a release.
 
 ## Verified platform seams
 
@@ -69,11 +69,15 @@ Authoritative references:
 
 ## Supported surfaces and scope
 
-### Initial support
+### Initial release
 
-- standalone Claude Code CLI on Anton's Mac;
-- VS Code Claude Code extension in a local workspace on that Mac; and
-- Claude Desktop Code tab using a Local environment on that Mac.
+- standalone Claude Code CLI on Anton's Mac.
+
+### Incremental local certification
+
+- automatic hook capture (`v0.1.1`);
+- VS Code Claude Code extension in a local workspace (`v0.1.2`); and
+- Claude Desktop Code tab using a Local environment (`v0.1.3`).
 
 ### Deferred
 
@@ -92,9 +96,9 @@ A deferred surface must not block or weaken the local release.
 3. Search and patch before creating duplicate artifacts.
 4. Require evidence and verification before persistence.
 5. Keep human-authored content review-gated.
-6. Make every write atomic, attributable, validated, and reversible.
+6. Make every write journaled, attributable, validated, recoverable, and reversible without claiming cross-store atomicity.
 7. Preserve privacy by storing minimal normalized evidence rather than transcripts.
-8. Work consistently across the three local Claude Code surfaces.
+8. Certify local Claude Code surfaces incrementally after the CLI core works.
 9. Fail without blocking Claude's normal work.
 10. Provide deterministic tests and real packaged-artifact smoke tests.
 
@@ -128,7 +132,7 @@ A lesson must reference an observable correction, verified successful method, or
 - Detailed supporting material → skill reference.
 - Temporary task state or completed-work log → discard.
 
-### Patch before create
+### Search before create or patch
 
 The reviewer searches existing memories, rules, and skills first. It prefers, in order:
 
@@ -137,9 +141,9 @@ The reviewer searches existing memories, rules, and skills first. It prefers, in
 3. add a reference to an existing skill; then
 4. propose a new artifact.
 
-### Reversible by construction
+### Recoverable by construction
 
-A write is not successful until the old content is durably backed up, the new content is atomically installed, validation passes, and provenance records the transition.
+A write is not successful until its journal is prepared, recovery material is durable, filesystem installation is synced, validation passes, and observed hashes are recorded. SQLite and filesystem updates are not one atomic transaction; nonterminal journal records are reconciled from actual filesystem state.
 
 ### Deterministic authorization
 
@@ -164,32 +168,30 @@ An LLM may propose a classification or patch. Code decides whether the target, s
 
 ```mermaid
 flowchart LR
-    S[Claude Code surface] --> H[Plugin lifecycle hook]
-    H --> D[Deterministic detector]
-    D --> Q[(Candidate queue)]
-    S --> R[Review skill / reviewer agent]
-    R --> E[Artifact discovery and evidence review]
-    Q --> E
-    E --> P[Proposed typed patch]
+    S[Claude Code CLI] --> L[Explicit learn skill]
+    L --> C[Bounded proposal context]
+    C --> R[Reviewer skill / agent]
+    R --> P[Untrusted typed proposal submission]
     P --> A[Policy and authorization]
-    A -->|approved| M[Atomic mutation engine]
+    A -->|approved| M[Journaled mutation engine]
     A -->|needs review| U[User review]
     U -->|approve| M
-    U -->|reject| Q
-    M --> B[(Backups and provenance)]
-    M --> K[Claude memory / rule / skill]
+    U -->|reject| X[Rejected proposal]
+    M --> J[(Journal and recovery data)]
+    M --> K[New personal skill]
+    H[Optional later hooks] -.-> C
 ```
 
 ### Process boundaries
 
 - Claude Code owns the session, model calls, plugin loading, tool execution, and hook invocation.
 - The plugin owns skills, agents, hook declarations, and wrappers.
-- `claude-si` owns candidate state, artifact indexing, policy evaluation, mutation, backup, and rollback.
+- `claude-si` owns candidate/proposal metadata, deterministic policy, journaled installation, recovery, and rollback.
 - Claude's knowledge files remain the authoritative content Claude consumes.
 - The state database is authoritative only for candidates, provenance, lifecycle metadata, and mutation history.
 - The user owns approval of review-gated mutations.
 
-No continuously running daemon is required for the first three phases. Hook and command invocations run the engine as bounded local processes using file locks and SQLite transactions.
+No continuously running daemon is required for the first three phases. Commands and later hooks run the engine as bounded local processes. SQLite transactions protect metadata only; the mutation journal reconciles metadata with filesystem reality.
 
 ## Proposed implementation technology
 
@@ -203,7 +205,7 @@ Reasons:
 - standard-library support for hashing, JSON, filesystem safety, and process control; and
 - a narrow CLI/JSON contract that is testable without Claude.
 
-SQLite shall be embedded through a maintained driver, with WAL enabled only after concurrency tests prove cleanup and backup behavior. If the dependency or cross-compilation cost is unacceptable during Phase 1, an append-only JSONL state implementation may replace SQLite through a design amendment; both shall preserve the same logical contracts.
+SQLite shall be embedded through a maintained driver, with WAL enabled only after concurrency and recovery tests prove cleanup behavior. Replacing SQLite requires a design amendment; this specification does not promise interchangeable storage implementations.
 
 The plugin shall invoke the executable through a wrapper resolved from `${CLAUDE_PLUGIN_ROOT}`. Distribution shall package the correct macOS architecture artifact and verify its checksum. Source-tree execution is not accepted as the release smoke test.
 
@@ -246,7 +248,7 @@ Only `plugin.json` belongs inside `.claude-plugin/`; components remain at plugin
 
 ## Component design
 
-### Plugin hook
+### Plugin hook (`v0.1.1` and later)
 
 The hook is a thin adapter. It:
 
@@ -260,7 +262,7 @@ The hook does not perform LLM review or mutate knowledge.
 
 ### Deterministic detector
 
-The detector computes signals from bounded event metadata and, only when required, a bounded read of the referenced transcript. Transcript location is treated as sensitive input, not durable evidence storage.
+The detector is not part of `v0.1`. Beginning in `v0.1.1`, it computes signals primarily from minimal `PostToolUse` and `PostToolUseFailure` envelopes. `Stop` closes the turn but does not assume `transcript_path` is synchronously complete. Bounded transcript reading is an optional compatibility fallback with explicit retry and byte/message limits.
 
 Signals include:
 
@@ -275,7 +277,7 @@ The detector outputs a normalized candidate envelope or no-op. It does not decid
 
 ### Reviewer
 
-The reviewer can be a Claude plugin agent or skill invoking the engine's discovery commands. It receives only the candidate and bounded evidence needed for judgment.
+The reviewer is a Claude plugin agent or skill. The engine does not invoke a model or private Claude API. The learning skill calls `claude-si proposal context <id> --json`; the reviewer reasons over that bounded context and submits untrusted typed JSON through `claude-si proposal submit --stdin`.
 
 It must return a typed proposal:
 
@@ -284,22 +286,22 @@ It must return a typed proposal:
   "candidate_id": "...",
   "classification": "skill",
   "scope": "user",
-  "target": "~/.claude/skills/example/SKILL.md",
-  "action": "patch",
+  "target": "~/.claude/skills/generated-unique-name/",
+  "action": "create_personal_skill",
   "lesson": "...",
   "evidence": [{"kind": "verified_success", "ref": "..."}],
   "confidence": 0.0,
   "risk_flags": [],
-  "base_hash": "sha256:...",
-  "patch": "..."
+  "ownership": "human-owned-after-creation",
+  "files": {"SKILL.md": "..."}
 }
 ```
 
-The engine validates this schema and independently checks target, scope, hash, ownership, and forbidden content.
+The engine validates this schema and independently checks target, scope, ownership, uniqueness, containment, and forbidden content. No undocumented structured callback is assumed.
 
 ### Artifact discovery
 
-Discovery indexes only supported Claude knowledge roots and the active trusted project. It records canonical path, type, scope, content hash, ownership, and lightweight search fields.
+Phase 1 discovery searches supported personal knowledge roots read-only for duplicate review. Later project support uses an engine-owned authorization registry containing canonical repository identity/root, explicit user enrollment, permitted destination classes, expiry, and revocation. Trust is never inferred from `cwd`, plugin enablement, or Claude UI state.
 
 It must defend against:
 
@@ -326,9 +328,9 @@ Policy decisions include stable machine-readable reason codes. The plugin cannot
 
 ### Mutation engine
 
-The mutation engine accepts a typed, authorized proposal. It owns locking, stale checks, backup, atomic replacement, validation, provenance, and rollback.
+The mutation engine accepts a typed, authorized proposal. It owns an explicit mutation journal, recovery data, filesystem installation, observed-hash validation, provenance, reconciliation, and rollback-as-a-new-mutation. It does not claim an atomic transaction across SQLite and the filesystem.
 
-It does not accept arbitrary shell commands. It supports bounded operations such as replacing one validated text artifact or creating one approved skill directory through a staged directory rename.
+It does not accept arbitrary shell commands. `v0.1` supports only creation of one new uniquely named personal skill directory. Existing-file replacement is deferred to Phase 2A.
 
 ### State store
 
@@ -338,8 +340,8 @@ Logical entities:
 - `evidence_refs` — minimal references and fingerprints;
 - `proposals` — typed classification and diff against a base hash;
 - `artifacts` — indexed Claude knowledge and ownership;
-- `mutations` — before/after hashes, backup, actor, and outcome;
-- `usage_events` — Phase 3 metadata only;
+- `mutations` — intended/observed hashes, recovery path, actor, journal state, and outcome;
+- `activity_events` — Phase 3 engine-owned metadata only;
 - `curation_proposals` — Phase 3 consolidation/archive proposals; and
 - `settings` — engine policy, never Claude credentials.
 
@@ -351,7 +353,7 @@ captured -> reviewing -> needs_review -> approved -> applying -> applied
     +--------> discarded <----+----------> rejected     +--> failed
 ```
 
-Every transition is transactional and idempotent. Replaying the same hook event cannot create duplicate candidates.
+Metadata transitions are transactional and idempotent. Filesystem transitions are reconciled through the mutation journal. Replaying the same hook event cannot create duplicate candidates.
 
 ## Storage layout
 
@@ -360,7 +362,7 @@ Default local root on macOS:
 ```text
 ~/Library/Application Support/claude-self-improvement/
 ├── state.sqlite
-├── backups/<mutation-id>/
+├── recovery/<random-mutation-id>/
 ├── archive/
 ├── logs/
 └── locks/
@@ -368,7 +370,7 @@ Default local root on macOS:
 
 The engine shall use the operating system's user data directory on future platforms rather than assuming the macOS path. Configuration may override this root for tests. Runtime state never lives inside the plugin cache because plugin updates may replace that directory.
 
-Backup content inherits the sensitivity of the original artifact. User-only permissions are required. Backups must not be uploaded, synchronized, or committed automatically.
+Recovery content inherits the sensitivity of the artifact. User-only permissions, parent containment, and symlink checks are required before creation. Recovery names are random mutation IDs, not content hashes; content is never deduplicated across projects or scopes. Credential canaries are rejected before a recovery copy or staged artifact is written. Successful mutation recovery data is retained for 30 days by default and removed only through a symlink-safe explicit purge. Recovery data must not be uploaded, synchronized, or committed automatically.
 
 ## Privacy and sensitive-data policy
 
@@ -403,29 +405,30 @@ Redaction runs before persistence and again before logs or diagnostics. Credenti
 
 ## Concurrency and consistency
 
-CLI, VS Code, and Desktop may run simultaneously. Therefore:
+Multiple Claude surfaces and external editors may run simultaneously. Therefore:
 
 - candidate capture uses database transactions and unique event fingerprints;
-- mutation uses one exclusive cross-process lock;
+- mutation uses one exclusive cross-process lock that coordinates only cooperating `claude-si` processes;
 - proposals include a base content hash;
 - apply rechecks canonical path and hash;
 - stale proposals return to review;
-- backups are complete before replacement;
-- writes use same-directory temporary files and atomic rename; and
-- post-write validation occurs before success is recorded.
+- recovery data and staged files are `fsync`ed before rename;
+- the final parent directory is `fsync`ed after rename;
+- post-write validation occurs before success is recorded; and
+- nonterminal journal entries are reconciled from actual filesystem hashes before another mutation.
 
-The design does not rely on an in-memory singleton.
+The design does not rely on an in-memory singleton and does not claim race-free coordination with editors, Git, Claude Code, or other external writers. Existing-file support rechecks immediately before rename and treats conflict detection as best effort; it never directly mutates Claude-managed auto-memory.
 
 ## Artifact ownership
 
 Ownership values:
 
 - **human:** created or explicitly claimed by the user;
-- **agent:** created by this system with valid provenance;
+- **agent:** created by this system with valid provenance and explicitly opted into agent management;
 - **mixed:** agent-created but externally modified, or jointly maintained;
 - **unknown:** no reliable provenance.
 
-Phase 1 requires review for all mutations. Phase 2 may automatically patch only unchanged `agent` artifacts under its eligibility policy. `human`, `mixed`, and `unknown` remain review-gated.
+Phase 1 requires review for all mutations and defaults new artifacts to `human`. Phase 2B may automatically patch only unchanged `agent` artifacts under its eligibility policy. `human`, `mixed`, and `unknown` remain review-gated.
 
 ## Validation
 
@@ -464,15 +467,17 @@ Claude-generated prose is not parsed to determine whether an operation succeeded
 
 | Failure | Required behavior |
 | --- | --- |
-| Hook timeout or crash | Do not block Claude; record local diagnostic |
+| Hook timeout or crash (`v0.1.1+`) | Do not block Claude; record local diagnostic |
 | Store unavailable | Disable capture/mutation; preserve Claude operation |
 | Reviewer unavailable | Keep candidate queued |
 | Invalid proposal | Reject with reasons; no write |
 | Stale target | Return to review; no force apply |
-| Backup failure | Abort write |
-| Write interruption | Preserve complete old or new artifact, never partial |
-| Post-write validation failure | Restore previous artifact and mark failed |
-| Rollback collision | Require review; do not overwrite current content |
+| Recovery preparation failure | Abort before filesystem installation |
+| Write interruption | Leave a reconcilable journal state; never infer success from SQLite alone |
+| Installed hash matches intent but journal is nonterminal | Validate and complete the journal during recovery |
+| Installed path has unexpected bytes | Mark conflict; do not overwrite or auto-restore |
+| Post-write validation failure | Journal failure and perform a separate recovery mutation where safe |
+| Rollback collision | Require review; rollback is a new mutation and never overwrites current content |
 | Unknown Claude version/schema | Fail closed for capture or mutation feature, not Claude itself |
 
 ## Version compatibility
@@ -481,10 +486,11 @@ The project shall maintain fixtures for each supported Claude Code hook schema a
 
 A new Claude Code version is supported only after:
 
-1. plugin load verification;
-2. hook fixture capture and schema comparison;
-3. CLI, VS Code, and Desktop Local smoke tests; and
-4. rollback verification.
+1. plugin load verification from the exact release artifact;
+2. strict validator output with no unexpected warnings;
+3. hook fixture capture and schema comparison for releases that enable hooks;
+4. smoke tests for each surface actually certified by that release; and
+5. recovery and rollback verification.
 
 Unsupported versions may run with self-improvement disabled and a diagnostic. They must not receive guessed writes.
 
@@ -504,12 +510,12 @@ A private Claude plugin marketplace may be added after local package installatio
 
 | Concern | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
 | --- | --- | --- | --- | --- |
-| Candidate detection | Required | Harden | Observe usage | Adapt per environment |
-| Proposed diff | Required | Required | Consolidation proposals | Required |
-| User approval | Every mutation | Risk/ownership dependent | Semantic curation | Environment dependent |
-| Automatic writes | None | Narrow agent-owned patches | Metadata only | No broader by default |
+| Candidate detection | Explicit in `v0.1`; hooks in `v0.1.1` | Harden | Engine-owned events only | Adapt per environment |
+| Proposed change | One new skill in `v0.1` | Existing-artifact patches | Consolidation proposals | Contract-specific |
+| User approval | Every mutation | Every Phase 2A mutation; risk/ownership dependent in 2B | Semantic curation | Environment dependent |
+| Automatic writes | None | Phase 2B narrow agent-owned patches | Metadata only | No broader by default |
 | Archive | No | No | Reversible | Synchronization-aware |
-| Local CLI/VS Code/Desktop Code | Required | Required | Required | Already stable |
+| Local surfaces | CLI `v0.1`; VS Code `v0.1.2`; Desktop `v0.1.3` | Previously certified surfaces | Previously certified surfaces | Adapter-specific |
 | Devcontainer/SSH | No | No | No | Independent adapters |
 | Desktop Chat/Cowork | No | No | No | Public-seam-dependent |
 
@@ -525,11 +531,11 @@ Claude may produce a convincing but unsafe proposal. Typed engine policy, not pr
 
 ### Configuration corruption
 
-Simultaneous surfaces can race. Hash preconditions, locks, backups, atomic writes, and packaged concurrency tests are release blockers.
+Simultaneous surfaces and editors can race. Engine locks coordinate only engine processes. Journaled recovery, immediate pre-rename checks, observed-hash validation, conflict handling, and packaged crash tests are release blockers; race-free external compare-and-swap is not claimed.
 
 ### Knowledge pollution
 
-Over-capture can make Claude worse. The taxonomy, discard rules, review-only first phase, and later usage-aware curation protect quality.
+Over-capture can make Claude worse. The taxonomy, discard rules, review-only first phase, and later engine-event curation protect quality.
 
 ### Surface topology confusion
 
@@ -541,25 +547,25 @@ The plugin and engine may update independently. Every invocation performs a prot
 
 ## Decision log
 
-1. **Plugin plus native engine, not prompt-only:** deterministic state, policy, locking, backup, and rollback require code.
+1. **Plugin plus native engine, not prompt-only:** deterministic state, policy, journaling, recovery, and rollback require code.
 2. **No daemon for initial releases:** bounded hook/command processes reduce lifecycle and security surface.
-3. **Review-only first:** quality and safety evidence precede unattended writes.
+3. **Explicit, review-only CLI tracer bullet first:** quality and safety evidence precede hooks, additional surfaces, existing-file edits, and unattended writes.
 4. **Claude files remain authoritative:** the engine does not replace Claude memory or skills with a private database.
 5. **Go proposed for engine:** native startup and later cross-compilation outweigh a larger initial build step.
 6. **No full transcript telemetry:** minimal evidence is sufficient and materially reduces privacy risk.
-7. **Additional environments are independent adapters:** local value cannot be held hostage by cloud or container topology.
+7. **Additional surfaces and environments are independent gates:** CLI value cannot be held hostage by desktop, cloud, or container topology.
+8. **Filesystem and SQLite are reconciled, not atomic together:** mutation journals and observed hashes define recovery.
 
 ## Open implementation questions
 
 These must be resolved during Phase 1 seam verification, not guessed:
 
-1. Exact minimum Claude Code version exposing every required hook and plugin feature.
-2. Stable hook fields available for deduplication and bounded evidence lookup.
-3. Official plugin validation command and packaged plugin behavior in each surface.
-4. Whether Desktop Local exposes the same executable PATH as CLI and VS Code.
+1. Exact minimum Claude Code version exposing the plugin/skill features required by `v0.1`.
+2. Stable hook fields available for `v0.1.1` deduplication and bounded evidence lookup.
+3. Packaged plugin behavior in each incrementally certified surface.
+4. Whether Desktop Local exposes the packaged executable consistently.
 5. Packaging format for Intel and Apple Silicon Macs.
-6. Exact auto-memory discovery contract safe for supported versions. Direct external writes remain disabled unless Anthropic documents a supported mutation seam.
-7. Whether SQLite or append-only JSONL produces the simpler interruption-safe first implementation.
+6. Exact auto-memory discovery contract safe for supported versions. Direct external writes remain disabled unless Anthropic documents a supported resolver and mutation seam.
 
 Each answer must be captured in tests and, where it changes this design, in a specification amendment.
 

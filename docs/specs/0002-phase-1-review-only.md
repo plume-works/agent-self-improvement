@@ -1,216 +1,241 @@
-# Spec-0002: Phase 1 — Review-only vertical slice
+# Spec-0002: Phase 1 — Review-only local core
 
 - **Status:** Proposed
 - **Date:** 2026-07-28
-- **Target release:** `v0.1`
 - **Depends on:** [Spec-0001](0001-initial-system-design.md)
-- **Supported topology:** macOS local Claude Code runtime
+- **Initial supported topology:** macOS standalone Claude Code CLI
 
 ## Summary
 
-Phase 1 proves the entire learning loop without permitting unattended changes to durable Claude knowledge.
+Phase 1 is delivered as four independently gated increments. The first release proves one narrow learning path before automatic detection or additional surfaces are allowed onto the release path.
 
-A substantial task completed in one supported local surface can produce a candidate lesson. The engine classifies it, searches existing artifacts, and prepares a concrete proposed patch. Anton explicitly approves the proposal. The engine then applies it atomically with a backup and verifies that a fresh session in a second local surface can discover and use the lesson.
+### Release sequence
 
-## User-visible result
+| Release | Increment | New release proof |
+| --- | --- | --- |
+| `v0.1` | Explicit CLI tracer bullet | One new system-owned personal skill, approved, installed, loaded, and rolled back |
+| `v0.1.1` | Automatic candidate capture | Real packaged hooks capture bounded evidence without transcript dependence |
+| `v0.1.2` | VS Code Local certification | The packaged user-scope plugin and engine pass the same core flow in VS Code |
+| `v0.1.3` | Desktop Code Local certification | The packaged user-scope plugin and engine pass the same core flow in Desktop Local |
+
+No later increment can redefine an earlier release as incomplete.
+
+## `v0.1`: explicit CLI tracer bullet
+
+### First releasable vertical slice
+
+> In the standalone Claude Code CLI, the user explicitly invokes the learning workflow; Claude proposes one new uniquely named personal skill; the user approves it; `claude-si` installs it with journaled recovery metadata; and a fresh packaged CLI session deterministically lists and invokes the skill.
+
+This release does not use lifecycle hooks, parse transcripts, edit existing files, write auto-memory, or certify VS Code/Desktop.
+
+### User-visible result
 
 The user can:
 
-1. inspect queued learning candidates;
-2. see why each candidate was captured;
-3. see the proposed destination and exact diff;
-4. approve or reject the candidate;
-5. roll back an approved mutation; and
-6. verify the resulting memory, rule, or skill from another local Claude Code surface.
+1. invoke `/self-improvement:learn` for the current lesson;
+2. inspect bounded proposal context;
+3. see the proposed skill name, content, evidence, ownership, and exact staged files;
+4. approve or reject the proposal;
+5. install one new personal skill; and
+6. recover or roll back the installation.
 
-## Included surfaces
+### Plugin package
 
-| Surface | Phase 1 support |
-| --- | --- |
-| Standalone Claude Code CLI | Required |
-| VS Code Claude Code extension, local workspace | Required |
-| Claude Desktop Code tab, Local environment | Required |
-| Claude Desktop Chat | Excluded |
-| Cowork/cloud sessions | Excluded |
-| SSH sessions | Excluded |
-| VS Code devcontainer | Excluded |
-
-## Functional requirements
-
-### Plugin packaging
-
-The repository shall contain a valid Claude Code plugin with:
+The packaged plugin contains:
 
 - `.claude-plugin/plugin.json`;
-- a model-invocable `self-improvement` skill containing the learning policy;
-- user-invocable review, reject, apply, status, and rollback commands or skills;
-- a learning-reviewer agent that may call read-only engine discovery/review commands but cannot mutate Claude knowledge artifacts;
-- a `Stop` hook that invokes the deterministic candidate detector; and
-- executable wrappers that locate the local `claude-si` engine without embedding secrets.
+- `/self-improvement:learn`;
+- `/self-improvement:status`;
+- `/self-improvement:rollback`;
+- a knowledge-read-only reviewer agent or skill; and
+- an executable wrapper resolving the packaged engine through `${CLAUDE_PLUGIN_ROOT}`.
 
-The plugin shall install at user scope and load in all three required local surfaces.
+“Knowledge-read-only” means the reviewer cannot directly mutate Claude knowledge. It may submit untrusted proposal JSON to engine state.
 
-### Candidate detection
+### Reviewer-to-engine protocol
 
-The `Stop` hook shall be fast and deterministic. It may inspect only the hook event, bounded metadata available from the transcript path, and existing local state. It shall not call an LLM itself.
+Only public Claude Code seams are used. The engine never invokes private Claude APIs, reads Claude authentication state, reuses Claude credentials, or assumes an undocumented structured-return callback.
 
-The detector shall enqueue a candidate only when at least one high-signal condition exists:
-
-- the user corrected Claude;
-- a tool or command failed and a later attempt verified a different working method;
-- an invoked skill was demonstrably incomplete or incorrect;
-- the task crossed a configurable complexity threshold; or
-- the user explicitly asked Claude to remember or reuse something.
-
-The detector shall suppress:
-
-- empty and trivial turns;
-- repeated stop events for the same turn;
-- candidates already rejected for the same evidence fingerprint;
-- secrets or credential-shaped evidence;
-- raw transcript bodies in the persistent index.
-
-### Review
-
-Candidate review shall be explicit. The reviewer produces:
-
-- a one-sentence proposed lesson;
-- evidence references that identify the session and event without copying sensitive bodies into telemetry;
-- confidence and rationale;
-- classification: `memory`, `rule`, `skill`, `hook`, or `discard`;
-- scope: `user`, `project`, or `local`;
-- matching existing artifacts;
-- the exact proposed diff; and
-- risk flags.
-
-Phase 1 never applies a candidate before user approval.
-
-### Mutation
-
-Approved writes shall:
-
-1. acquire an exclusive mutation lock;
-2. re-read the current target and reject stale proposals;
-3. validate destination and scope;
-4. create a content-addressed backup in the same trust boundary;
-5. write a temporary file in the destination directory;
-6. flush and atomically rename it;
-7. validate the resulting artifact;
-8. record provenance and hashes; and
-9. expose a rollback identifier.
-
-Project artifacts may be changed only inside the active trusted project. User artifacts may be changed only under documented Claude user configuration paths. Phase 1 shall not modify `~/.claude/settings.json`, hooks, permissions, MCP configuration, authentication state, or `~/.claude.json`.
-
-### Supported destinations
-
-Phase 1 may propose and, after approval, mutate:
-
-- `~/.claude/CLAUDE.md`;
-- project `CLAUDE.md` or `.claude/CLAUDE.md`;
-- `.claude/rules/*.md`;
-- personal skills under `~/.claude/skills/`; and
-- project skills under `.claude/skills/`.
-
-Claude-managed auto-memory may be searched read-only for duplicate detection, but the engine does not write its files because no supported external mutation contract has been verified. Hook candidates remain proposals documented for manual implementation; Phase 1 does not install or edit hooks.
-
-### Commands
-
-The engine shall expose stable machine-readable commands equivalent to:
+The protocol is:
 
 ```text
-claude-si candidate capture
-claude-si candidate list --json
-claude-si candidate show <id> --json
-claude-si candidate review <id> --json
-claude-si candidate reject <id> --reason <text>
-claude-si candidate apply <id>
+claude-si proposal begin --kind personal-skill --json
+claude-si proposal context <candidate-id> --json
+claude-si proposal submit --stdin
+claude-si proposal show <proposal-id> --json
+claude-si proposal reject <proposal-id> --reason <text>
+claude-si proposal approve <proposal-id>
+claude-si proposal apply <proposal-id>
+claude-si mutation recover --json
 claude-si mutation rollback <mutation-id>
 claude-si status --json
 claude-si doctor --json
 ```
 
-Human-facing plugin skills may wrap these commands but shall not scrape prose output when JSON is available.
+1. The learning skill starts an explicit candidate.
+2. The engine emits bounded context and a JSON schema.
+3. The reviewer reasons in the current Claude conversation.
+4. The reviewer sends typed JSON to `proposal submit --stdin` through an allowed Bash command.
+5. The engine treats that JSON as untrusted input and validates it.
+6. Approval and apply are separate user-gated operations.
 
-## Data and privacy requirements
+Human-facing skills use JSON result fields and process exit status. They never scrape prose to determine success.
 
-- Default storage root: `~/Library/Application Support/claude-self-improvement/` on macOS, with a configurable override for tests.
-- Store normalized candidate summaries and cryptographic fingerprints, not complete transcripts.
-- Never store Claude OAuth state, API keys, environment-variable values, `.env` contents, or MCP credentials.
-- Redact known credential patterns before any candidate content is persisted.
-- File permissions shall be user-only where the platform supports POSIX modes.
-- Logs shall contain IDs, state transitions, durations, and error classes—not prompt or response text.
+### Single mutable destination
 
-## Failure behavior
+`v0.1` may create exactly one new uniquely named directory beneath:
 
-- Hook failure never blocks Claude from completing a response.
-- Corrupt or unavailable local state disables capture and emits a local diagnostic.
-- A stale proposal is returned to `needs_review`; it is never force-applied.
-- Validation failure restores or preserves the previous target and marks the mutation failed.
-- Surface-specific plugin load failure does not alter existing knowledge artifacts.
+```text
+~/.claude/skills/<generated-unique-name>/
+```
 
-## Implementation sequence
+The staged directory may contain:
 
-1. Pin minimum supported Claude Code and macOS versions after seam tests.
-2. Scaffold and validate the plugin package.
-3. Implement the engine state model and deterministic redaction.
-4. Implement candidate capture and deduplication from recorded hook fixtures.
-5. Implement artifact discovery and classification policy.
-6. Implement diff generation without write permission.
-7. Implement approval-gated atomic mutation and rollback.
-8. Add plugin commands and reviewer agent.
-9. Exercise the packaged plugin in CLI.
-10. Exercise the same installation in VS Code.
-11. Exercise the same installation in Desktop Code Local.
-12. Complete the cross-surface learning test.
+- `SKILL.md`;
+- `references/*.md`; and
+- non-executable templates required by that skill.
 
-## Deterministic test gate
+It may not:
 
-The following must pass offline:
+- overwrite or patch an existing path;
+- create symlinks;
+- add executable files or shell hooks;
+- edit `CLAUDE.md`, rules, settings, agents, MCP configuration, or auto-memory;
+- write project scope; or
+- create more than one skill from one proposal.
 
-- hook input schema fixtures for supported Claude Code versions;
-- capture/no-capture signal tests;
-- secret and PII redaction tests;
-- candidate deduplication tests;
-- classification routing tests;
-- existing-artifact search tests;
-- stale-diff rejection tests;
-- concurrent lock tests;
-- atomic-write interruption tests;
-- backup and rollback tests;
-- path traversal and symlink escape tests;
-- human-authored artifact approval tests;
-- JSON CLI schema tests; and
-- plugin manifest and Markdown-link validation.
+At approval, the user chooses ownership:
 
-## Packaged-artifact acceptance gate
+- `human-owned-after-creation` — default; never eligible for automatic updates; or
+- `agent-managed` — records provenance but still receives no automatic updates before Phase 2B.
 
-Phase 1 is complete only when all of these are observed with the packaged plugin, not a source-tree shortcut:
+### Journaled installation
 
-1. `claude plugin validate` or the current official validator accepts the plugin.
-2. User-scope installation succeeds on the target Mac.
-3. The same installation appears in CLI, VS Code, and Desktop Code Local.
-4. A substantial fixture task in Surface A creates exactly one candidate.
-5. The candidate proposes the correct destination and a valid diff.
-6. No durable artifact changes before approval.
-7. Approval creates a backup and one attributable mutation.
-8. A fresh session in Surface B loads or invokes the new knowledge and follows it.
-9. Rollback restores the byte-identical prior artifact.
-10. A fresh session after rollback no longer sees the reverted lesson.
-11. No transcript body or credential appears in the state database, backups, or logs.
+SQLite metadata and filesystem installation are not one atomic transaction. The engine uses a recoverable mutation journal and makes no cross-store atomicity claim.
 
-## Non-goals
+Normative sequence:
 
-Phase 1 does not:
+1. Acquire the engine mutation lock. The lock coordinates only cooperating `claude-si` processes.
+2. Revalidate proposal, destination containment, nonexistence, and credential canaries.
+3. Create a `prepared` journal record containing mutation ID, target, staged hash, intended operation, and recovery metadata.
+4. Create a randomly named mutation-scoped recovery directory with user-only permissions and `fsync` its metadata.
+5. Write the complete skill into a same-parent staged directory; `fsync` every file and staged directory.
+6. Recheck that the final destination still does not exist.
+7. Atomically rename the staged directory into place and `fsync` the parent directory.
+8. Validate the installed bytes and skill structure.
+9. Mark the journal `applied` only after observed filesystem hashes match the intended result.
+10. Before every new mutation and at `doctor`/startup, reconcile all nonterminal journal entries from actual filesystem state.
 
-- auto-approve any learning;
-- edit Claude settings, permissions, hooks, or MCP configuration;
-- run a background daemon or launchd job;
-- consolidate or archive existing skills;
-- synchronize state through a cloud service;
-- support Desktop Chat, Cowork, cloud, SSH, or devcontainers;
-- publish to a public marketplace; or
-- claim compatibility with untested Claude Code versions.
+Recovery states include:
 
-## Rollback
+- `prepared` — no final artifact observed; remove safe staging remnants or resume;
+- `installed_uncommitted` — final artifact matches intended hash; validate and commit metadata;
+- `conflict` — final path exists with unexpected bytes; stop and require user review;
+- `failed` — no automatic retry after bounded recovery attempts; and
+- `applied` — terminal success.
 
-Uninstalling or disabling the plugin stops capture. Existing knowledge remains unchanged. Every applied Phase 1 mutation has an explicit rollback record. Removing the engine state requires a separate user action and is never part of plugin uninstall.
+Rollback is a new journaled mutation. It does not merely change a database status. For `v0.1` rollback removes the exact unchanged system-created skill by renaming it into the mutation recovery area and syncing the parent. If the installed skill changed after creation, rollback stops with `conflict`.
+
+### Privacy and recovery storage
+
+Default macOS state root:
+
+```text
+~/Library/Application Support/claude-self-improvement/
+```
+
+Requirements:
+
+- random mutation IDs and recovery names; no raw content hashes in filenames;
+- no cross-project or cross-scope content deduplication;
+- user-only permissions and parent/symlink checks before creation;
+- reject credential canaries before staging or recovery copies are written;
+- logs contain IDs, transitions, durations, and error classes only;
+- raw prompts, responses, transcripts, credentials, environment values, and account IDs are never stored;
+- recovery data for a successful `v0.1` installation is retained for 30 days by default;
+- explicit purge lists exactly what will be removed and never follows symlinks; and
+- sensitive but noncredential skill content may exist in local recovery storage for that retention period because rollback requires it.
+
+Negative tests seed canaries into source context, proposal JSON, staged skill, logs, SQLite fields, recovery directories, diagnostics, and crash journal output.
+
+### `v0.1` deterministic test gate
+
+Offline tests cover:
+
+- proposal schema and untrusted-input validation;
+- exactly-one-new-skill policy;
+- destination uniqueness and containment;
+- path traversal, case normalization, and symlink escape;
+- ownership selection and default;
+- credential-canary rejection before staging;
+- journal recovery at every numbered installation boundary;
+- parent-directory and file `fsync` calls through injectable filesystem fixtures;
+- conflict handling for external writers;
+- rollback as a new journaled mutation;
+- JSON CLI contracts;
+- plugin schema and Markdown links; and
+- zero prompt/response/credential leakage across all persistent surfaces.
+
+### `v0.1` packaged-artifact acceptance gate
+
+The release is complete only when all of these are observed from the exact checksummed release artifact:
+
+1. `claude plugin validate --strict` exits successfully with no unexpected warnings.
+2. User-scope installation succeeds from the packaged artifact, not the source tree.
+3. Plugin and engine complete a version/protocol handshake.
+4. `${CLAUDE_PLUGIN_ROOT}` resolves the packaged executable in a real CLI session.
+5. `/self-improvement:learn` creates one typed proposal without changing Claude knowledge.
+6. Rejection leaves no installed skill.
+7. Approval and apply install one new personal skill with an `applied` journal entry.
+8. A fresh CLI session proves deterministic discovery through `/context`, `/skills`, or the current official equivalent.
+9. Direct skill invocation produces a fixed expected artifact or structured effect in a bounded-cost live smoke.
+10. Cancellation before approval, process termination at each journal boundary, reload, and recovery produce the specified state.
+11. Rollback removes the unchanged skill; a fresh CLI session no longer discovers it.
+12. Uninstall stops plugin behavior while leaving engine state available for explicit recovery/purge.
+13. Persistent state, recovery files, logs, and diagnostics pass secret-canary scans.
+
+## `v0.1.1`: automatic candidate capture
+
+This increment adds packaged hooks only after hook fixtures are pinned for the supported Claude Code version.
+
+### Capture design
+
+- `PostToolUse` and `PostToolUseFailure` capture minimal redacted envelopes keyed by documented session, prompt, and tool-call identifiers where available.
+- `Stop` closes or scores the turn but does not treat `transcript_path` as synchronously complete.
+- Transcript parsing is an optional bounded compatibility fallback, not the primary evidence source.
+- Default transcript fallback bounds must name exact byte and message limits before implementation.
+- `StopFailure` and user-interrupt behavior have explicit fixtures.
+- Hook failure never blocks Claude response completion.
+- Automatic capture creates candidates only; all proposals and mutations remain review-only.
+
+### Acceptance gate
+
+The installed artifact must prove real hook invocation from the plugin cache for success, tool failure, user interrupt, `StopFailure`, reload, and uninstall. Capture must deduplicate replayed events and leak no transcript body or tool payload secrets.
+
+## `v0.1.2`: VS Code Local certification
+
+Depends only on packaged `v0.1` core; `v0.1.1` capture is optional for this certification.
+
+The exact release artifact must prove:
+
+- shared user-scope plugin visibility;
+- engine executable resolution in the extension environment;
+- version handshake;
+- explicit proposal, rejection, apply, fresh-session discovery, conflict, recovery, and rollback; and
+- no dependency on the standalone CLI process already running.
+
+## `v0.1.3`: Desktop Code Local certification
+
+Depends only on packaged `v0.1` core; automatic capture is optional.
+
+The exact release artifact must prove the same core flow in Desktop Code with Environment set to Local, including executable PATH/architecture behavior, fresh-session discovery, crash recovery, uninstall, and rollback.
+
+## Deferred from Phase 1
+
+- edits to existing skills, `CLAUDE.md`, and rules;
+- project-scoped mutations;
+- direct auto-memory mutation;
+- automatic application;
+- curation or archival;
+- Desktop Chat, Cowork/cloud, SSH, and devcontainers; and
+- public marketplace publication.

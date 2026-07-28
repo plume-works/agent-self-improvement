@@ -2,7 +2,7 @@
 
 A private Claude Code plugin and local learning engine that turn verified corrections and hard-won workflows into durable, reviewable memory, rules, skills, and hooks.
 
-The project targets the local Claude Code runtime shared by:
+The long-term local target covers:
 
 - the standalone Claude Code CLI;
 - the Claude Code extension for VS Code; and
@@ -14,9 +14,11 @@ Ordinary Claude Desktop Chat, Cowork/cloud sessions, SSH sessions, and devcontai
 
 Design and specifications only. No runtime implementation has been accepted yet.
 
+The surfaces are certified incrementally rather than coupled into the first release.
+
 ## First releasable vertical slice
 
-> Complete a substantial task in one local Claude Code surface, capture one legitimate reusable lesson, produce and approve a reversible patch, then verify that the lesson is applied in a fresh session opened from a different local Claude Code surface.
+> Explicitly invoke learning in the standalone Claude Code CLI, approve one new uniquely named personal skill, install it with journaled recovery, and verify deterministic discovery and invocation in a fresh packaged CLI session.
 
 ## Design principles
 
@@ -33,9 +35,9 @@ Design and specifications only. No runtime implementation has been accepted yet.
 See [`docs/specs/README.md`](docs/specs/README.md) for the normative specification index:
 
 1. [Initial system design](docs/specs/0001-initial-system-design.md)
-2. [Phase 1 — Review-only vertical slice](docs/specs/0002-phase-1-review-only.md)
-3. [Phase 2 — Trusted automatic updates](docs/specs/0003-phase-2-trusted-automatic-updates.md)
-4. [Phase 3 — Skill curator](docs/specs/0004-phase-3-skill-curator.md)
+2. [Phase 1 — Review-only local core](docs/specs/0002-phase-1-review-only.md)
+3. [Phase 2 — Existing-artifact patches and trusted automatic updates](docs/specs/0003-phase-2-trusted-automatic-updates.md)
+4. [Phase 3 — Engine-event skill curator](docs/specs/0004-phase-3-skill-curator.md)
 5. [Phase 4 — Additional execution environments](docs/specs/0005-phase-4-additional-environments.md)
 
 ## Intended repository layout

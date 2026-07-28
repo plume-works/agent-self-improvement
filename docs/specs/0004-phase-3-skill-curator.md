@@ -3,18 +3,18 @@
 - **Status:** Proposed
 - **Date:** 2026-07-28
 - **Target release:** `v0.3`
-- **Depends on:** The complete release gate in [Spec-0003](0003-phase-2-trusted-automatic-updates.md)
+- **Depends on:** Packaged Phase 1 core and the reviewed mutation/recovery contract from Phase 2A; Phase 2B automatic updates are not required
 
 ## Summary
 
 Phase 3 manages the lifecycle of agent-created knowledge without allowing a background process to erase or silently rewrite human knowledge.
 
-The curator tracks usage, identifies stale or overlapping agent-owned artifacts, and produces consolidation or archival proposals. Deterministic maintenance may update metadata automatically. Semantic consolidation remains reviewable.
+The curator tracks engine-owned lifecycle activity, identifies aged or overlapping agent-owned artifacts, and produces consolidation or archival proposals. Deterministic maintenance may update metadata automatically. Semantic consolidation remains reviewable.
 
 ## Goals
 
-1. Measure whether installed skills are discovered and used.
-2. Identify unused, stale, duplicate, and contradictory agent-owned artifacts.
+1. Measure only lifecycle events the engine directly owns and can prove.
+2. Identify aged, overlapping, duplicate, and contradictory agent-owned artifacts.
 3. Prefer rich umbrella skills over many narrow one-off skills.
 4. Move detailed, session-specific material into skill references where appropriate.
 5. Archive reversibly; never automatically delete.
@@ -23,7 +23,7 @@ The curator tracks usage, identifies stale or overlapping agent-owned artifacts,
 
 ## Ownership boundary
 
-The curator may automatically mutate only its own usage and lifecycle metadata.
+The curator may automatically mutate only its own activity and lifecycle metadata.
 
 It may propose changes to:
 
@@ -40,12 +40,14 @@ It may never automatically:
 - merge artifacts across user/project scope; or
 - publish a skill or repository change.
 
-## Usage telemetry
+## Activity telemetry
 
-Allowed telemetry:
+Claude Code exposes no verified general `SkillInvoked` hook. Absence of engine events therefore cannot prove that Claude did not discover or invoke a skill. The curator does not label a skill “unused” from missing model-invocation telemetry.
+
+Allowed engine-owned telemetry:
 
 - artifact ID and canonical path hash;
-- discovery, invocation, patch, rejection, and rollback counts;
+- explicit proposal, engine command, mutation, rejection, rollback, archive, and restore counts;
 - first and last activity timestamps;
 - current lifecycle state;
 - surface class: CLI, VS Code, or Desktop Local;
@@ -72,9 +74,9 @@ active -> idle -> stale -> archived
           restore/use
 ```
 
-- **active:** used or changed recently.
-- **idle:** no recent use, but below the stale threshold.
-- **stale:** eligible for review or archive proposal.
+- **active:** changed or explicitly acted on through the engine recently.
+- **idle:** no recent engine-owned activity, but below the stale threshold; this does not mean Claude failed to use it.
+- **stale:** eligible for review or archive proposal based on age and engine-owned history, never on an unsupported claim about model invocation.
 - **archived:** removed from Claude discovery but retained with manifest and restoration path.
 - **pinned:** orthogonal flag preventing automatic state progression and automated review proposals.
 
@@ -134,7 +136,7 @@ A scheduled macOS launchd job may be added as an optional installer choice only 
 
 ## Failure behavior
 
-- Missing or corrupt usage data produces a diagnostic and a rebuild from provenance where possible.
+- Missing or corrupt activity data produces a diagnostic and a rebuild from provenance where possible.
 - Analyzer uncertainty creates no proposal.
 - Archive destination failure leaves the source untouched.
 - Restore collision requires review; it never overwrites the current artifact.
@@ -144,8 +146,8 @@ A scheduled macOS launchd job may be added as an optional installer choice only 
 
 Phase 3 is complete only when:
 
-1. All Phase 1 and 2 tests continue to pass.
-2. Telemetry records usage without prompt, response, credential, or content leakage.
+1. Required Phase 1 and Phase 2A tests continue to pass; Phase 2B tests run only when automatic updates are enabled in the artifact under test.
+2. Telemetry records only engine-owned lifecycle events without prompt, response, credential, or content leakage.
 3. Pinned artifacts never progress automatically.
 4. Human and mixed-ownership artifacts are never silently changed.
 5. Duplicate fixtures produce the expected groups and preserve distinct procedures.
@@ -154,7 +156,8 @@ Phase 3 is complete only when:
 8. Archival removes an artifact from Claude discovery while retaining a complete restoration record.
 9. Restore recreates the byte-identical original when no collision exists.
 10. Curator crashes and timeouts do not affect normal Claude operation.
-11. The packaged plugin exposes the curator consistently in CLI, VS Code, and Desktop Local.
+11. The exact checksummed artifact passes strict validation, version handshake, real executable resolution, curator proposal/rejection/apply, crash recovery, reload, uninstall, archive, and restore on every surface certified for that release.
+12. No report infers that a skill was unused merely because no engine-owned event exists.
 
 ## Non-goals
 
