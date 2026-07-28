@@ -46,6 +46,7 @@ See [`docs/case-study/README.md`](docs/case-study/README.md):
 
 - [Hermes Agent](docs/case-study/hermes/README.md) — source-grounded reference architecture for durable memory, skills, triggers, and curation
 - [`aviadr1/claude-meta`](docs/case-study/claude-meta/README.md) — manual reflection and `CLAUDE.md` self-editing compared with this project's reviewed control plane
+- [Self-improving Claude Code bootstrap seed](docs/case-study/bootstrap-seed/README.md) — prompt-seeded triage, state, promotion, and structural evolution compared with a trusted mutation boundary
 
 ## Intended repository layout
 
