@@ -70,4 +70,4 @@ The implementation layout is proposed by Spec-0001 and may change through an exp
 
 ## License
 
-No license has been selected. All rights are reserved until a license is added explicitly.
+Licensed under the [MIT License](LICENSE).
