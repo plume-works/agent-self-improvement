@@ -13,7 +13,7 @@
 
 `learning-loop` is not one self-improvement prompt. It is a large Claude Code plugin and local knowledge system: 731 tracked files, 24 skills, 20 agents, JavaScript hooks and scripts, a multi-crate Rust search engine, an Obsidian vault schema, auto-memory workflows, research and citation verification, retrieval telemetry, consolidation-evaluation scaffolding, optional federation, cross-instance harvesting, and native release artifacts.
 
-It is by far the most technically ambitious and operationally mature adjacent implementation in these studies. It demonstrates several ideas worth carrying forward:
+Among the implementations reviewed, it has the broadest observed architecture and operational surface. It demonstrates several ideas worth carrying forward:
 
 - split deterministic mechanics from model judgment;
 - inject retrieved context only after a measurable shadow phase;
@@ -33,7 +33,7 @@ Three current compatibility and documentation gaps are material:
 
 1. The code removed episodic memory from the per-prompt injection hot path in `v1.37.0`, but the README, architecture, configuration guide, and workflow guide still describe a dual vault-plus-episodic `UserPromptSubmit` search.
 2. Multiple skills and guides say plugin `PostToolUse` hooks do not fire inside subagents and therefore replay the post-write chain manually. Current official Claude Code hook documentation says plugin hooks also run inside subagents. The replay is designed to be idempotent and repairs missed enrichment, but the premise should be revalidated on the supported Claude Code range.
-3. The pinned hook manifest matches `Task|Skill` and the changelog calls `Task` the real subagent tool name, while current official documentation describes subagents as spawned through the `Agent` tool. Without a version-matrix integration test, agent-spawn provenance and post-agent dispatch compatibility across the plugin's supported Claude range are unproven.
+3. The pinned hook manifest and provenance module match `Task`, while current official hook documentation defines exact tool matcher names and lists the subagent tool as `Agent`. On that documented interface, `Task` does not match and agent-spawn provenance is missed. A supported-version integration matrix is needed to establish which installed Claude releases emit each name.
 
 **Recommendation:** adopt `learning-loop`'s instrumentation, shadow-to-live graduation, source checks, stale-read guards, deterministic validators, locks, snapshot-based evaluation, control/repeated experiments, offline mode, and operator diagnostics. Preserve this project's narrower ownership and release sequence: explicit review first, exact patches, agent-owned destinations, archive-over-delete, journaled recovery, rollback, and fresh-session validation. Treat vault automation, automatic memory consolidation, global hook policy, daemons, federation, and cross-instance harvesting as separately threat-modeled later systems rather than features of a first self-improvement release.
 
@@ -178,9 +178,9 @@ The gap is ownership. Claude-managed auto-memory is treated as a writable substr
 
 ### Evaluation
 
-`learning-loop` has the strongest evaluation surface observed in these studies:
+`learning-loop` has the broadest evaluation surface observed in these studies:
 
-- a seeded retrieval-quality CI gate with recall and NDCG baselines;
+- a seeded retrieval-quality CI job with recall and NDCG baselines;
 - injection shadow review and readiness thresholds;
 - injection-versus-used precision by rank;
 - mutation tests for secret scrubbing, artifact verification, and edge classification;
@@ -195,9 +195,10 @@ Limitations remain:
 
 - several upstream metrics come from one maintainer's private corpus and cannot be independently reproduced from the repository;
 - the committed quality fixture validates retrieval, not the truth or utility of all generated knowledge;
+- the committed [`quality.json` baseline](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/bench/baselines/quality.json) is Darwin/ARM64, while [`bench.mjs`](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/bench/bench.mjs) downgrades cross-platform regression comparisons on the Linux CI runner to warnings; only the `+prf` recall@10 and NDCG@10 metrics are eligible gates, with no absolute quality floor, so the job is not a hard cross-platform quality boundary;
 - model-mediated note quality and source-support judgments remain nondeterministic;
 - the integrity report is produced by the project itself, not an independent assurance boundary;
-- mutation testing covers seven selected JavaScript targets and some configs define break thresholds, but the GitHub workflows and `release.sh` do not run the mutation suite; its lefthook gate is a local developer control; and
+- mutation testing covers seven selected JavaScript targets, only two configs define breaking thresholds, and neither GitHub workflows, `release.sh`, nor Lefthook runs the mutation suite despite the changelog's Lefthook-gating claim; and
 - current public documentation has known drift from executable behavior.
 
 ## Approval, ownership, recovery, and rollback
@@ -229,17 +230,18 @@ The repository has unusually explicit privacy features:
 - signing seeds prefer OS keyrings with an encrypted fallback;
 - the federation skill instructs Claude not to write configuration until a first sync succeeds;
 - cross-instance [`harvest`](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/plugin/skills/harvest/SKILL.md) requires exact `portable: true`, a mechanical deny list, model narrowing, and user confirmation; and
-- peer content is framed as untrusted data and restricted by prompt contracts at retrieval boundaries.
+- CLI vault and peer retrieval helpers can wrap results as untrusted data and apply prompt-level restrictions at retrieval boundaries.
 
 These are meaningful controls, not decorative policy. They do not eliminate risk:
 
 - “public permanent folder” is a broad default for users who enable federation;
 - listed metadata can still reveal topics, relationships, identities, and work context;
 - a regex deny list cannot prove absence of paraphrased or conceptual IP; the harvest skill delegates the remaining judgment to a model and operator;
-- “untrusted data” envelopes and adversarial-content instructions are prompt-injection mitigations, not a sandbox or authorization boundary; retrieved text still enters the same model context that can propose privileged tool calls;
+- “untrusted data” envelopes and adversarial-content instructions are prompt-injection mitigations, not a sandbox or authorization boundary; moreover, the live `UserPromptSubmit` JIT path injects the top note body directly beneath a plugin directive without the CLI helper's origin envelope, so a poisoned local or synchronized note remains instruction-bearing model context;
 - machine-derived encryption fallback is weaker than a separately supplied secret against host compromise;
 - federation adds a remote hub, overlay network, invite-token, peer-data, retraction, and key-lifecycle threat model;
 - the remote hub implementation is not present in the pinned repository, so its token handling, storage, authorization, retention, and peer-routing controls cannot be verified from this source;
+- [`/rewrite`](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/plugin/skills/rewrite/SKILL.md) can append retraction events through [`retraction-notify.mjs`](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/plugin/scripts/retraction-notify.mjs), but the inspected native watcher synchronizes indexes and contains no consumer for that outbox; the documented claim that the sync daemon delivers peer retractions is therefore unimplemented in this source;
 - the [`federation client`](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/native/crates/ll-search/src/sync/client.rs) can pin and authenticate the hub, but downloaded peer metadata and databases are accepted from that hub with hash consistency rather than verified peer signatures, so a compromised hub can substitute remote knowledge; and
 - telemetry and provenance retention can themselves become sensitive datasets.
 
@@ -311,7 +313,7 @@ The current plugin shape, skill directories, agent directories, hook manifest, `
 
 One assumption needs active compatibility testing. The project repeatedly states that subagent `Write` and `Edit` calls bypass plugin `PostToolUse`, then replays the dispatcher over reported files. Current hook documentation says plugin hooks also run inside subagents and exposes `agent_id` and `agent_type` in hook input. The repository's replay modules aim to be idempotent, and the changelog documents duplicate-processing bugs they have already caused. The safe response is not to delete the replay blindly; it is to build a supported-version matrix test that observes actual hook events and proves exactly-once semantic enrichment.
 
-The hook manifest also matches `Task|Skill`, while current public terminology calls the dispatch tool `Agent`. The code and changelog explicitly say `Task` is the real provenance tool name. This is another seam that should be verified against the installed Claude Code version rather than inferred from labels.
+The hook manifest and provenance module match `Task`, while current hook documentation lists `Agent` as an exact `PreToolUse`/`PostToolUse` tool name. Under that documented contract, the current matcher misses agent-spawn provenance. A supported-version integration test should observe the actual emitted name and handle the required versions explicitly.
 
 ## Strong ideas to adopt
 
@@ -412,7 +414,7 @@ Each needs its own threat model, operator consent, data-retention policy, and ro
 
 ## Final assessment
 
-`learning-loop` is the best source in this study set for understanding what a full personal-learning system eventually requires: deterministic infrastructure around prompts, measurable retrieval, operational tooling, rich provenance, concurrency controls, supply-chain care, and honest evaluation. It also demonstrates why the target project is right to start smaller.
+`learning-loop` is the broadest source in this study set for understanding what a full personal-learning system eventually requires: deterministic infrastructure around prompts, measurable retrieval, operational tooling, rich provenance, concurrency controls, supply-chain care, and honest evaluation. It also demonstrates why the target project is right to start smaller.
 
 The repository's history shows that every additional authority surface creates new classes of bugs: hooks, subagents, auto-memory, local models, background daemons, indexes, remote peers, release artifacts, cross-platform paths, and privacy scrubbers all need independent invariants. Tests and repairs can make that system substantially safer, but they do not erase ownership or authorization questions.
 
