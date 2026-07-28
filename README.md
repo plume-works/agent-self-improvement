@@ -40,6 +40,13 @@ See [`docs/specs/README.md`](docs/specs/README.md) for the normative specificati
 4. [Phase 3 — Engine-event skill curator](docs/specs/0004-phase-3-skill-curator.md)
 5. [Phase 4 — Additional execution environments](docs/specs/0005-phase-4-additional-environments.md)
 
+## Case studies
+
+See [`docs/case-study/README.md`](docs/case-study/README.md):
+
+- [Hermes Agent](docs/case-study/hermes/README.md) — source-grounded reference architecture for durable memory, skills, triggers, and curation
+- [`aviadr1/claude-meta`](docs/case-study/claude-meta/README.md) — manual reflection and `CLAUDE.md` self-editing compared with this project's reviewed control plane
+
 ## Intended repository layout
 
 ```text
@@ -53,7 +60,9 @@ claude-self-improvement/
 ├── internal/
 ├── dist/                 # generated packaged artifacts
 ├── tests/
-├── docs/specs/
+├── docs/
+│   ├── specs/
+│   └── case-study/
 └── README.md
 ```
 
