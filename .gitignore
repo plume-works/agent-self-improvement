@@ -1,0 +1,29 @@
+# Build outputs
+/bin/claude-si
+/dist/
+/coverage/
+
+# Go
+*.test
+*.out
+
+# Local development
+.env
+.env.*
+!.env.example
+.DS_Store
+.vscode/
+.idea/
+
+# Runtime state must never enter the repository
+.self-improvement/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+candidates/
+backups/
+archive/
+logs/
+
+# Test scratch
+/tmp/
