@@ -7,7 +7,7 @@
 - **Author:** Christopher Allen (`ChristopherA`), with collaborative development via Claude Code
 - **Source license:** [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 - **Related studies:** [`aviadr1/claude-meta`](../claude-meta/README.md), [Hermes Agent](../hermes/README.md)
-- **Related design:** [Spec-0001](../../specs/0001-initial-system-design.md), [Phase 1](../../specs/0002-phase-1-review-only.md)
+- **Related design:** [Spec-0001](../../hypothetical-extensions/specs/0001-initial-system-design.md), [Phase 1](../../hypothetical-extensions/specs/0002-phase-1-review-only.md)
 
 ## Executive verdict
 

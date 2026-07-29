@@ -7,7 +7,7 @@
 - **Latest release at inspection:** [`v1.39.1`](https://github.com/robinslange/learning-loop/releases/tag/v1.39.1), commit [`db8585f`](https://github.com/robinslange/learning-loop/tree/db8585f17f145abf96d4795f428fd2ae9aad020b)
 - **Source license:** [Apache-2.0](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/LICENSE), with third-party attribution in [`NOTICE`](https://github.com/robinslange/learning-loop/blob/b45997b129722951325ab15ccc7372eb44ea39d1/NOTICE)
 - **Related studies:** [`claude-improve`](../claude-improve/README.md), [`claude-meta`](../claude-meta/README.md), [bootstrap seed](../bootstrap-seed/README.md), [Hermes Agent](../hermes/README.md)
-- **Related design:** [Spec-0001](../../specs/0001-initial-system-design.md), [Phase 1](../../specs/0002-phase-1-review-only.md), [Phase 2](../../specs/0003-phase-2-trusted-automatic-updates.md), [Phase 3](../../specs/0004-phase-3-skill-curator.md)
+- **Related design:** [Spec-0001](../../hypothetical-extensions/specs/0001-initial-system-design.md), [Phase 1](../../hypothetical-extensions/specs/0002-phase-1-review-only.md), [Phase 2](../../hypothetical-extensions/specs/0003-phase-2-trusted-automatic-updates.md), [Phase 3](../../hypothetical-extensions/specs/0004-phase-3-skill-curator.md)
 
 ## Executive verdict
 

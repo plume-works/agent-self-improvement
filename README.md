@@ -1,75 +1,46 @@
 # Claude Self-Improvement
 
-A Claude Code plugin and local learning engine that turn verified corrections and hard-won workflows into durable, reviewable memory, rules, skills, and hooks.
-
-The long-term local target covers:
-
-- the standalone Claude Code CLI;
-- the Claude Code extension for VS Code; and
-- the Code tab in Claude Desktop when the environment is **Local**.
-
-Ordinary Claude Desktop Chat, Cowork/cloud sessions, SSH sessions, and devcontainers have different configuration and filesystem boundaries. They are deliberately deferred to Phase 4.
+A proposed Claude Code learning loop that turns verified corrections and hard-won workflows into durable, reviewable instructions and skills.
 
 ## Status
 
-Design and specifications only. No runtime implementation has been accepted yet.
+Design only. The current implementation target is a deliberately small Hermes-style experiential-learning MVP.
 
-The surfaces are certified incrementally rather than coupled into the first release.
+## MVP
 
-## First releasable vertical slice
+> After completed work, Claude identifies a verified reusable lesson, searches for the correct existing owner, proposes one exact durable change, and applies it only after user review with backup and rollback.
 
-> Explicitly invoke learning in the standalone Claude Code CLI, approve one new uniquely named personal skill, install it with journaled recovery, and verify deterministic discovery and invocation in a fresh packaged CLI session.
+The user does not write test procedures or maintain optimization datasets. Ordinary learning is grounded in explicit corrections, verified failed-then-successful approaches, completed reusable workflows, repeated friction, and direct requests to remember an approach.
 
-## Design principles
+See [Spec-0001: Hermes-style experiential learning MVP](docs/specs/0001-hermes-style-experiential-learning-mvp.md).
 
+### MVP principles
+
+- Finish the user's task before learning review.
 - Evidence before persistence.
-- Memory for durable facts; skills for procedures; hooks for deterministic enforcement.
-- Search and patch before creating a new artifact.
-- Human-authored content is never silently rewritten.
-- Automatic changes are limited to low-risk, agent-owned artifacts.
-- Every mutation is validated, backed up, attributable, and reversible.
-- Temporary task state, completion logs, commit identifiers, and unverified guesses are not durable learning.
+- Discard temporary task state and unverified guesses.
+- Search and patch the existing owner before creating a skill.
+- Let the model propose; let the user authorize.
+- Apply only exact reviewed bytes.
+- Back up, verify, and support rollback.
+- Do not persist raw transcripts, prompts, responses, or credentials.
+- Do not require behavioral test suites for ordinary experiential learning.
 
-## Specifications
+## Hypothetical extensions
 
-See [`docs/specs/README.md`](docs/specs/README.md) for the normative specification index:
+The previous multi-phase architecture has been retained without rewrite under [`docs/hypothetical-extensions/specs/`](docs/hypothetical-extensions/specs/README.md). It is research material, not an MVP dependency or release plan.
 
-1. [Initial system design](docs/specs/0001-initial-system-design.md)
-2. [Phase 1 — Review-only local core](docs/specs/0002-phase-1-review-only.md)
-3. [Phase 2 — Existing-artifact patches and trusted automatic updates](docs/specs/0003-phase-2-trusted-automatic-updates.md)
-4. [Phase 3 — Engine-event skill curator](docs/specs/0004-phase-3-skill-curator.md)
-5. [Phase 4 — Additional execution environments](docs/specs/0005-phase-4-additional-environments.md)
+Prompt optimization, automatic skill evaluation, unattended mutation, curator automation, additional Claude surfaces, daemons, retrieval systems, and federation all remain hypothetical extensions.
 
 ## Case studies
 
 See [`docs/case-study/README.md`](docs/case-study/README.md):
 
-- [Hermes Agent](docs/case-study/hermes/README.md) — source-grounded reference architecture for durable memory, skills, triggers, and curation
-- [`aviadr1/claude-meta`](docs/case-study/claude-meta/README.md) — manual reflection and `CLAUDE.md` self-editing compared with this project's reviewed control plane
-- [Self-improving Claude Code bootstrap seed](docs/case-study/bootstrap-seed/README.md) — prompt-seeded triage, state, promotion, and structural evolution compared with a trusted mutation boundary
-- [`TerenceBristol/claude-improve`](docs/case-study/claude-improve/README.md) — a mature retrospective command with individual review and deletion gates, but broad private-state access and direct model-mediated mutation
-- [`robinslange/learning-loop`](docs/case-study/learning-loop/README.md) — a full local knowledge system with strong instrumentation, validation, and evaluation, but far broader mutation, privacy, and operational authority than the initial release
-
-## Intended repository layout
-
-```text
-claude-self-improvement/
-├── .claude-plugin/plugin.json
-├── agents/
-├── bin/claude-si-hook
-├── hooks/hooks.json
-├── skills/
-├── cmd/claude-si/
-├── internal/
-├── dist/                 # generated packaged artifacts
-├── tests/
-├── docs/
-│   ├── specs/
-│   └── case-study/
-└── README.md
-```
-
-The implementation layout is proposed by Spec-0001 and may change through an explicit design amendment before Phase 1 begins.
+- [Hermes Agent](docs/case-study/hermes/README.md) — the closest model for experiential reflection, artifact routing, ownership-aware persistence, and recoverable curation
+- [`aviadr1/claude-meta`](docs/case-study/claude-meta/README.md) — a minimal explicit reflection baseline
+- [Self-improving Claude Code bootstrap seed](docs/case-study/bootstrap-seed/README.md) — triage and pressure-driven structure without a trusted mutation boundary
+- [`TerenceBristol/claude-improve`](docs/case-study/claude-improve/README.md) — useful manual reflection and placement UX with overly broad model-mediated mutation
+- [`robinslange/learning-loop`](docs/case-study/learning-loop/README.md) — a broad knowledge system whose operational scope exceeds the MVP
 
 ## Authoritative platform documentation
 
@@ -77,8 +48,6 @@ The implementation layout is proposed by Spec-0001 and may change through an exp
 - [Hooks reference](https://code.claude.com/docs/en/hooks)
 - [Skills](https://code.claude.com/docs/en/skills)
 - [Memory](https://code.claude.com/docs/en/memory)
-- [VS Code extension](https://code.claude.com/docs/en/vs-code)
-- [Claude Desktop Code tab](https://code.claude.com/docs/en/desktop)
 
 ## License
 

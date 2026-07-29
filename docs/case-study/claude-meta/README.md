@@ -5,7 +5,7 @@
 - **Upstream repository:** [`aviadr1/claude-meta`](https://github.com/aviadr1/claude-meta)
 - **Pinned upstream commit:** [`93bf944ffabc525808f4cd7d5cca09ff9cd0876c`](https://github.com/aviadr1/claude-meta/tree/93bf944ffabc525808f4cd7d5cca09ff9cd0876c)
 - **Upstream license:** [MIT](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/LICENSE)
-- **Related design:** [Spec-0001](../../specs/0001-initial-system-design.md), [Phase 1](../../specs/0002-phase-1-review-only.md)
+- **Related design:** [Spec-0001](../../hypothetical-extensions/specs/0001-initial-system-design.md), [Phase 1](../../hypothetical-extensions/specs/0002-phase-1-review-only.md)
 
 ## Executive verdict
 
@@ -106,7 +106,7 @@ Claude Self-Improvement should preserve that simplicity in its UX even though it
 
 ### 2. Human detection is high-signal and cheap
 
-The human chooses when an event is worth capturing. That avoids noisy end-of-turn model calls, uncertain automatic detection, and transcript collection. It aligns with this project's decision to make the first release explicitly user-triggered before adding hooks ([Phase 1 lines 23–40](../../specs/0002-phase-1-review-only.md#v01-explicit-cli-tracer-bullet)).
+The human chooses when an event is worth capturing. That avoids noisy end-of-turn model calls, uncertain automatic detection, and transcript collection. It aligns with this project's decision to make the first release explicitly user-triggered before adding hooks ([Phase 1 lines 23–40](../../hypothetical-extensions/specs/0002-phase-1-review-only.md#v01-explicit-cli-tracer-bullet)).
 
 ### 3. The reasoning verbs are strong
 
@@ -164,7 +164,7 @@ The workflow maps every retained lesson to project `CLAUDE.md`. Current Claude C
 
 Official sources: [Memory](https://code.claude.com/docs/en/memory), [Skills](https://code.claude.com/docs/en/skills), and [Hooks](https://code.claude.com/docs/en/hooks).
 
-This validates the routing taxonomy in [Spec-0001 lines 126–133](../../specs/0001-initial-system-design.md#correct-destination). A single-file strategy creates unnecessary context cost and weakens scope.
+This validates the routing taxonomy in [Spec-0001 lines 126–133](../../hypothetical-extensions/specs/0001-initial-system-design.md#correct-destination). A single-file strategy creates unnecessary context cost and weakens scope.
 
 ### P0: mutation is not recoverable by construction
 
@@ -179,7 +179,7 @@ The workflow defines no:
 - conflict handling for concurrent sessions or editors; or
 - rollback command.
 
-Git may rescue a committed project file, but the workflow neither requires the file to be tracked nor defines how to recover uncommitted, partially written, or conflicting changes. This is materially weaker than the journaled mutation sequence in [Phase 1](../../specs/0002-phase-1-review-only.md#journaled-installation).
+Git may rescue a committed project file, but the workflow neither requires the file to be tracked nor defines how to recover uncommitted, partially written, or conflicting changes. This is materially weaker than the journaled mutation sequence in [Phase 1](../../hypothetical-extensions/specs/0002-phase-1-review-only.md#journaled-installation).
 
 ### P1: instruction growth directly consumes context
 

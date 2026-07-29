@@ -7,7 +7,7 @@
 - **Pinned release:** [`v3.2.0`](https://github.com/TerenceBristol/claude-improve/releases/tag/v3.2.0)
 - **Source license:** [MIT](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/LICENSE)
 - **Related studies:** [bootstrap seed](../bootstrap-seed/README.md), [`aviadr1/claude-meta`](../claude-meta/README.md), [Hermes Agent](../hermes/README.md)
-- **Related design:** [Spec-0001](../../specs/0001-initial-system-design.md), [Phase 1](../../specs/0002-phase-1-review-only.md), [Phase 2](../../specs/0003-phase-2-trusted-automatic-updates.md)
+- **Related design:** [Spec-0001](../../hypothetical-extensions/specs/0001-initial-system-design.md), [Phase 1](../../hypothetical-extensions/specs/0002-phase-1-review-only.md), [Phase 2](../../hypothetical-extensions/specs/0003-phase-2-trusted-automatic-updates.md)
 
 ## Executive verdict
 
@@ -272,7 +272,7 @@ The command treats `CLAUDE.md`, skills, settings, hooks, and memory as equivalen
 
 The command does not merely recommend auto-memory conceptually. It instructs Claude to merge and delete topic files, rewrite `MEMORY.md`, create `feedback_[topic].md`, and update the index ([lines 503–516](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/improve.md#L503-L516)). These are direct external mutations of Claude-managed memory internals.
 
-Claude Code documents auto-memory as a feature and exposes its Markdown for user inspection. This project's proposed architecture nevertheless classifies the **external mutation contract** as unverified and keeps auto-memory read-only for duplicate discovery ([Spec-0001 lines 43–55](../../specs/0001-initial-system-design.md#verified-platform-seams)). Phase 1 expressly forbids editing it, and Phase 2 retains direct auto-memory mutation as a non-goal. Until a supported, versioned resolver and mutation contract is verified, these writes should not enter the trusted engine.
+Claude Code documents auto-memory as a feature and exposes its Markdown for user inspection. This project's proposed architecture nevertheless classifies the **external mutation contract** as unverified and keeps auto-memory read-only for duplicate discovery ([Spec-0001 lines 43–55](../../hypothetical-extensions/specs/0001-initial-system-design.md#verified-platform-seams)). Phase 1 expressly forbids editing it, and Phase 2 retains direct auto-memory mutation as a non-goal. Until a supported, versioned resolver and mutation contract is verified, these writes should not enter the trusted engine.
 
 ### Deletion is verified but not recoverable
 
