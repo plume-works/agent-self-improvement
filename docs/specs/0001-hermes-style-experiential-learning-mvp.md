@@ -504,7 +504,7 @@ These remain hypothetical extensions rather than MVP dependencies.
 
 ### Real packaged smoke test
 
-This test requires an interactive Claude Code session and is therefore a documented manual procedure under `docs/` rather than part of the automated suite. At least one supported Claude Code CLI version must demonstrate:
+This test requires an interactive Claude Code session and is therefore a documented manual procedure in [`docs/smoke-test.md`](../smoke-test.md) rather than part of the automated suite. At least one supported Claude Code CLI version must demonstrate:
 
 1. a completed task with a verified correction returns its normal response without waiting for review;
 2. the asynchronous reviewer wakes the same idle session with one candidate;
