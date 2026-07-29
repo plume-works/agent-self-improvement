@@ -6,6 +6,7 @@ implemented, so an unimplemented subcommand is a parser error rather than a stub
 that silently succeeds.
 """
 
+import argparse
 import contextlib
 import json
 import os
@@ -15,7 +16,243 @@ import shutil
 import subprocess
 import sys
 
-from . import config, hookio, paths, store
+from . import (
+    allowlist,
+    authz,
+    config,
+    hookio,
+    journal,
+    mutate,
+    owners,
+    paths,
+    proposals,
+    store,
+)
+
+
+def _emit(payload):
+    json.dump(payload, sys.stdout, indent=2, sort_keys=True, default=str)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _fail(reason, detail=None):
+    sys.stderr.write("self-improve: %s%s\n"
+                     % (reason, " (%s)" % detail if detail else ""))
+    return 1
+
+
+def capture_expansion(argv):
+    """Record authorization from a user-typed plugin command (section 5.2).
+
+    The matcher in hooks.json is deliberately wide and the selection happens
+    here, because the namespaced form Claude Code reports in ``command_name``
+    for a plugin skill is not guaranteed across versions. A matcher that failed
+    to match would silently discard the user's authorization; this fails loudly
+    or not at all.
+    """
+    event = hookio.read_event()
+    operation = authz.accepts(event)
+    if operation is None:
+        return 0
+
+    try:
+        arguments = authz.parse_arguments(operation, event.get("command_args"))
+    except authz.AuthorizationError as exc:
+        hookio.additional_context(
+            "UserPromptExpansion",
+            "self-improve: %s was not authorized: %s. Expected "
+            "/self-improve:apply <proposal-id> <hash-prefix>, "
+            "/self-improve:reject <proposal-id>, or "
+            "/self-improve:rollback <mutation-id>." % (operation, exc.reason),
+        )
+        return 0
+
+    authz.grant(event, operation, arguments)
+    identifier = arguments.get("proposal_id") or arguments.get("mutation_id")
+    hookio.additional_context(
+        "UserPromptExpansion",
+        "self-improve: the user authorized %s for %s by typing the command. "
+        "Run `${CLAUDE_PLUGIN_ROOT}/scripts/si %s-%s %s` and report its result "
+        "verbatim. Do not edit the target file yourself."
+        % (operation, identifier, operation,
+           "proposal" if operation != authz.ROLLBACK else "mutation",
+           _argument_string(operation, arguments)),
+    )
+    return 0
+
+
+def _argument_string(operation, arguments):
+    if operation == authz.APPLY:
+        return "--id %s --hash-prefix %s" % (arguments["proposal_id"],
+                                             arguments["hash_prefix"])
+    if operation == authz.REJECT:
+        return "--id %s" % arguments["proposal_id"]
+    return "--id %s" % arguments["mutation_id"]
+
+
+def find_owners(argv):
+    """List allowlisted artifacts that could own a lesson."""
+    parser = argparse.ArgumentParser(prog="si find-owners")
+    parser.add_argument("--query", default="")
+    parser.add_argument("--limit", type=int, default=25)
+    options = parser.parse_args(argv)
+    ranked = owners.search(options.query)[:options.limit]
+    return _emit({"allowlist": allowlist.describe(), "owners": ranked})
+
+
+def stage_proposal(argv):
+    """Stage one immutable proposal and print it for presentation.
+
+    The new content arrives on standard input rather than as an argument, so
+    the bytes staged are exactly the bytes supplied, with no shell quoting in
+    between.
+    """
+    parser = argparse.ArgumentParser(prog="si stage-proposal")
+    parser.add_argument("--target", required=True)
+    parser.add_argument("--candidate")
+    parser.add_argument("--reason", default="")
+    parser.add_argument("--content-file")
+    options = parser.parse_args(argv)
+
+    if options.content_file:
+        with open(options.content_file, "rb") as handle:
+            data = handle.read()
+    else:
+        data = sys.stdin.buffer.read()
+
+    candidate = {}
+    if options.candidate:
+        candidate = store.read_record(store.CANDIDATES, options.candidate) or {}
+        candidate["candidate_id"] = options.candidate
+
+    fingerprint = proposals.fingerprint(
+        candidate.get("lesson", ""), *_scope_and_kind(options.target))
+    status = journal.fingerprint_status(fingerprint)
+    if status == "rejected":
+        return _fail("duplicate_of_rejected_proposal")
+
+    try:
+        record = proposals.stage(options.target, data, candidate=candidate,
+                                 reason=options.reason)
+    except proposals.ProposalError as exc:
+        return _fail(exc.reason, exc.detail)
+
+    sys.stdout.write(proposals.summary(record) + "\n")
+    return 0
+
+
+def _scope_and_kind(target):
+    try:
+        resolved = allowlist.resolve(target)
+    except allowlist.PathRejected:
+        return ("", "")
+    return (resolved["scope"], resolved["kind"])
+
+
+def show_proposal(argv):
+    parser = argparse.ArgumentParser(prog="si show-proposal")
+    parser.add_argument("--id", required=True)
+    options = parser.parse_args(argv)
+    try:
+        record = proposals.load(options.id)
+    except proposals.ProposalError as exc:
+        return _fail(exc.reason)
+    sys.stdout.write(proposals.summary(record) + "\n")
+    return 0
+
+
+def apply_proposal(argv):
+    """Install a staged proposal, consuming its one-time authorization."""
+    parser = argparse.ArgumentParser(prog="si apply-proposal")
+    parser.add_argument("--id", required=True)
+    parser.add_argument("--hash-prefix", required=True)
+    parser.add_argument("--session-id")
+    options = parser.parse_args(argv)
+
+    try:
+        authz.consume(authz.APPLY, session_id=options.session_id,
+                      proposal_id=options.id,
+                      hash_prefix=options.hash_prefix.lower())
+    except authz.AuthorizationError as exc:
+        return _fail(
+            exc.reason,
+            "a proposal is applied only after the user types "
+            "/self-improve:apply <id> <hash-prefix>")
+
+    try:
+        record = mutate.apply_proposal(options.id, options.hash_prefix)
+    except (mutate.MutationError, proposals.ProposalError) as exc:
+        return _fail(exc.reason, getattr(exc, "detail", None))
+
+    sys.stdout.write(
+        "Applied %s to %s.\nMutation %s. Roll back with "
+        "/self-improve:rollback %s\n"
+        % (options.id, record["target"], record["mutation_id"],
+           record["mutation_id"]))
+    return 0
+
+
+def reject_proposal(argv):
+    """Discard a proposal, keeping only its fingerprint and a reason category."""
+    parser = argparse.ArgumentParser(prog="si reject-proposal")
+    parser.add_argument("--id", required=True)
+    parser.add_argument("--reason-category", default="declined")
+    parser.add_argument("--session-id")
+    options = parser.parse_args(argv)
+
+    try:
+        authz.consume(authz.REJECT, session_id=options.session_id,
+                      proposal_id=options.id)
+    except authz.AuthorizationError as exc:
+        return _fail(exc.reason)
+
+    try:
+        record = proposals.load(options.id)
+    except proposals.ProposalError as exc:
+        return _fail(exc.reason)
+
+    journal.record_fingerprint(record["fingerprint"], "rejected",
+                               reason_category=options.reason_category)
+    proposals.invalidate(options.id)
+    sys.stdout.write("Rejected %s. %s is unchanged.\n"
+                     % (options.id, record["target"]))
+    return 0
+
+
+def rollback_mutation(argv):
+    """Restore a verified preimage."""
+    parser = argparse.ArgumentParser(prog="si rollback-mutation")
+    parser.add_argument("--id", required=True)
+    parser.add_argument("--session-id")
+    options = parser.parse_args(argv)
+
+    try:
+        authz.consume(authz.ROLLBACK, session_id=options.session_id,
+                      mutation_id=options.id)
+    except authz.AuthorizationError as exc:
+        return _fail(exc.reason)
+
+    try:
+        record = mutate.rollback_mutation(options.id)
+    except mutate.MutationError as exc:
+        return _fail(exc.reason, exc.detail)
+
+    sys.stdout.write("Rolled back %s. %s restored to its previous contents.\n"
+                     % (options.id, record["target"]))
+    return 0
+
+
+def show_candidate(argv):
+    parser = argparse.ArgumentParser(prog="si show-candidate")
+    parser.add_argument("--id")
+    options = parser.parse_args(argv)
+    if options.id:
+        record = store.read_record(store.CANDIDATES, options.id)
+        if record is None:
+            return _fail("unknown_or_expired_candidate")
+        return _emit(record)
+    return _emit({"candidates": store.list_records(store.CANDIDATES)})
 
 
 def session_end(argv):
@@ -164,7 +401,15 @@ def cli_capability_warnings():
 
 
 HANDLERS = {
+    "capture-expansion": capture_expansion,
     "session-end": session_end,
+    "find-owners": find_owners,
+    "show-candidate": show_candidate,
+    "stage-proposal": stage_proposal,
+    "show-proposal": show_proposal,
+    "apply-proposal": apply_proposal,
+    "reject-proposal": reject_proposal,
+    "rollback-mutation": rollback_mutation,
     "status": status,
     "self-test": self_test,
 }
