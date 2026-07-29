@@ -1,4 +1,4 @@
-.PHONY: help test lint fmt validate check clean
+.PHONY: help test smoke smoke-auto lint fmt validate check clean
 
 UV := $(shell command -v uv 2>/dev/null)
 
@@ -7,21 +7,32 @@ UV := $(shell command -v uv 2>/dev/null)
 unexport VIRTUAL_ENV
 
 help:
-	@echo "make test      run the test suite"
-	@echo "make lint      run ruff"
-	@echo "make fmt       apply ruff formatting fixes"
-	@echo "make validate  validate the plugin manifest with the Claude CLI"
-	@echo "make check     test + lint + validate"
+	@echo "make test        run the offline suite (no model calls)"
+	@echo "make smoke       run the packaged smoke test against a real Claude session"
+	@echo "make smoke-auto  the same, skipping the one interactive check"
+	@echo "make lint        run ruff"
+	@echo "make fmt         apply ruff formatting fixes"
+	@echo "make validate    validate the plugin manifest with the Claude CLI"
+	@echo "make check       test + lint + validate"
 
 ifeq ($(UV),)
-test lint fmt:
+test smoke smoke-auto lint fmt:
 	@echo "uv is required for development tooling."
 	@echo "Install it with 'brew install uv' or from https://docs.astral.sh/uv/."
 	@echo "The plugin itself needs no dependencies; this is only for tests."
 	@exit 1
 else
 test:
-	uv run --group dev pytest -q
+	uv run --group dev pytest -q -m "not smoke"
+
+# Spends real model usage, so it is never part of `make test` or `make check`.
+# -s keeps stdin and stdout attached for the one interactive check. The scratch
+# workspace is left under tmp/smoke/ afterwards so a failure can be inspected.
+smoke:
+	uv run --group dev pytest -m smoke -s -v
+
+smoke-auto:
+	SMOKE_SKIP_INTERACTIVE=1 uv run --group dev pytest -m smoke -s -v
 
 lint:
 	uv run --group dev ruff check plugin tests
@@ -47,5 +58,5 @@ validate:
 check: test lint validate
 
 clean:
-	rm -rf .pytest_cache .ruff_cache
+	rm -rf .pytest_cache .ruff_cache tmp/smoke
 	find . -name __pycache__ -type d -prune -exec rm -rf {} +

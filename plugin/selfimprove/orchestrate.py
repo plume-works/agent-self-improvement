@@ -41,7 +41,7 @@ def run(event, forced=False, focus=None):
     if signal is None:
         # Section 3.1: no signal means delete the ephemeral turn data and stay
         # silent. The turn taught nothing; there is no reason to keep it.
-        capture.discard_turn(event)
+        capture.discard_turn(event, turn)
         return {"outcome": "no_signal"}
 
     gate.note_review()
@@ -57,7 +57,7 @@ def run(event, forced=False, focus=None):
 
     result = reviewer.review(bundle)
     if result.get("decision") != schema.PROPOSE:
-        capture.discard_turn(event)
+        capture.discard_turn(event, turn)
         return {"outcome": "no_lesson",
                 "reason": result.get("discard_reason", "reviewer_discarded")}
 
@@ -68,11 +68,11 @@ def run(event, forced=False, focus=None):
     if status is not None:
         # Section 11: a duplicate candidate is suppressed, whether the user
         # accepted this lesson before or declined it.
-        capture.discard_turn(event)
+        capture.discard_turn(event, turn)
         return {"outcome": "duplicate", "status": status}
 
     candidate = _store_candidate(event, signal, result, fingerprint)
-    capture.discard_turn(event)
+    capture.discard_turn(event, turn)
     gate.note_awaiting_presentation(event.get("session_id"),
                                     candidate["candidate_id"])
     return {"outcome": "candidate", "candidate": candidate,

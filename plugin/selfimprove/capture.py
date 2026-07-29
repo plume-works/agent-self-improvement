@@ -18,14 +18,17 @@ TOOL_SUCCESS = "tool_success"
 PROMPT = "prompt"
 
 
+FALLBACK_TURN = "session-turn"
+
+
 def turn_id(event):
     """Identify the turn a hook event belongs to.
 
     ``prompt_id`` is the documented identifier and requires Claude Code 2.1.196.
-    Older versions omit it, so the session identifier is used as a single
-    rolling turn rather than losing capture entirely.
+    Older versions omit it, so a single rolling turn is used rather than losing
+    capture entirely.
     """
-    return event.get("prompt_id") or "session-turn"
+    return event.get("prompt_id") or FALLBACK_TURN
 
 
 def session_id(event):
@@ -33,8 +36,27 @@ def session_id(event):
 
 
 def load_turn(event):
-    return store.read_record(store.TURNS, turn_id(event),
-                             subdir=session_id(event)) or {}
+    """The turn this event belongs to, or the session's most recent one.
+
+    Callers that were not handed a ``prompt_id`` fall back to the newest turn
+    recorded for the session. The manual review path is the case that matters:
+    it is invoked from a skill, which knows the session but not the identifier
+    Claude Code assigned to the prompt, and without this it would review an
+    empty bundle and conclude there was nothing to learn.
+    """
+    identifier = turn_id(event)
+    record = store.read_record(store.TURNS, identifier, subdir=session_id(event))
+    if record is not None:
+        return record
+    if event.get("prompt_id"):
+        return {}
+    latest = _latest_turn(session_id(event))
+    return latest or {}
+
+
+def _latest_turn(session):
+    records = store.list_records(store.TURNS, subdir=session)
+    return records[0] if records else None
 
 
 def _save(event, record):
@@ -43,10 +65,16 @@ def _save(event, record):
     return record
 
 
-def discard_turn(event):
-    """Delete the ephemeral turn file (spec section 10)."""
-    return store.delete_record(store.TURNS, turn_id(event),
-                               subdir=session_id(event))
+def discard_turn(event, turn=None):
+    """Delete the ephemeral turn file (spec section 10).
+
+    ``turn`` is the record :func:`load_turn` returned. Passing it matters when
+    that lookup fell back to the session's latest turn, since deleting by the
+    event's own identifier would leave the file, and its prompt, on disk.
+    """
+    identifier = (turn or {}).get("turn_id") or turn_id(event)
+    session = (turn or {}).get("session_id") or session_id(event)
+    return store.delete_record(store.TURNS, identifier, subdir=session)
 
 
 def record_prompt(event):

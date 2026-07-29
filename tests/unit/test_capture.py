@@ -146,6 +146,39 @@ def test_a_missing_prompt_id_falls_back_without_losing_capture(state_root):
     assert record["events"][0]["signature"] == "Bash:pytest"
 
 
+def test_a_caller_without_a_prompt_id_finds_the_session_latest_turn(state_root):
+    """A regression the smoke test caught against a real session.
+
+    The manual review path is invoked from a skill, which knows the session but
+    not the identifier Claude Code assigned to the prompt. Keying strictly on
+    prompt_id meant that path loaded an empty turn and every forced review
+    concluded there was nothing to learn.
+    """
+    capture.record_prompt(prompt_event("no, use make test", turn="prompt-abc"))
+    capture.record_tool_failure(failure_event("pytest", "exit 1", turn="prompt-abc"))
+
+    loaded = capture.load_turn({"session_id": "s1", "cwd": "/project"})
+    assert loaded.get("turn_id") == "prompt-abc"
+    assert loaded.get("markers") == ["correction"]
+    assert len(loaded.get("events", [])) == 2
+
+
+def test_a_caller_with_a_prompt_id_does_not_borrow_another_turn(state_root):
+    """The fallback must not blur turns together when the id is known."""
+    capture.record_prompt(prompt_event("no, use make test", turn="prompt-abc"))
+    assert capture.load_turn({"session_id": "s1", "prompt_id": "prompt-xyz"}) == {}
+
+
+def test_discarding_uses_the_turn_that_was_actually_loaded(state_root):
+    """Otherwise the fallback would leave the prompt on disk after review."""
+    capture.record_prompt(prompt_event("remember this always", turn="prompt-abc"))
+    loaded = capture.load_turn({"session_id": "s1"})
+
+    capture.discard_turn({"session_id": "s1"}, loaded)
+    assert store.read_record(store.TURNS, "prompt-abc", subdir="s1",
+                             allow_expired=True) is None
+
+
 def test_discarding_a_turn_removes_the_file(state_root):
     capture.record_prompt(prompt_event("remember this"))
     assert capture.discard_turn(prompt_event("remember this")) is True

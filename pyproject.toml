@@ -21,8 +21,12 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["plugin"]
+pythonpath = ["plugin", "."]
 filterwarnings = ["error"]
+markers = [
+    "smoke: drives a real Claude Code session and spends model usage; excluded from `make test` and run by `make smoke`",
+    "interactive: needs a person at the terminal; skipped with SMOKE_SKIP_INTERACTIVE=1",
+]
 
 [tool.ruff]
 line-length = 100

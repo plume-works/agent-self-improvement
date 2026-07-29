@@ -4,7 +4,9 @@ A Claude Code learning loop that turns verified corrections and hard-won workflo
 
 ## Status
 
-The MVP is implemented. All four slices of [Spec-0001](docs/specs/0001-hermes-style-experiential-learning-mvp.md) are in `plugin/`, with an automated suite covering the ten acceptance conditions of its section 15. The remaining step is the [packaged smoke test](docs/smoke-test.md), which needs a live interactive session and so is run by hand.
+The MVP is implemented. All four slices of [Spec-0001](docs/specs/0001-hermes-style-experiential-learning-mvp.md) are in `plugin/`, with an offline suite covering the ten acceptance conditions of its section 15, and a [packaged smoke test](docs/smoke-test.md) that drives a real Claude Code session.
+
+`make smoke` runs nine of its ten checks headlessly and asks you one question for the tenth: an `asyncRewake` hook has no idle session to wake in print mode, so the asynchronous wake is confirmed in a real interactive session. [Spec-0002](docs/specs/0002-pty-wake-harness.md) proposes automating it.
 
 The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
 
@@ -42,11 +44,15 @@ To turn it off without uninstalling, set `SELF_IMPROVE_DISABLE=1`.
 ## Develop
 
 ```bash
-make test      # uv run pytest
-make lint      # uv run ruff check
-make validate  # claude plugin validate ./plugin
-make check     # all three
+make test        # offline suite, no model calls
+make lint        # ruff
+make validate    # claude plugin validate ./plugin
+make check       # the three above
+make smoke       # packaged smoke test against a real session; spends model usage
+make smoke-auto  # the same, skipping the one interactive check
 ```
+
+`make smoke` leaves its scratch workspace under `tmp/smoke/` so a failure can be opened and read.
 
 ## MVP
 

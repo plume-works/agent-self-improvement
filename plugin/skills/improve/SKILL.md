@@ -77,15 +77,20 @@ notice. The diff the user reviews should contain only the lesson.
 
 ## 4. Stage it
 
-Write the new contents to a temporary file, then:
+Pass the complete new contents on standard input. Do not write them to a file
+first — you have no tool that can write files, and that is deliberate.
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/si" stage-proposal \
   --target "<absolute path>" \
   --candidate "<candidate-id>" \
-  --reason "<one sentence on why this artifact owns the lesson>" \
-  --content-file "<temp file>"
+  --reason "<one sentence on why this artifact owns the lesson>" <<'SELF_IMPROVE_EOF'
+<the complete new file contents>
+SELF_IMPROVE_EOF
 ```
+
+Use a quoted heredoc marker so nothing in the content is expanded by the shell.
+The bytes staged are exactly the bytes between the markers.
 
 ## 5. Present it
 
