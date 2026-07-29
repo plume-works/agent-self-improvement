@@ -4,7 +4,7 @@ The documents in this directory preserve the earlier architecture and phased des
 
 They are **not normative for the MVP**, are not on the current implementation path, and must not be treated as MVP dependencies or release gates. They have been moved here without attempting to reconcile or rewrite their internal assumptions. The [original specification index](legacy-index.md) is preserved verbatim as historical context.
 
-The current implementation target is [Spec-0001: Hermes-style experiential learning MVP](../../specs/0001-hermes-style-experiential-learning-mvp.md).
+The current implementation target is [Spec-0001: Hook-driven experiential learning plugin MVP](../../specs/0001-hermes-style-experiential-learning-mvp.md).
 
 ## Preserved documents
 

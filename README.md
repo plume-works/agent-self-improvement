@@ -4,7 +4,7 @@ A proposed Claude Code learning loop that turns verified corrections and hard-wo
 
 ## Status
 
-Design only. The current implementation target is a deliberately small Hermes-style experiential-learning MVP.
+Design only. The current implementation target is a deliberately small hook-driven plugin that adapts `claude-improve` into an automatic, review-gated experiential-learning loop.
 
 ## MVP
 
@@ -12,7 +12,20 @@ Design only. The current implementation target is a deliberately small Hermes-st
 
 The user does not write test procedures or maintain optimization datasets. Ordinary learning is grounded in explicit corrections, verified failed-then-successful approaches, completed reusable workflows, repeated friction, and direct requests to remember an approach.
 
-See [Spec-0001: Hermes-style experiential learning MVP](docs/specs/0001-hermes-style-experiential-learning-mvp.md).
+See [Spec-0001: Hook-driven experiential learning plugin MVP](docs/specs/0001-hermes-style-experiential-learning-mvp.md).
+
+### Hook-driven architecture
+
+```text
+UserPromptSubmit / tool outcome hooks
+→ deterministic meaningful-event gate
+→ asynchronous Stop-hook review in an independent Claude context
+→ wake the original session only for one durable candidate
+→ exact proposal with explicit apply/reject commands
+→ atomic mutation, fresh-session verification, and rollback
+```
+
+The existing `claude-improve` reasoning workflow is narrowed into a noninteractive current-turn reviewer; its broad history scan and direct multi-artifact mutation are not inherited. Anthropic's official [`security-guidance`](https://code.claude.com/docs/en/security-guidance#how-the-plugin-integrates-with-claude-code) plugin demonstrates the same supported Stop hook → independent background review → session wake pattern.
 
 ### MVP principles
 
