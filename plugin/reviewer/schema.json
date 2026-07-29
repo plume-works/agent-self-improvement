@@ -1,0 +1,69 @@
+{
+  "$comment": "Reviewer output contract (spec section 7.4). Consumed by selfimprove/schema.py, which validates against this file with the standard library rather than a JSON Schema package. Anything not matching becomes a discard.",
+  "type": "object",
+  "required": ["decision"],
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["discard", "propose"]
+    },
+    "signal_type": {
+      "type": "string",
+      "enum": [
+        "explicit_retention",
+        "explicit_correction",
+        "verified_workaround",
+        "repeated_friction",
+        "confirmed_technique",
+        "reusable_completion",
+        "manual_force"
+      ]
+    },
+    "evidence_summary": {
+      "type": "string",
+      "maxLength": 600
+    },
+    "lesson": {
+      "type": "string",
+      "minLength": 12,
+      "maxLength": 400
+    },
+    "applicability": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "counterexample": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "destination_scope": {
+      "type": "string",
+      "enum": ["project", "user"]
+    },
+    "destination_kind": {
+      "type": "string",
+      "enum": ["CLAUDE.md", "rule", "skill"]
+    },
+    "owner_query": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    }
+  },
+  "requiredWhenProposing": [
+    "signal_type",
+    "evidence_summary",
+    "lesson",
+    "applicability",
+    "counterexample",
+    "destination_scope",
+    "destination_kind",
+    "owner_query",
+    "confidence"
+  ],
+  "acceptedConfidence": ["high", "medium"]
+}
