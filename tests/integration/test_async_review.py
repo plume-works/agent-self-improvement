@@ -215,6 +215,8 @@ def test_review_never_persists_prompt_or_response_text(run_si, corrected_turn,
                       errors="replace") as handle:
                 blob.append(handle.read())
     combined = "\n".join(blob)
+    # Without this the assertions below would pass on an empty state root.
+    assert "cand-" in combined, "expected a stored candidate to inspect"
 
     assert "Switched to make test." not in combined, "assistant response persisted"
     assert "no, use make test instead" not in combined, "raw prompt persisted"
