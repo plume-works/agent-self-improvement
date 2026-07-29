@@ -19,6 +19,7 @@ import sys
 from . import (
     allowlist,
     authz,
+    capture,
     config,
     hookio,
     journal,
@@ -40,6 +41,26 @@ def _fail(reason, detail=None):
     sys.stderr.write("self-improve: %s%s\n"
                      % (reason, " (%s)" % detail if detail else ""))
     return 1
+
+
+def capture_prompt(argv):
+    """Start a turn and note its markers (spec section 5.1).
+
+    Silent by design: no stdout, so nothing enters the transcript. This hook
+    runs before every prompt on a five-second budget.
+    """
+    capture.record_prompt(hookio.read_event())
+    return 0
+
+
+def capture_tool_failure(argv):
+    capture.record_tool_failure(hookio.read_event())
+    return 0
+
+
+def capture_tool_success(argv):
+    capture.record_tool_success(hookio.read_event())
+    return 0
 
 
 def capture_expansion(argv):
@@ -401,7 +422,10 @@ def cli_capability_warnings():
 
 
 HANDLERS = {
+    "capture-prompt": capture_prompt,
     "capture-expansion": capture_expansion,
+    "capture-tool-failure": capture_tool_failure,
+    "capture-tool-success": capture_tool_success,
     "session-end": session_end,
     "find-owners": find_owners,
     "show-candidate": show_candidate,

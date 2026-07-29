@@ -1,0 +1,17 @@
+{
+  "session_id": "session-1",
+  "prompt_id": "prompt-1",
+  "transcript_path": "/Users/example/.claude/projects/example/session-1.jsonl",
+  "cwd": "/Users/example/project",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "pytest tests/unit -x",
+    "description": "Run the unit tests"
+  },
+  "tool_use_id": "toolu_01ABC123",
+  "error": "Command exited with non-zero status code 1",
+  "is_interrupt": false,
+  "duration_ms": 4187
+}

@@ -1,0 +1,15 @@
+{
+  "session_id": "session-1",
+  "prompt_id": "prompt-1",
+  "transcript_path": "/Users/example/.claude/projects/example/session-1.jsonl",
+  "cwd": "/Users/example/project",
+  "permission_mode": "default",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "pytest tests/unit",
+    "description": "Run the unit tests"
+  },
+  "tool_use_id": "toolu_01ABC124",
+  "tool_response": "12 passed"
+}
