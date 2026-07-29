@@ -4,7 +4,9 @@ A proposed Claude Code learning loop that turns verified corrections and hard-wo
 
 ## Status
 
-Design only. The current implementation target is a deliberately small hook-driven plugin that adapts `claude-improve` into an automatic, review-gated experiential-learning loop.
+Specification accepted; implementation in progress. The target is a deliberately small hook-driven plugin that adapts `claude-improve` into an automatic, review-gated experiential-learning loop.
+
+The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
 
 ## MVP
 
@@ -26,6 +28,17 @@ UserPromptSubmit / tool outcome hooks
 ```
 
 The existing `claude-improve` reasoning workflow is narrowed into a noninteractive current-turn reviewer; its broad history scan and direct multi-artifact mutation are not inherited. Anthropic's official [`security-guidance`](https://code.claude.com/docs/en/security-guidance#how-the-plugin-integrates-with-claude-code) plugin demonstrates the same supported Stop hook → independent background review → session wake pattern.
+
+The reviewer is a separate `claude -p` call with a reviewer-only system prompt, hooks disabled, and no tools at all. It receives its evidence on standard input, so it has nothing to read, write, or execute with. It cannot mutate an artifact even if it tries.
+
+### What a proposal may touch
+
+| Scope | Allowed targets |
+| --- | --- |
+| User | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md` |
+| Project | `./CLAUDE.md`, `./.claude/CLAUDE.md`, `./.claude/rules/*.md`, `./.claude/skills/<name>/SKILL.md` |
+
+Nothing else. Settings, hook configuration, Claude-managed auto-memory, and source files are rejected before any I/O, as are symlinks and paths that resolve outside an allowed root.
 
 ### MVP principles
 
