@@ -27,12 +27,22 @@ Otherwise list what is waiting:
 "${CLAUDE_PLUGIN_ROOT}/scripts/si" show-candidate
 ```
 
-If there is no candidate and the user invoked this directly, identify the lesson
-yourself from the current session. Hold to the same bar the reviewer uses: a
-lesson is worth keeping only if it would have changed what you did earlier in
-this session, it will still be true in three months, and you can name the
-specific evidence for it. If nothing meets that bar, say so plainly and stop.
-Proposing nothing is a good outcome.
+If nothing is waiting and the user invoked this directly, force a review of the
+current turn:
+
+```bash
+echo '{"session_id":"<session id>","cwd":"<cwd>"}' \
+  | "${CLAUDE_PLUGIN_ROOT}/scripts/si" improve --focus "<what the user asked about>"
+```
+
+That runs the same isolated reviewer the automatic path uses. If it returns
+`no_signal` or `no_lesson`, tell the user plainly that this turn produced
+nothing worth keeping and stop. Proposing nothing is a good outcome, and it is
+the most common one.
+
+Hold to the same bar the reviewer uses: a lesson is worth keeping only if it
+would have changed what you did earlier in this session, it will still be true
+in three months, and you can name the specific evidence for it.
 
 ## 2. Find the owner
 

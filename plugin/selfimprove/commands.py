@@ -21,9 +21,11 @@ from . import (
     authz,
     capture,
     config,
+    gate,
     hookio,
     journal,
     mutate,
+    orchestrate,
     owners,
     paths,
     proposals,
@@ -60,6 +62,59 @@ def capture_tool_failure(argv):
 
 def capture_tool_success(argv):
     capture.record_tool_success(hookio.read_event())
+    return 0
+
+
+def review_turn(argv):
+    """The Stop hook (spec section 5.5).
+
+    Runs in the background under ``asyncRewake``, so the user's response is
+    never delayed. Exit 0 stays silent; exit 2 wakes the session with the
+    message on stderr, which is the documented contract for that flag.
+    """
+    event = hookio.read_event()
+    result = orchestrate.run(event)
+    if result["outcome"] != "candidate":
+        return 0
+    hookio.wake(result["message"])
+    return 2
+
+
+def improve(argv):
+    """Force a review of the current turn (spec section 3.2).
+
+    The same bounded pipeline as the automatic path, not a second route to
+    mutation. Used when automatic detection missed something worth keeping.
+    """
+    parser = argparse.ArgumentParser(prog="si improve")
+    parser.add_argument("--focus", default="")
+    parser.add_argument("--session-id")
+    options = parser.parse_args(argv)
+
+    event = hookio.read_event()
+    if options.session_id:
+        event.setdefault("session_id", options.session_id)
+
+    result = orchestrate.run(event, forced=True, focus=options.focus or None)
+    if result["outcome"] == "candidate":
+        return _emit({"outcome": "candidate",
+                      "candidate": result["candidate"]})
+    return _emit(result)
+
+
+def session_start(argv):
+    """Surface candidates found while no session was available (section 11)."""
+    event = hookio.read_event()
+    waiting = orchestrate.pending_candidates(cwd=event.get("cwd"))
+    if not waiting:
+        return 0
+    lines = ["self-improve: %d retained learning candidate%s from an earlier "
+             "session." % (len(waiting), "" if len(waiting) == 1 else "s")]
+    for entry in waiting[:5]:
+        lines.append("  %s: %s" % (entry["candidate_id"], entry.get("lesson", "")))
+    lines.append("Mention them only if the user asks; running the self-improve "
+                 "improve skill with a candidate id will route and stage one.")
+    hookio.additional_context("SessionStart", "\n".join(lines))
     return 0
 
 
@@ -272,6 +327,10 @@ def show_candidate(argv):
         record = store.read_record(store.CANDIDATES, options.id)
         if record is None:
             return _fail("unknown_or_expired_candidate")
+        # Reading a candidate is the moment it stops awaiting presentation, so
+        # the recursion guard lifts and the next turn can be reviewed again.
+        gate.clear_awaiting_presentation(record.get("session_id"))
+        orchestrate.drop_pending(options.id)
         return _emit(record)
     return _emit({"candidates": store.list_records(store.CANDIDATES)})
 
@@ -426,6 +485,9 @@ HANDLERS = {
     "capture-expansion": capture_expansion,
     "capture-tool-failure": capture_tool_failure,
     "capture-tool-success": capture_tool_success,
+    "review-turn": review_turn,
+    "improve": improve,
+    "session-start": session_start,
     "session-end": session_end,
     "find-owners": find_owners,
     "show-candidate": show_candidate,

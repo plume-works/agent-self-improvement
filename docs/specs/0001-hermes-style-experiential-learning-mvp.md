@@ -169,6 +169,8 @@ Runtime state resolves in this order:
 | Variable | Purpose |
 | --- | --- |
 | `SELF_IMPROVE_REVIEW_MODEL` | Reviewer model; defaults to `sonnet` |
+| `SELF_IMPROVE_REVIEW_TIMEOUT` | Seconds to wait for the reviewer before giving up silently |
+| `SELF_IMPROVE_DISABLE` | Set to `1` to disable the plugin without uninstalling it |
 | `SELF_IMPROVE_REVIEWER` | Set to `1` in the reviewer's own environment; suppresses reflection in reviewer-originated sessions |
 | `SELF_IMPROVE_REVIEWER_CMD` | Overrides the reviewer binary; used by tests to substitute a deterministic fake |
 | `SELF_IMPROVE_STATE_DIR` | Overrides the state root |

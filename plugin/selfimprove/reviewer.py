@@ -81,7 +81,7 @@ def invoke(bundle, timeout=None, model=None):
             capture_output=True,
             text=True,
             env=build_environment(),
-            timeout=timeout or config.REVIEW_TIMEOUT_SECONDS,
+            timeout=timeout or config.review_timeout(),
         )
     except subprocess.TimeoutExpired as exc:
         raise ReviewUnavailable("timeout") from exc

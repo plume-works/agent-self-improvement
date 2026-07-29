@@ -33,6 +33,19 @@ def review_model():
     return os.environ.get("SELF_IMPROVE_REVIEW_MODEL") or DEFAULT_REVIEW_MODEL
 
 
+def review_timeout():
+    """Seconds to wait for the reviewer before giving up silently."""
+    raw = os.environ.get("SELF_IMPROVE_REVIEW_TIMEOUT")
+    if raw:
+        try:
+            value = float(raw)
+        except ValueError:
+            return REVIEW_TIMEOUT_SECONDS
+        if value > 0:
+            return value
+    return REVIEW_TIMEOUT_SECONDS
+
+
 def reviewer_command():
     """The binary used for the isolated review call.
 

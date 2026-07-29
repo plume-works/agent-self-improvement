@@ -82,6 +82,11 @@ def _read_fingerprints():
     return data if isinstance(data, dict) else {}
 
 
+def known_fingerprints():
+    """Every fingerprint seen before, for reviewer-side deduplication."""
+    return sorted(_read_fingerprints())
+
+
 def fingerprint_status(fingerprint):
     """``"accepted"``, ``"rejected"``, or ``None`` if unseen."""
     entry = _read_fingerprints().get(fingerprint)

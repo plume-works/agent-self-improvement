@@ -26,7 +26,7 @@ def build(turn, signal, owners=None, last_assistant_message=None,
             "detail": signal.get("detail"),
         },
         "events": [_summarize_event(event) for event in events],
-        "transitions": _transitions(events),
+        "transitions": transitions(events),
         "last_assistant_message": redact.scrub(last_assistant_message, limit=1500),
         "candidate_owners": (owners or [])[:MAX_OWNERS_IN_BUNDLE],
         "known_fingerprints": sorted(fingerprints or [])[:50],
@@ -52,24 +52,24 @@ def _summarize_event(event):
     return summary
 
 
-def _transitions(events):
+def transitions(events):
     """Verified failure-to-success transitions, as section 7.2 requires.
 
     Reported as a signature plus the error class that preceded the success, so
     the reviewer learns that a retry worked without seeing either command.
     """
-    transitions = []
-    for event in events:
+    found = []
+    for event in events or []:
         if event.get("kind") != "tool_success":
             continue
         if not event.get("after_failure"):
             continue
-        transitions.append({
+        found.append({
             "signature": event.get("signature"),
             "prior_error_class": event.get("prior_error_class"),
             "failures_before_success": event.get("failures_before_success", 1),
         })
-    return transitions
+    return found
 
 
 def friction_counts(events):
