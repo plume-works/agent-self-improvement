@@ -1,0 +1,17 @@
+{
+  "description": "Experiential learning capture, review, and proposal lifecycle.",
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/si",
+            "args": ["session-end"],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

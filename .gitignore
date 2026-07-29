@@ -1,11 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
 # Build outputs
-/bin/claude-si
 /dist/
 /coverage/
-
-# Go
-*.test
-*.out
 
 # Local development
 .env
@@ -17,13 +20,16 @@
 
 # Runtime state must never enter the repository
 .self-improvement/
-*.sqlite
-*.sqlite-shm
-*.sqlite-wal
 candidates/
+proposals/
+authorizations/
 backups/
 archive/
 logs/
+locks/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 
 # Test scratch
 /tmp/
