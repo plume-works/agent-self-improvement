@@ -88,18 +88,21 @@ def resolve(target, project_dir=None, must_exist=False):
         raise PathRejected("bad_name")
 
     expanded = os.path.abspath(os.path.expanduser(target))
-
-    # Scope is decided from the caller's own spelling, before any resolution.
-    # Resolving first would turn a symlink attack into a confusing "not an
-    # allowed artifact", and the symlink is the thing worth naming.
-    scope, root = _scope_of(expanded, project_dir)
-    _reject_symlinks_below_root(expanded, root)
-
     real = os.path.realpath(expanded)
-    # Re-check after resolution: a symlink above the root, or one this walk did
-    # not cover, must not land the target outside the boundary.
-    if not _within(real, roots(project_dir)[scope]):
-        raise PathRejected("outside_allowed_roots")
+
+    # Containment is decided on the resolved path, because a caller's spelling
+    # of a perfectly ordinary location may differ from its real one: on macOS a
+    # project under /tmp is really under /private/tmp. Comparing only the
+    # literal spelling rejected such paths as symlink attacks.
+    scope = _scope_of(real, expanded, project_dir)
+    root = roots(project_dir)[scope]
+
+    # A symlink for the target itself is refused whatever it points at. The
+    # indirection is the problem: it makes the reviewed destination and the
+    # written destination two different things.
+    if os.path.islink(expanded):
+        raise PathRejected("symlink")
+    _reject_symlinks_below_root(real, root)
 
     kind = _kind_of(real, scope, project_dir)
 
@@ -116,16 +119,16 @@ def _within(path, root):
     return path == root or path.startswith(root + os.sep)
 
 
-def _reject_symlinks_below_root(expanded, root):
+def _reject_symlinks_below_root(real, root):
     """Refuse a symlink anywhere between an allowed root and the target.
 
-    Only components below the root are checked. Above it, symlinks are the
-    system's business and routinely legitimate: macOS reaches /etc and /tmp
-    through them, and a home directory may be one too. Below the root, a
-    symlinked parent redirects a write just as effectively as a symlinked file,
-    and realpath alone would follow it silently.
+    Walking from the resolved root means each component checked is the real
+    location, so a link created inside the root is detected wherever the caller
+    reached it from. Components above the root are not checked: there symlinks
+    are the system's business and routinely legitimate, since macOS reaches
+    /etc and /tmp through them and a home directory may be one too.
     """
-    relative = os.path.relpath(expanded, root)
+    relative = os.path.relpath(real, root)
     if relative == os.curdir:
         return
     current = root
@@ -135,22 +138,40 @@ def _reject_symlinks_below_root(expanded, root):
             raise PathRejected("symlink")
 
 
-def _scope_of(expanded, project_dir):
-    """Match against both the caller's spelling of each root and its real path."""
+def _scope_of(real, expanded, project_dir):
+    """The allowed root containing ``real``, or a reason it is out of bounds."""
     resolved = roots(project_dir)
-    original = {USER: os.path.abspath(paths.claude_home()),
-                PROJECT: os.path.abspath(project_dir or os.getcwd())}
-    for scope in (USER, PROJECT):
-        for root in (original[scope], resolved[scope]):
-            if _within(expanded, root):
-                return scope, root
-    # Not textually inside either root. It may still resolve into one, in which
-    # case the symlink walk below that root gets to reject it by name.
-    real = os.path.realpath(expanded)
     for scope in (USER, PROJECT):
         if _within(real, resolved[scope]):
-            return scope, original[scope]
+            return scope
+    # Out of bounds. When the caller's own path pointed inside a root, a
+    # symlink took it out, and naming that is more useful than reporting the
+    # destination it happened to land on.
+    for scope in (USER, PROJECT):
+        for root in (resolved[scope], os.path.abspath(_original_root(scope,
+                                                                     project_dir))):
+            if _within(expanded, root):
+                _reject_symlinks_below_root_of_original(expanded, root)
+                raise PathRejected("outside_allowed_roots")
     raise PathRejected("outside_allowed_roots")
+
+
+def _original_root(scope, project_dir):
+    if scope == USER:
+        return paths.claude_home()
+    return project_dir or os.getcwd()
+
+
+def _reject_symlinks_below_root_of_original(expanded, root):
+    """Walk the caller's own spelling, used only to explain an escape."""
+    relative = os.path.relpath(expanded, root)
+    if relative == os.curdir:
+        return
+    current = root
+    for part in relative.split(os.sep):
+        current = os.path.join(current, part)
+        if os.path.islink(current):
+            raise PathRejected("symlink")
 
 
 def _kind_of(real, scope, project_dir):

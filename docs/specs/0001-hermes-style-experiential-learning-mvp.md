@@ -346,7 +346,9 @@ A proposal may target only these paths. The list is normative and is enforced by
 | User | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md` |
 | Project | `./CLAUDE.md`, `./.claude/CLAUDE.md`, `./.claude/rules/*.md`, `./.claude/skills/<name>/SKILL.md` |
 
-Paths are resolved to their real location before the check. Symlinks, traversal outside an allowed root, and non-regular files are rejected before any I/O.
+Paths are resolved to their real location before the check, and containment and shape are both decided on the resolved path. Traversal outside an allowed root and non-regular files are rejected before any I/O.
+
+Symlink rejection is scoped deliberately. A symlink for the target itself is always refused, because the indirection makes the reviewed destination and the written destination two different things, as is any symlinked component between an allowed root and the target. Components above the root are not checked: symlinked prefixes are ordinary and outside this system's concern, since macOS reaches `/tmp` and `/etc` through them and a home or checkout directory may be one too. Rejecting those would refuse most scratch directories while protecting nothing.
 
 `AGENTS.md` is deliberately excluded, including in repositories such as this one that keep their instructions there and import them from `CLAUDE.md`. Claude Code does not load `AGENTS.md` directly, so it is not an owner this system can reason about; a lesson belonging to such a repository is routed to the importing `CLAUDE.md` or to a rule.
 

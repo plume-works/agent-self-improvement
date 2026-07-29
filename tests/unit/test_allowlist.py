@@ -97,6 +97,27 @@ def test_traversal_is_rejected(workspace, attack):
         allowlist.resolve(str(workspace["project"] / attack))
 
 
+def test_an_ordinary_path_reached_through_a_symlinked_prefix_is_allowed(
+        workspace, tmp_path, monkeypatch):
+    """A regression: /tmp is a symlink to /private/tmp on macOS.
+
+    Comparing only the caller's literal spelling of the path rejected every
+    project under such a prefix as a symlink attack, which is most scratch
+    directories and any repository reached through a symlinked parent.
+    """
+    real_project = tmp_path / "real-project"
+    real_project.mkdir()
+    (real_project / "CLAUDE.md").write_text("# Real\n")
+    alias = tmp_path / "alias"
+    alias.symlink_to(real_project)
+    monkeypatch.chdir(real_project)
+
+    resolved = allowlist.resolve(str(alias / "CLAUDE.md"))
+    assert resolved["scope"] == allowlist.PROJECT
+    assert resolved["kind"] == allowlist.CLAUDE_MD
+    assert resolved["path"] == str(real_project / "CLAUDE.md")
+
+
 def test_a_symlinked_target_is_rejected(workspace):
     """Even one pointing somewhere legitimate: the indirection is the problem."""
     real = workspace["project"] / ".claude" / "real.md"
