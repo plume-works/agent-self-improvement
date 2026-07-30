@@ -66,6 +66,22 @@ def cli_version():
 
 SCRATCH_ROOT = os.path.join(REPO_ROOT, "tmp", "smoke")
 
+# Provider-side failures: the CLI ran, the call inside it did not. These say
+# nothing about the plugin, so a check that hits one is retried and then skipped
+# rather than reported as a product failure. Everything else fails loudly.
+PROVIDER_STATUSES = {401: "unauthenticated", 403: "unauthenticated",
+                     429: "rate_limited", 500: "provider_error",
+                     502: "provider_error", 503: "overloaded",
+                     529: "overloaded"}
+
+PROVIDER_PHRASES = re.compile(
+    r"(?i)usage limit|out of credit|quota|rate[ _-]?limit|too many requests|"
+    r"overloaded|service unavailable|api error|internal server error|"
+    r"invalid api key|please run /login|not logged in|"
+    r"issue with the selected model")
+
+SESSION_RETRY_DELAY = 20
+
 
 @pytest.fixture
 def scratch(request, monkeypatch, cli_version):
@@ -138,9 +154,100 @@ class Session:
     def find(self, needle):
         return [event for event in self.events if needle in json.dumps(event)]
 
+    def provider_failure(self):
+        """Why the provider, not the plugin, kept this session from answering.
 
-def run_session(cwd, messages, timeout=600, extra_args=None):
-    """Drive one headless session through ``messages`` and collect its stream."""
+        A rate-limited or overloaded turn still exits zero and still emits an
+        assistant message: the message is the error text. Undetected, that
+        becomes whichever assertion happened to run first — a Stop hook that
+        never fired, an answer that does not mention `make test` — and a
+        provider outage gets read as a product defect.
+        """
+        for event in self.events:
+            if event.get("type") == "assistant" and event.get("is_api_error_message"):
+                return _provider_class(event.get("error"), _text_of(event))
+        for event in self.results():
+            if event.get("terminal_reason") == "api_error" or \
+                    event.get("api_error_status"):
+                return _provider_class(event.get("api_error_status"),
+                                       event.get("result"))
+        if not self.results():
+            # No result event at all: the CLI never got as far as a turn. Only a
+            # provider or authentication failure is transient; anything else has
+            # to fail.
+            return _provider_class(None, self.stderr)
+        return None
+
+    def failure(self):
+        """Why this session did not complete a normal turn, provider aside."""
+        if self.returncode != 0:
+            return "the claude CLI exited %d: %s" % (
+                self.returncode, (self.stderr or "").strip()[:400] or "(no stderr)")
+        results = self.results()
+        if not results:
+            return "the session emitted no result event"
+        last = results[-1]
+        if last.get("is_error") or last.get("subtype") not in (None, "success"):
+            return "the session ended in %s (%s)" % (
+                last.get("subtype"), last.get("terminal_reason"))
+        if not [event for event in self.events if event.get("type") == "assistant"]:
+            return "the session produced no assistant message"
+        return None
+
+
+def _text_of(event):
+    chunks = [block.get("text", "")
+              for block in event.get("message", {}).get("content", [])
+              if block.get("type") == "text"]
+    return "\n".join(chunks)
+
+
+def _provider_class(status, text):
+    """Name a provider failure, or return None if this is not one."""
+    if isinstance(status, int) and status in PROVIDER_STATUSES:
+        return PROVIDER_STATUSES[status]
+    if isinstance(status, str) and status:
+        return status
+    if text and PROVIDER_PHRASES.search(text):
+        return PROVIDER_PHRASES.search(text).group(0).lower()
+    return None
+
+
+def run_session(cwd, messages, timeout=600, extra_args=None, attempts=2):
+    """Drive one headless session through ``messages`` and collect its stream.
+
+    A provider failure is retried once and then skips the check. That is the
+    honest outcome: nothing about the plugin was observed, and reporting it as a
+    failure sends the next reader looking for a defect that is not there. Every
+    other way a session can end badly fails, including the ones that would
+    otherwise let a check pass without the session ever having answered.
+    """
+    attempts = max(attempts, 1)
+    session = None
+    reason = None
+    for attempt in range(attempts):
+        session = _run_session_once(cwd, messages, timeout=timeout,
+                                    extra_args=extra_args)
+        reason = session.provider_failure()
+        if reason is None:
+            break
+        if attempt + 1 < attempts:
+            time.sleep(SESSION_RETRY_DELAY)
+
+    if reason is not None:
+        pytest.skip("the model call did not go through (%s); this check observed "
+                    "nothing about the plugin. %d attempt%s, %ds apart."
+                    % (reason, attempts, "" if attempts == 1 else "s",
+                       SESSION_RETRY_DELAY))
+
+    failed = session.failure()
+    assert failed is None, \
+        "the session did not complete a turn, so nothing below is meaningful: %s" \
+        % failed
+    return session
+
+
+def _run_session_once(cwd, messages, timeout=600, extra_args=None):
     require_cli()
     command = [
         "claude", "-p",

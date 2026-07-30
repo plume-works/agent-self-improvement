@@ -104,6 +104,23 @@ To skip it — in CI, or when you only want the deterministic checks:
 make smoke-auto
 ```
 
+## If a check skips
+
+A check that reports `SKIPPED` with `the model call did not go through` never saw
+the plugin: the session was rate limited, overloaded, unauthenticated, or pointed
+at a model it cannot reach. Each session is retried once, 20 seconds apart,
+before the check gives up, and the skip names the class. Check 3 skips the same
+way when the reviewer subprocess itself was never consulted — including the class
+`other`, which is a provider failure this build cannot name yet.
+
+Skips are not passes. Rerun once the account or the API is healthy; `make smoke`
+passes `-rs`, so every reason is listed in the summary at the end.
+
+The distinction is worth keeping intact when editing these checks. A provider
+outage once produced three failures — checks 1, 3, and 6 — pointing at code that
+was correct, while every check whose assertions hold for a session that never ran
+reported success.
+
 ## If something fails
 
 The failing test names its own workspace. Include:

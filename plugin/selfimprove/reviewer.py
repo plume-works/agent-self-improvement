@@ -12,9 +12,39 @@ produces no candidate.
 
 import json
 import os
+import re
 import subprocess
 
 from . import config, journal, schema
+
+# HTTP statuses the CLI reports as ``api_error_status``. Naming these separately
+# from a generic failure is what makes a smoke run diagnosable: a review that
+# never happened because the provider was busy is a transient condition, not the
+# reviewer declining to propose anything.
+_STATUS_CLASSES = {
+    401: "unauthenticated",
+    403: "unauthenticated",
+    429: "rate_limited",
+    500: "provider_error",
+    502: "provider_error",
+    503: "overloaded",
+    529: "overloaded",
+}
+
+# Phrases, most specific first, for the failures that arrive as text rather than
+# as a status. Bare status numbers are deliberately absent: they collide with the
+# durations and token counts in the same envelope.
+_PHRASE_CLASSES = [
+    ("usage_limited", re.compile(r"(?i)credit|quota|usage limit")),
+    ("rate_limited", re.compile(r"(?i)rate[ _-]?limit|too many requests")),
+    ("overloaded", re.compile(r"(?i)overloaded|service unavailable")),
+    ("model_unavailable", re.compile(
+        r"(?i)(unknown|invalid|unsupported) model|model_not_found|"
+        r"model .{0,40}(does not exist|may not exist|access to it)")),
+    ("unauthenticated", re.compile(r"(?i)auth|login|api key")),
+    ("provider_error", re.compile(
+        r"(?i)internal server error|bad gateway|api error")),
+]
 
 
 class ReviewUnavailable(Exception):
@@ -100,12 +130,30 @@ def _failure_class(result):
     from . import redact
 
     combined = "%s\n%s" % (result.stderr or "", result.stdout or "")
-    lowered = combined.lower()
-    if "credit" in lowered or "quota" in lowered or "usage limit" in lowered:
-        return "usage_limited"
-    if "auth" in lowered or "login" in lowered or "api key" in lowered:
-        return "unauthenticated"
-    return redact.error_class(combined)
+    status = _api_error_status(result.stdout)
+    if status in _STATUS_CLASSES:
+        return _STATUS_CLASSES[status]
+    return _phrase_class(combined) or redact.error_class(combined)
+
+
+def _phrase_class(text):
+    """The failure class implied by ``text``, or None if nothing matches."""
+    for name, pattern in _PHRASE_CLASSES:
+        if pattern.search(text or ""):
+            return name
+    return None
+
+
+def _api_error_status(stdout):
+    """The CLI's ``api_error_status``, when the envelope carries one."""
+    try:
+        envelope = json.loads(stdout or "")
+    except ValueError:
+        return None
+    if not isinstance(envelope, dict):
+        return None
+    status = envelope.get("api_error_status")
+    return status if isinstance(status, int) else None
 
 
 def _response_text(stdout):
@@ -119,13 +167,24 @@ def _response_text(stdout):
         # layer is what decides whether the content is usable.
         return stdout
     if isinstance(envelope, dict):
-        if envelope.get("is_error"):
-            raise ReviewUnavailable("reviewer_error")
+        if envelope.get("is_error") or envelope.get("terminal_reason") == "api_error":
+            # A provider error can arrive with a zero exit status: the CLI ran
+            # fine, the call inside it did not. Classify it the same way.
+            raise ReviewUnavailable(_envelope_failure_class(envelope))
         for key in ("result", "text", "content"):
             value = envelope.get(key)
             if isinstance(value, str):
                 return value
     raise ReviewUnavailable("unrecognized_envelope")
+
+
+def _envelope_failure_class(envelope):
+    """Classify a failed review the CLI reported inside its own envelope."""
+    status = envelope.get("api_error_status")
+    if isinstance(status, int) and status in _STATUS_CLASSES:
+        return _STATUS_CLASSES[status]
+    text = envelope.get("result")
+    return _phrase_class(text if isinstance(text, str) else "") or "reviewer_error"
 
 
 def review(bundle, timeout=None, model=None):

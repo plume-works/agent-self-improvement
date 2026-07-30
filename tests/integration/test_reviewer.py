@@ -72,6 +72,24 @@ def test_authentication_failure_is_classified(state_root, fake_reviewer):
     assert reviewer.review(BUNDLE)["discard_reason"] == "unauthenticated"
 
 
+def test_provider_failures_are_classified_apart_from_a_declined_review(
+        state_root, fake_reviewer):
+    """A review that never happened must not look like one that said no.
+
+    Section 11 keeps every one of these silent, but the recorded class is the
+    only thing a later investigation has, and "the provider was busy" and "the
+    reviewer found no lesson" call for opposite responses.
+    """
+    for mode, expected in (("rate_limited", "rate_limited"),
+                           ("overloaded", "overloaded"),
+                           ("provider_error", "provider_error"),
+                           ("bad_model", "model_unavailable")):
+        fake_reviewer.mode(mode)
+        result = reviewer.review(BUNDLE)
+        assert result["decision"] == schema.DISCARD
+        assert result["discard_reason"] == expected, mode
+
+
 def test_empty_output_becomes_a_discard(state_root, fake_reviewer):
     fake_reviewer.mode("empty")
     assert reviewer.review(BUNDLE)["discard_reason"] == "empty_output"

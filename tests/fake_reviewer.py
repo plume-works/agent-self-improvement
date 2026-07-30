@@ -16,6 +16,10 @@ The behavior is chosen by ``FAKE_REVIEWER_MODE``:
     timeout        sleeps past any reasonable timeout
     crash          exits non-zero
     unauthorized   exits non-zero with an authentication message
+    rate_limited   exits non-zero with a 429 envelope
+    overloaded     exits zero with a 529 envelope, as the CLI does
+    provider_error exits non-zero with a 500 and no explanatory text
+    bad_model      exits zero reporting an inaccessible model
     empty          prints nothing
 
 ``FAKE_REVIEWER_ARGV`` and ``FAKE_REVIEWER_STDIN``, when set to paths, capture
@@ -58,6 +62,17 @@ def _envelope(text):
     return json.dumps({"type": "result", "is_error": False, "result": text})
 
 
+def _api_error(status, text):
+    """The shape the CLI prints when the call inside it failed.
+
+    Real envelopes also carry durations and token counts; the numbers are kept
+    here because a classifier that reads bare digits would trip over them.
+    """
+    return json.dumps({"type": "result", "is_error": True, "subtype": "success",
+                       "terminal_reason": "api_error", "api_error_status": status,
+                       "duration_ms": 529, "num_turns": 1, "result": text})
+
+
 def main():
     mode = os.environ.get("FAKE_REVIEWER_MODE", "discard")
     _record()
@@ -71,6 +86,20 @@ def main():
     if mode == "unauthorized":
         sys.stderr.write("Invalid API key. Please run /login.\n")
         return 1
+    if mode == "rate_limited":
+        sys.stdout.write(_api_error(429, "API Error: 429 rate_limit_error"))
+        return 1
+    if mode == "overloaded":
+        sys.stdout.write(_api_error(529, "API Error: 529 overloaded_error"))
+        return 0
+    if mode == "provider_error":
+        sys.stdout.write(_api_error(500, "something went wrong"))
+        return 1
+    if mode == "bad_model":
+        sys.stdout.write(_api_error(
+            404, "There's an issue with the selected model (sonnet-9). It may "
+                 "not exist or you may not have access to it."))
+        return 0
     if mode == "empty":
         return 0
 

@@ -26,13 +26,15 @@ test:
 	uv run --group dev pytest -q -m "not smoke"
 
 # Spends real model usage, so it is never part of `make test` or `make check`.
-# -s keeps stdin and stdout attached for the one interactive check. The scratch
+# -s keeps stdin and stdout attached for the one interactive check. -rs lists why
+# anything skipped: a check that could not reach the model observed nothing, and
+# that has to be readable at the end of the run rather than inferred. The scratch
 # workspace is left under tmp/smoke/ afterwards so a failure can be inspected.
 smoke:
-	uv run --group dev pytest -m smoke -s -v
+	uv run --group dev pytest -m smoke -s -v -rs
 
 smoke-auto:
-	SMOKE_SKIP_INTERACTIVE=1 uv run --group dev pytest -m smoke -s -v
+	SMOKE_SKIP_INTERACTIVE=1 uv run --group dev pytest -m smoke -s -v -rs
 
 lint:
 	uv run --group dev ruff check plugin tests

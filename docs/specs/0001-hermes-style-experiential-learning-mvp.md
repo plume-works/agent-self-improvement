@@ -430,6 +430,7 @@ The plugin never edits or parses Claude-managed auto-memory internals.
 
 - Capture/gating failure: fail open and preserve the completed task.
 - Reviewer timeout, authentication failure, or malformed output: stay silent and record only a redacted error class.
+- Reviewer unavailability distinct from reviewer disagreement: the recorded class must name a provider failure — rate limit, overload, usage limit, unreachable model, or other API error — separately from a review that ran and proposed nothing. Both stay silent; only the class distinguishes a transient condition from a decision, and the class is all a later investigation has.
 - Session unavailable when review completes: retain the staged candidate for explicit retrieval on the next session start; do not mutate.
 - Duplicate candidate: suppress it.
 - User rejection: invalidate the candidate and retain only its fingerprint and rejection reason category.
