@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: make test
+    runs-on: ubuntu-latest
+    env:
+      # The runtime floor is Python 3.9 (pyproject requires-python), so the
+      # suite runs against the oldest supported interpreter rather than
+      # whichever one the runner image happens to ship. uv downloads it.
+      UV_PYTHON: "3.9"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # `make smoke` is excluded: it drives a real Claude session and spends
+      # model usage. `make validate` needs the Claude CLI, which CI has no
+      # reason to install.
+      - name: Run the offline suite
+        run: make test
