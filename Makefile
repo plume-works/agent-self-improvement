@@ -1,4 +1,4 @@
-.PHONY: help test smoke smoke-auto lint fmt validate check clean
+.PHONY: help test smoke smoke-auto wake wake-repeat lint fmt validate check clean
 
 UV := $(shell command -v uv 2>/dev/null)
 
@@ -10,20 +10,22 @@ help:
 	@echo "make test        run the offline suite (no model calls)"
 	@echo "make smoke       run the packaged smoke test against a real Claude session"
 	@echo "make smoke-auto  the same, skipping the one interactive check"
+	@echo "make wake        verify the asynchronous wake automatically, on a pty"
+	@echo "make wake-repeat run the wake check ten times to measure its stability"
 	@echo "make lint        run ruff"
 	@echo "make fmt         apply ruff formatting fixes"
 	@echo "make validate    validate the plugin manifest with the Claude CLI"
 	@echo "make check       test + lint + validate"
 
 ifeq ($(UV),)
-test smoke smoke-auto lint fmt:
+test smoke smoke-auto wake wake-repeat lint fmt:
 	@echo "uv is required for development tooling."
 	@echo "Install it with 'brew install uv' or from https://docs.astral.sh/uv/."
 	@echo "The plugin itself needs no dependencies; this is only for tests."
 	@exit 1
 else
 test:
-	uv run --group dev pytest -q -m "not smoke"
+	uv run --group dev pytest -q -m "not smoke and not pty"
 
 # Spends real model usage, so it is never part of `make test` or `make check`.
 # -s keeps stdin and stdout attached for the one interactive check. -rs lists why
@@ -35,6 +37,22 @@ smoke:
 
 smoke-auto:
 	SMOKE_SKIP_INTERACTIVE=1 uv run --group dev pytest -m smoke -s -v -rs
+
+# Spec-0002. Automates the one smoke check a person otherwise confirms, by
+# driving a real interactive session on a pseudo-terminal. Opt-in on purpose:
+# it spends model usage on two real reviews, and it is the component here most
+# exposed to changes in the terminal interface, so it never gates anything.
+wake:
+	uv run --group dev pytest -m pty -s -v -rs
+
+# Acceptance criterion 1: reliable across ten consecutive runs. Stops at the
+# first failure, since that is the answer.
+wake-repeat:
+	@for run in 1 2 3 4 5 6 7 8 9 10; do \
+	  echo "=== wake run $$run/10 ==="; \
+	  uv run --group dev pytest -m pty -q -rs || exit 1; \
+	done
+	@echo "=== ten consecutive wake runs, no failures ==="
 
 lint:
 	uv run --group dev ruff check plugin tests

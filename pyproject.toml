@@ -26,6 +26,7 @@ filterwarnings = ["error"]
 markers = [
     "smoke: drives a real Claude Code session and spends model usage; excluded from `make test` and run by `make smoke`",
     "interactive: needs a person at the terminal; skipped with SMOKE_SKIP_INTERACTIVE=1",
+    "pty: drives a real session on a pseudo-terminal to observe the asynchronous wake; spends model usage and is excluded from every other target (see `make wake`)",
 ]
 
 [tool.ruff]

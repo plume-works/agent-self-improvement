@@ -1,6 +1,6 @@
 # Spec-0002: Automated verification of the asynchronous wake
 
-- **Status:** Proposed; not implemented
+- **Status:** Accepted; implemented as `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`
 - **Scope:** Test tooling only. No change to the plugin, its hooks, or its mutation protocol.
 - **Depends on:** [Spec-0001](0001-hermes-style-experiential-learning-mvp.md), implemented
 
@@ -81,3 +81,17 @@ The harness is worth having only if it is more reliable than the manual check it
 5. runs behind its own target, excluded from `make test`, `make check`, and `make smoke`.
 
 Until it meets those, the interactive step in `make smoke` remains the supported way to verify the wake.
+
+## 7. Implementation notes
+
+The harness is `tests/smoke/pty_harness.py`; the checks are `tests/smoke/test_wake_pty.py`, marked `pty` and run only by `make wake`. `make test`, `make check`, and `make smoke` all exclude that marker.
+
+Three decisions differ from, or sharpen, what section 3 anticipated.
+
+**Turn boundaries come from quiescence, not from a prompt.** Section 3.1 says to wait for the prompt to return between turns, but recognizing the prompt would mean matching what the interface renders, which section 3.2 forbids. The harness instead waits for the output stream to stop for eight seconds. While Claude works the renderer emits continuously; when it stops, the stream goes quiet. That is a property of a terminal program redrawing rather than of any version's layout.
+
+**The on-screen match is normalized before comparison.** A 17-character candidate identifier wraps whenever it lands near the right margin, so escape sequences and all whitespace are stripped from both sides before the single match. Without this a wake that did arrive would be reported as missing. This is covered by a check that needs no model.
+
+**The negative control suppresses the wake signal rather than the `asyncRewake` flag.** Section 6.2 proposed disabling the flag, but that control does not discriminate: without it the `Stop` hook still runs and still exits 2, synchronously inside the turn, so Claude is still told about the candidate and the marker still reaches the screen. The control would pass whether or not the wake worked. The harness instead runs a copy of the plugin whose `Stop` hook discards its exit code, leaving the gate, the reviewer, and the stored candidate exactly as they are and removing only the wake. A candidate is then required on disk — a control that observed nothing proves nothing — and the marker is required to be absent from the screen.
+
+Two failure modes are separated in the assertions, because they have different causes and different fixes: review never ran or proposed nothing, versus a candidate that exists while no wake arrived. Only the second is a wake failure.
