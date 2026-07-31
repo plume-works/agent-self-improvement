@@ -12,6 +12,14 @@ Two things are deliberately *not* isolated:
   mutations landed inside the scratch repository.
 - The model is the real one. That is the point of this suite: the reviewer
   prompt and the skills have never met a real model anywhere else.
+
+Isolation of plugin state rests on ``SELF_IMPROVE_STATE_DIR`` outranking
+``CLAUDE_PLUGIN_DATA`` in :func:`selfimprove.paths.state_root`. Claude Code sets
+``CLAUDE_PLUGIN_DATA`` in every hook environment it creates and discards the
+inherited value, so unsetting it here is not enough on its own: with the other
+precedence every hook inside a real session writes to the user's installed
+plugin data directory instead, which is both a leak and a source of false
+assertions here.
 """
 
 import json
@@ -42,6 +50,82 @@ SEED_CLAUDE_MD = """# Scratch project
 ALLOWED_TOOLS = [
     "Read", "Grep", "Glob", "Bash(%s:*)" % SI,
 ]
+
+# Check 2 runs interactively, where a permission prompt is not a rejected tool
+# call but a halted turn: the session sits waiting, no Stop hook fires, and the
+# wake under test can never happen. So the commands its script leads Claude to
+# run are allowed up front.
+INTERACTIVE_ALLOWED_TOOLS = [
+    *ALLOWED_TOOLS,
+    "Bash(pytest:*)", "Bash(make:*)", "Bash(git:*)", "Bash(ls:*)", "Bash(cat:*)",
+]
+
+MAKEFILE = """\
+.PHONY: build test
+
+build:
+\t@echo "nothing to build"
+
+# The environment variable is the reason the suite has to go through make.
+test:
+\t@SCRATCH_SUITE=1 pytest -q
+"""
+
+MODULE = """\
+def add(left, right):
+    return left + right
+"""
+
+TEST_MODULE = """\
+import unittest
+
+from calculator import add
+
+
+class AddTest(unittest.TestCase):
+    def test_adds(self):
+        self.assertEqual(add(2, 3), 5)
+"""
+
+
+def seed_runnable_project(project):
+    """Give the scratch repository tests that a test command can actually run.
+
+    Check 2 asks the operator to correct *how* the tests were run, which needs
+    there to have been tests. In an empty repository the request cannot be
+    carried out at all, and the session goes looking for context outside the
+    project — where the first tool call stops on a permission prompt, the turn
+    never ends, and no Stop hook fires.
+    """
+    (project / "Makefile").write_text(MAKEFILE)
+    (project / "calculator.py").write_text(MODULE)
+    # An empty root conftest.py is what puts the project root on sys.path, so
+    # the test module can import what it tests.
+    (project / "conftest.py").write_text("")
+    tests = project / "tests"
+    tests.mkdir(exist_ok=True)
+    (tests / "test_calculator.py").write_text(TEST_MODULE)
+    subprocess.run(["git", "add", "-A"], cwd=str(project), check=True)
+    subprocess.run(["git", "-c", "user.email=smoke@example.invalid",
+                    "-c", "user.name=Smoke Test", "commit", "-q",
+                    "-m", "Add a calculator and its tests"],
+                   cwd=str(project), check=True)
+    return project
+
+
+def runner_environment():
+    """The environment for a session that is expected to run ``pytest``.
+
+    The scratch project has no interpreter of its own, and the plugin has no
+    dependencies to install one. What it does have is this suite's own runner:
+    putting its directory on ``PATH`` makes ``pytest`` and the seeded
+    ``make test`` genuinely work inside the scratch repository, so the first
+    turn of check 2 succeeds instead of failing on a missing module.
+    """
+    environment = dict(os.environ)
+    environment["PATH"] = os.pathsep.join(
+        [os.path.dirname(sys.executable), environment.get("PATH", "")])
+    return environment
 
 
 def require_cli():
@@ -83,6 +167,44 @@ PROVIDER_PHRASES = re.compile(
 SESSION_RETRY_DELAY = 20
 
 
+def mangle_path(path):
+    """The CLI's directory key for a working directory.
+
+    Every character outside ``[A-Za-z0-9-]`` becomes a dash, so
+    ``/tmp/smoke/test_2_x/project`` keys as ``-tmp-smoke-test-2-x-project``.
+    Underscores are included: they are converted, not kept.
+    """
+    return re.sub(r"[^A-Za-z0-9-]", "-", str(path))
+
+
+def claude_session_dir(project):
+    """Where Claude Code keeps its own transcripts and memories for a directory."""
+    home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(
+        os.path.expanduser("~"), ".claude")
+    return os.path.join(home, "projects", mangle_path(project))
+
+
+def forget_previous_runs(project):
+    """Drop Claude's own transcripts and memories for a scratch directory.
+
+    These live outside the workspace, so wiping ``tmp/smoke`` does not reach
+    them and the next run starts holding the previous run's memory of the very
+    lesson under test. In check 2 that appeared as Claude answering "already
+    saved in memory, so no update needed" instead of taking the proposal, and in
+    check 6 it would let a fresh session answer from memory rather than from the
+    instruction that was just applied.
+
+    Guarded on the scratch root, so it can only ever remove state belonging to a
+    smoke workspace. If the CLI ever derives these paths differently the guard
+    stops matching and nothing is deleted, which loses repeatability rather than
+    touching anything it should not.
+    """
+    directory = claude_session_dir(project)
+    if os.path.basename(directory).startswith(mangle_path(SCRATCH_ROOT)):
+        shutil.rmtree(directory, ignore_errors=True)
+    return directory
+
+
 @pytest.fixture
 def scratch(request, monkeypatch, cli_version):
     """A throwaway git repository with isolated plugin state.
@@ -100,6 +222,7 @@ def scratch(request, monkeypatch, cli_version):
     project.mkdir(parents=True)
     (project / "CLAUDE.md").write_text(SEED_CLAUDE_MD)
     subprocess.run(["git", "init", "-q"], cwd=str(project), check=True)
+    forget_previous_runs(project)
 
     state = pathlib.Path(workspace) / "state"
     monkeypatch.setenv("SELF_IMPROVE_STATE_DIR", str(state))

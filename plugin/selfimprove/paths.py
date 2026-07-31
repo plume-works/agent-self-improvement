@@ -16,10 +16,15 @@ FILE_MODE = 0o600
 def state_root():
     """Resolve the runtime state root.
 
-    Order is fixed by spec section 4.1: the plugin data directory Claude Code
-    provides, then an explicit override, then a directory under the Claude home.
+    Order is fixed by spec section 4.1: an explicit override, then the plugin
+    data directory Claude Code provides, then a directory under the Claude home.
+
+    The override has to be checked first to be usable at all. Claude Code sets
+    ``CLAUDE_PLUGIN_DATA`` itself in every hook environment, replacing whatever
+    the surrounding environment held, so a root that lost to it would be ignored
+    by precisely the hooks that produce state.
     """
-    for key in ("CLAUDE_PLUGIN_DATA", "SELF_IMPROVE_STATE_DIR"):
+    for key in ("SELF_IMPROVE_STATE_DIR", "CLAUDE_PLUGIN_DATA"):
         value = os.environ.get(key)
         if value:
             return os.path.abspath(os.path.expanduser(value))

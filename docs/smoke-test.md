@@ -44,10 +44,24 @@ tmp/smoke/test_3_a_real_reviewer_produces_a_schema_valid_candidate/
 
 `make clean` removes them.
 
+Isolation works because `SELF_IMPROVE_STATE_DIR` outranks `CLAUDE_PLUGIN_DATA`
+when the state root is resolved. Claude Code sets `CLAUDE_PLUGIN_DATA` in every
+hook environment it creates and discards the inherited value, so with the other
+precedence the hooks inside a real session would write to your installed plugin
+data directory — mixing smoke state into your own, and letting your real
+cooldown and daily review counters suppress the check.
+
 Your own `~/.claude` is not isolated, because redirecting `CLAUDE_CONFIG_DIR`
 would take the CLI's authentication with it. No check proposes a user-scope
 change, and every mutation assertion checks the file it touched is inside the
 scratch repository.
+
+One thing inside `~/.claude` is removed: `projects/<scratch-path>/`, where Claude
+Code keeps its own transcripts and memories for the scratch directory. Those
+outlive `tmp/smoke`, so without this a second run begins already holding the
+first run's memory of the lesson under test — which is how check 2 once ended in
+"already saved in memory, so no update needed". The deletion is guarded on the
+scratch root and can only match a smoke workspace.
 
 ## The checks
 
@@ -85,18 +99,41 @@ session to wake. This was measured, not assumed — see
 automating it would take.
 
 So `make smoke` pauses, prints instructions, and opens a real session in your
-terminal with the scratch repository already prepared. You:
+terminal. The scratch repository for this check gets a `Makefile` and a small
+passing suite, because the correction has to be about something that really
+happened: in an empty repository the request cannot be carried out, and the
+session goes looking for context outside the project. You:
 
-1. correct a real approach, for example asking for the tests to be run and then
-   saying to always use `make test` in this repository;
-2. **wait up to a minute without typing** — the session should wake on its own
-   with a `self-improve:` notice naming a candidate;
-3. type `/exit`; and
-4. answer one yes/no question.
+1. ask for the tests to be run with pytest;
+2. **wait for the reply to finish** before typing anything;
+3. correct it — say to always use `make test` in this repo, not pytest directly;
+4. **wait up to two minutes without typing** — a line beginning
+   `self-improve:` should appear on its own, naming a candidate;
+5. type `/exit`; and
+6. answer one yes/no question.
 
-The harness then verifies what it can: that a candidate record exists and that
-diagnostics are clean. If you answer no, it prints the diagnostics and the
-workspace path rather than just failing.
+Three things will make it fail whatever the plugin does:
+
+- **Typing while Claude is still working.** Text entered mid-turn is queued and
+  folded into the turn already running, so it never arrives as a prompt of its
+  own — `UserPromptSubmit` never sees the correction and there is nothing to
+  review. This is the most common way to lose the check.
+- **A pending permission prompt.** The commands the script leads to are allowed
+  up front, but if Claude asks for anything else, answer it. A prompt waiting
+  for you is a turn that has not ended, no `Stop` hook fires, and the wake can
+  only follow a completed turn.
+- **An IDE terminal.** Your editor selection is attached to every prompt there,
+  so Claude can be handed the correction before you type it.
+
+The question asked afterwards is deliberately narrow — whether a line beginning
+`self-improve:` appeared on its own. Claude recalling one of its own memories, or
+agreeing to use `make test`, is ordinary behaviour and not this check passing.
+
+If you answer no, the harness prints what the state says: whether any state was
+written at all, the candidates, any turn file that survived the session (each one
+is a turn that never reached `Stop`), and the review counters. A missing
+`counters.json` is the loudest signal there — no review ever started, so no
+correction marker reached the gate.
 
 To skip it — in CI, or when you only want the deterministic checks:
 

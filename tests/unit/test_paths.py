@@ -8,18 +8,24 @@ import pytest
 from selfimprove import paths
 
 
-def test_state_root_prefers_plugin_data(tmp_path, monkeypatch):
+def test_state_root_prefers_the_explicit_override(tmp_path, monkeypatch):
+    """The override must win over the value Claude Code injects into hooks.
+
+    Claude Code sets ``CLAUDE_PLUGIN_DATA`` in every hook environment, replacing
+    an inherited one, so the other order leaves the override with no effect on
+    the hooks that write state.
+    """
     monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path / "data"))
-    monkeypatch.setenv("SELF_IMPROVE_STATE_DIR", str(tmp_path / "override"))
-    assert paths.state_root() == str(tmp_path / "data")
-
-
-def test_state_root_falls_back_to_override_then_claude_home(tmp_path, monkeypatch):
-    monkeypatch.delenv("CLAUDE_PLUGIN_DATA", raising=False)
     monkeypatch.setenv("SELF_IMPROVE_STATE_DIR", str(tmp_path / "override"))
     assert paths.state_root() == str(tmp_path / "override")
 
+
+def test_state_root_falls_back_to_plugin_data_then_claude_home(tmp_path, monkeypatch):
     monkeypatch.delenv("SELF_IMPROVE_STATE_DIR", raising=False)
+    monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path / "data"))
+    assert paths.state_root() == str(tmp_path / "data")
+
+    monkeypatch.delenv("CLAUDE_PLUGIN_DATA", raising=False)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
     assert paths.state_root() == str(tmp_path / "claude" / "self-improvement")
 

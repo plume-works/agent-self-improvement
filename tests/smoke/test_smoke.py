@@ -24,10 +24,13 @@ import sys
 import pytest
 
 from tests.smoke.conftest import (
+    INTERACTIVE_ALLOWED_TOOLS,
     PLUGIN_ROOT,
     ask,
     expansion,
     run_session,
+    runner_environment,
+    seed_runnable_project,
     si,
 )
 
@@ -341,6 +344,116 @@ def test_10_nothing_sensitive_survives_a_real_run(scratch):
 
 # Check 2 -------------------------------------------------------------------
 
+INTERACTIVE_SCRIPT = """
+==============================================================================
+  Check 2: does the asynchronous review wake an idle session?
+
+  An interactive Claude Code session is about to open in this terminal, in a
+  scratch repository with a Makefile and a small passing test suite already in
+  place. Nothing else is needed from you beforehand.
+
+  Inside that session:
+
+    1. Type this, and press Enter:
+
+         run the tests with pytest
+
+    2. WAIT for Claude to finish replying. Do not type while it is working.
+
+       Anything typed mid-turn is queued and folded into the turn already
+       running, so it never arrives as a prompt of its own. The correction is
+       then invisible to the capture hook and there is nothing to review.
+
+    3. Now type the correction, and press Enter:
+
+         no, always use `make test` in this repo, not pytest directly
+
+    4. Wait up to two minutes WITHOUT typing anything.
+
+       Expected: a line beginning `self-improve:` appears on its own, naming a
+       candidate, and Claude offers a proposal. That line is the thing under
+       test. Claude recalling one of its own memories is not it.
+
+    5. Type /exit to come back here.
+
+  Two more things that will fail the check whatever the plugin does:
+
+    - If Claude asks permission for anything, ANSWER IT. A pending prompt is a
+      turn that has not ended, and the wake can only follow a completed turn.
+    - Run `make smoke` in a plain terminal. In an IDE terminal your editor
+      selection is attached to every prompt, which can hand Claude the
+      correction before you type it.
+
+  Working directory: %s
+  Plugin state:      %s
+==============================================================================
+"""
+
+WAKE_QUESTION = ("Did a line beginning `self-improve:` appear on its own, "
+                 "without you typing anything?")
+
+
+def _forensics(scratch):
+    """What the state says about a wake that did not arrive.
+
+    Each of these distinguishes a different failure, which is the point: the
+    answer to "no wake" is almost never "the wake is broken".
+    """
+    state = str(scratch["state"])
+    lines = ["state root: %s%s" % (state, "" if os.path.isdir(state)
+                                   else "  (MISSING — no hook wrote any state, "
+                                        "so the plugin never ran in-session)")]
+
+    def listing(*parts):
+        path = os.path.join(state, *parts)
+        return sorted(os.listdir(path)) if os.path.isdir(path) else []
+
+    lines.append("candidates: %s" % (listing("candidates") or "(none)"))
+
+    # A turn file surviving the session means no Stop hook ever ran for it:
+    # review deletes the file whichever way it decides. That is the signature of
+    # a turn halted on a permission prompt, or of a session killed mid-turn.
+    leftover = []
+    turns = os.path.join(state, "turns")
+    for session in listing("turns"):
+        for name in sorted(os.listdir(os.path.join(turns, session))):
+            leftover.append("%s/%s" % (session, name))
+    lines.append("undiscarded turn files: %s  (each one is a turn that never "
+                 "reached Stop)" % (leftover or "(none)"))
+
+    pending = os.path.join(state, "pending.json")
+    if os.path.exists(pending):
+        with open(pending, encoding="utf-8") as handle:
+            lines.append("pending.json: %s" % handle.read().strip())
+
+    # counters.json is written the moment a review starts, so its absence is the
+    # single most informative fact here: the gate found no signal in any turn of
+    # the session. The usual cause is a correction that never arrived as a
+    # prompt of its own — typed while the previous turn was still running, and
+    # so folded into it, where the capture hook never sees it.
+    counters = os.path.join(state, "counters.json")
+    if os.path.exists(counters):
+        with open(counters, encoding="utf-8") as handle:
+            lines.append("counters.json: %s" % handle.read().strip())
+        lines.append("a last_review_at within %ds of the correction means the "
+                     "gate suppressed this one as cooldown." % 120)
+    else:
+        lines.append("counters.json: (none) — NO REVIEW EVER STARTED. The gate "
+                     "saw no signal, so no correction marker reached it. Check "
+                     "that the correction was submitted as its own prompt, "
+                     "after the previous reply had finished.")
+
+    diagnostics = os.path.join(state, "diagnostics.jsonl")
+    if os.path.exists(diagnostics):
+        with open(diagnostics, encoding="utf-8") as handle:
+            lines.append("diagnostics (tail):\n%s" % handle.read()[-800:])
+    else:
+        lines.append("diagnostics: (none — the reviewer did not fail)")
+
+    lines.append("workspace kept at %s" % scratch["workspace"])
+    return "\n".join(lines)
+
+
 @pytest.mark.interactive
 def test_2_the_async_wake_reaches_an_idle_session(scratch):
     """The one check a headless session cannot show.
@@ -358,61 +471,28 @@ def test_2_the_async_wake_reaches_an_idle_session(scratch):
         pytest.skip("not a terminal; run `make smoke` directly, or set "
                     "SMOKE_SKIP_INTERACTIVE=1")
 
-    sys.stdout.write("""
-==============================================================================
-  Check 2: does the asynchronous review wake an idle session?
+    seed_runnable_project(scratch["project"])
 
-  An interactive Claude Code session is about to open in this terminal, in a
-  scratch repository that is already set up. Nothing else is needed from you
-  beforehand.
-
-  Inside that session:
-
-    1. Type this, or anything that corrects a real approach:
-
-         run the tests with pytest
-
-       then, after it replies:
-
-         no, always use `make test` in this repo, not pytest directly
-
-    2. Wait up to a minute WITHOUT typing anything.
-
-       Expected: the session wakes on its own with a self-improve notice
-       naming a candidate, and Claude offers a proposal.
-
-    3. Type /exit to come back here.
-
-  Working directory: %s
-  Plugin state:      %s
-==============================================================================
-""" % (scratch["project"], scratch["state"]))
+    sys.stdout.write(INTERACTIVE_SCRIPT % (scratch["project"], scratch["state"]))
     sys.stdout.flush()
     input("  Press Enter to launch the session... ")
 
-    subprocess.run(["claude", "--plugin-dir", PLUGIN_ROOT],
-                   cwd=str(scratch["project"]), check=False)
+    subprocess.run(["claude", "--plugin-dir", PLUGIN_ROOT,
+                    "--allowedTools", *INTERACTIVE_ALLOWED_TOOLS],
+                   cwd=str(scratch["project"]), env=runner_environment(),
+                   check=False)
 
     # Whatever you saw, these are checkable: the review has to have run.
     candidates_dir = os.path.join(str(scratch["state"]), "candidates")
     candidates = (os.listdir(candidates_dir) if os.path.isdir(candidates_dir) else [])
-    diagnostics = os.path.join(str(scratch["state"]), "diagnostics.jsonl")
 
-    woke = ask("Did the session wake on its own with a self-improve candidate?")
+    woke = ask(WAKE_QUESTION)
     if woke is None:
         pytest.skip("no answer given")
 
     if not woke:
-        detail = ""
-        if os.path.exists(diagnostics):
-            with open(diagnostics, encoding="utf-8") as handle:
-                detail = handle.read()[-800:]
-        pytest.fail(
-            "the asynchronous wake did not reach the session.\n"
-            "candidates on disk: %s\n"
-            "diagnostics:\n%s\n"
-            "workspace kept at %s" % (candidates, detail or "(none)",
-                                      scratch["workspace"]))
+        pytest.fail("the asynchronous wake did not reach the session.\n%s"
+                    % _forensics(scratch))
 
     assert candidates, (
         "you saw a wake but no candidate was stored; the wake and the state "

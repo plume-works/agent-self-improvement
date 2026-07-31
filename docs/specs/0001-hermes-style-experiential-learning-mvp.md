@@ -160,9 +160,11 @@ A single dispatcher, `scripts/si <subcommand>`, is the only executable. Hooks an
 
 Runtime state resolves in this order:
 
-1. `${CLAUDE_PLUGIN_DATA}`;
-2. `${SELF_IMPROVE_STATE_DIR}`; then
+1. `${SELF_IMPROVE_STATE_DIR}`;
+2. `${CLAUDE_PLUGIN_DATA}`; then
 3. `~/.claude/self-improvement/`.
+
+The explicit override precedes the plugin data directory because Claude Code sets `CLAUDE_PLUGIN_DATA` in every hook environment it creates, discarding any inherited value. An override that lost to it would have no effect on the hooks that write state, which is the only place the setting matters.
 
 #### Environment variables
 
