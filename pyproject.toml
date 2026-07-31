@@ -1,0 +1,48 @@
+[project]
+name = "claude-self-improvement"
+version = "0.1.0"
+description = "Hook-driven experiential learning plugin for Claude Code."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+
+# Intentionally and permanently empty. Plugin runtime code imports the standard
+# library only, because hook scripts run inside Claude Code's environment on a
+# five-second budget and must fail open; a third-party import there would need a
+# bootstrap step in the code that has to be most reliable. See spec section 4.1.
+# tests/unit/test_no_runtime_deps.py enforces this.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["plugin", "."]
+filterwarnings = ["error"]
+markers = [
+    "smoke: drives a real Claude Code session and spends model usage; excluded from `make test` and run by `make smoke`",
+    "interactive: needs a person at the terminal; skipped with SMOKE_SKIP_INTERACTIVE=1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "C4", "SIM", "RUF"]
+ignore = [
+    # The runtime targets Python 3.9, so 3.10+ idioms are unavailable.
+    "UP006",
+    "UP007",
+    "UP035",
+    # printf-style formatting is used deliberately for 3.9 compatibility.
+    "UP031",
+    "UP032",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]

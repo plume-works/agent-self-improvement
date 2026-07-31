@@ -1,0 +1,12 @@
+{
+  "extraKnownMarketplaces": {
+    "chocobot-farm": {
+      "source": {
+        "source": "github",
+        "repo": "chocobot-farm/agent-devcontainer",
+        "ref": "spec/catalog-distribution-02-claude-plugin"
+      }
+    }
+  },
+  "enabledPlugins": { "agentdev@chocobot-farm": true }
+}

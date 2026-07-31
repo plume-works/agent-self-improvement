@@ -1,0 +1,13 @@
+{
+  "session_id": "session-1",
+  "prompt_id": "prompt-2",
+  "transcript_path": "/Users/example/.claude/projects/example/session-1.jsonl",
+  "cwd": "/Users/example/project",
+  "permission_mode": "default",
+  "hook_event_name": "UserPromptExpansion",
+  "expansion_type": "slash_command",
+  "command_name": "apply",
+  "command_args": "prop-abc123def456 0123456789ab",
+  "command_source": "plugin",
+  "prompt": "/self-improve:apply prop-abc123def456 0123456789ab"
+}

@@ -1,10 +1,58 @@
 # Claude Self-Improvement
 
-A proposed Claude Code learning loop that turns verified corrections and hard-won workflows into durable, reviewable instructions and skills.
+A Claude Code learning loop that turns verified corrections and hard-won workflows into durable, reviewable instructions and skills.
 
 ## Status
 
-Design only. The current implementation target is a deliberately small hook-driven plugin that adapts `claude-improve` into an automatic, review-gated experiential-learning loop.
+The MVP is implemented. All four slices of [Spec-0001](docs/specs/0001-hermes-style-experiential-learning-mvp.md) are in `plugin/`, with an offline suite covering the ten acceptance conditions of its section 15, and a [packaged smoke test](docs/smoke-test.md) that drives a real Claude Code session.
+
+`make smoke` runs nine of its ten checks headlessly and asks you one question for the tenth: an `asyncRewake` hook has no idle session to wake in print mode, so the asynchronous wake is confirmed in a real interactive session. [Spec-0002](docs/specs/0002-pty-wake-harness.md) proposes automating it.
+
+The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
+
+## Install
+
+Requires Claude Code **2.1.196 or later**; earlier versions have no `UserPromptExpansion` event, which is the entire authorization path.
+
+Try it in one session without installing anything:
+
+```bash
+claude --plugin-dir /path/to/claude-self-improvement/plugin
+```
+
+Check the install invariants at any time:
+
+```bash
+./plugin/scripts/si self-test
+```
+
+## Use
+
+Most of the time there is nothing to do. After a turn that produced a real correction, a verified workaround, or repeated friction, the session wakes on its own with one candidate and Claude presents an exact proposal.
+
+| Command | Effect |
+| --- | --- |
+| `/self-improve:improve` | Force a review of the current turn when automatic detection missed something |
+| `/self-improve:apply <proposal-id> <hash-prefix>` | Install exactly the displayed bytes |
+| `/self-improve:reject <proposal-id>` | Discard the proposal; the target is untouched |
+| `/self-improve:rollback <mutation-id>` | Restore the verified backup |
+
+Only a command **you type** authorizes a change. Claude invoking the same skill, or you saying "looks good", produces no authorization and the mutation refuses.
+
+To turn it off without uninstalling, set `SELF_IMPROVE_DISABLE=1`.
+
+## Develop
+
+```bash
+make test        # offline suite, no model calls
+make lint        # ruff
+make validate    # claude plugin validate ./plugin
+make check       # the three above
+make smoke       # packaged smoke test against a real session; spends model usage
+make smoke-auto  # the same, skipping the one interactive check
+```
+
+`make smoke` leaves its scratch workspace under `tmp/smoke/` so a failure can be opened and read.
 
 ## MVP
 
@@ -26,6 +74,17 @@ UserPromptSubmit / tool outcome hooks
 ```
 
 The existing `claude-improve` reasoning workflow is narrowed into a noninteractive current-turn reviewer; its broad history scan and direct multi-artifact mutation are not inherited. Anthropic's official [`security-guidance`](https://code.claude.com/docs/en/security-guidance#how-the-plugin-integrates-with-claude-code) plugin demonstrates the same supported Stop hook → independent background review → session wake pattern.
+
+The reviewer is a separate `claude -p` call with a reviewer-only system prompt, hooks disabled, and no tools at all. It receives its evidence on standard input, so it has nothing to read, write, or execute with. It cannot mutate an artifact even if it tries.
+
+### What a proposal may touch
+
+| Scope | Allowed targets |
+| --- | --- |
+| User | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md` |
+| Project | `./CLAUDE.md`, `./.claude/CLAUDE.md`, `./.claude/rules/*.md`, `./.claude/skills/<name>/SKILL.md` |
+
+Nothing else. Settings, hook configuration, Claude-managed auto-memory, and source files are rejected before any I/O, as are symlinks and paths that resolve outside an allowed root.
 
 ### MVP principles
 

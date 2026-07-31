@@ -1,7 +1,8 @@
 # Spec-0001: Hook-driven experiential learning plugin MVP
 
-- **Status:** Proposed implementation specification
+- **Status:** Accepted; implemented in slices 1–4
 - **Scope:** Standalone Claude Code CLI on one local user account
+- **Runtime:** Python 3.9+, standard library only
 - **Implementation strategy:** package a narrowed `claude-improve` reviewer as a Claude Code plugin and invoke it selectively through supported lifecycle hooks
 - **Supersedes for MVP planning:** the earlier multi-phase specifications, retained as [hypothetical extensions](../hypothetical-extensions/specs/README.md)
 
@@ -136,6 +137,46 @@ claude-self-improvement/
 
 Names may change during implementation, but the separation of capture, review, authorization, mutation, and rollback is normative.
 
+### 4.1 Implementation decisions
+
+#### Runtime and dependencies
+
+Runtime code under the plugin directory must import successfully with nothing but a system `python3`, offline. Hook scripts run inside Claude Code's environment rather than one the plugin controls, capture hooks run on a five-second budget, and every capture path must fail open. A third-party import in that path requires a bootstrap step in precisely the code that must be most reliable.
+
+Anthropic's `security-guidance` plugin demonstrates the cost of the alternative: it builds a virtual environment under `~/.claude/security/`, requires `pip` and network access, documents degraded fallbacks for when that install fails, and treats YAML support as best-effort because the plugin does not install PyYAML for the user.
+
+The rule therefore splits by location rather than by preference:
+
+- plugin runtime code: standard library only, enforced by a test that walks the AST of every runtime module and fails on any non-stdlib import;
+- tests and development tooling: unconstrained, managed with `uv`, with `project.dependencies` permanently empty.
+
+The standard library covers hashing, JSON, unified diffs, subprocess timeouts, advisory locking, and atomic replacement. What remains hand-written is a small set of generic helpers — atomic write with fsync and mode preservation, a lock context manager, a `name`/`description`-only frontmatter reader, and a flat reviewer-output validator — alongside domain logic that no dependency provides.
+
+#### Entry point
+
+A single dispatcher, `scripts/si <subcommand>`, is the only executable. Hooks and skills both invoke it, so there is one place that parses hook JSON from standard input and one place that fails open. The normative separation of capture, review, authorization, mutation, and rollback required by section 4 is realized as separate modules rather than separate executables.
+
+#### State root
+
+Runtime state resolves in this order:
+
+1. `${SELF_IMPROVE_STATE_DIR}`;
+2. `${CLAUDE_PLUGIN_DATA}`; then
+3. `~/.claude/self-improvement/`.
+
+The explicit override precedes the plugin data directory because Claude Code sets `CLAUDE_PLUGIN_DATA` in every hook environment it creates, discarding any inherited value. An override that lost to it would have no effect on the hooks that write state, which is the only place the setting matters.
+
+#### Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `SELF_IMPROVE_REVIEW_MODEL` | Reviewer model; defaults to `sonnet` |
+| `SELF_IMPROVE_REVIEW_TIMEOUT` | Seconds to wait for the reviewer before giving up silently |
+| `SELF_IMPROVE_DISABLE` | Set to `1` to disable the plugin without uninstalling it |
+| `SELF_IMPROVE_REVIEWER` | Set to `1` in the reviewer's own environment; suppresses reflection in reviewer-originated sessions |
+| `SELF_IMPROVE_REVIEWER_CMD` | Overrides the reviewer binary; used by tests to substitute a deterministic fake |
+| `SELF_IMPROVE_STATE_DIR` | Overrides the state root |
+
 ## 5. Hook design
 
 ### 5.1 `UserPromptSubmit`
@@ -150,9 +191,11 @@ It must not append raw prompts to telemetry or a durable learning database.
 
 ### 5.2 `UserPromptExpansion`
 
-A synchronous hook matched only to the plugin's `apply`, `reject`, and `rollback` command names records direct user invocation and the exact `command_args`. Claude Code documents this event specifically for user-typed commands before their prompts reach Claude. The resulting one-time authorization is bound to the session, operation, proposal or mutation ID, and displayed hash prefix.
+A synchronous hook records direct user invocation of the plugin's `apply`, `reject`, and `rollback` commands together with the exact `command_args`. Claude Code documents this event specifically for user-typed commands before their prompts reach Claude. The resulting one-time authorization is bound to the session, operation, proposal or mutation ID, and displayed hash prefix.
 
 This closes the direct-command path that a `PreToolUse` hook cannot observe. Invocation by Claude through the `Skill` tool does not authorize mutation; only a matching `UserPromptExpansion` event with `expansion_type: "slash_command"` and the plugin as `command_source` is accepted.
+
+The hook registers a wildcard matcher and performs command selection inside the script, rather than relying on a matcher expression. The namespaced form Claude Code reports in `command_name` for a plugin skill is not guaranteed, and a matcher that failed to match would silently discard the user's authorization rather than fail loudly. The script accepts an event only when `expansion_type` is `slash_command`, `command_source` is the plugin, and the command name resolves to one of the three authorizing operations. Every other expansion exits without recording anything.
 
 ### 5.3 `PostToolUseFailure`
 
@@ -185,9 +228,11 @@ The `Stop` command hook is configured with `asyncRewake: true` and performs the 
 
 The hook exits successfully for no-op and internal failure cases. It uses the documented `asyncRewake` signal only when a valid candidate should wake Claude.
 
-### 5.6 `SessionEnd`
+### 5.6 `SessionEnd` and `SessionStart`
 
-`SessionEnd` is not the primary reviewer. It may delete expired ephemeral files or queue an already-detected candidate for the next session, but it must not depend on having time to perform model review or interactive approval after the session has terminated.
+`SessionEnd` is not the primary reviewer. It may delete expired ephemeral files or queue an already-detected candidate for the next session, but it must not depend on having time to perform model review or interactive approval after the session has terminated. The implementation restricts it to an expiry sweep.
+
+`SessionStart` performs the retrieval half that section 11 requires: when review completed while no session was available to wake, it reports the retained candidates as context so the user can ask for them explicitly. It performs no model review and no mutation.
 
 ## 6. Meaningful-event gate
 
@@ -242,7 +287,21 @@ It does not receive unrelated historical transcripts, credentials, environment d
 
 ### 7.3 Reviewer isolation
 
-The reviewer runs as a separate Claude call with fresh context, a reviewer-only system prompt, plugin hooks disabled, and read-only access to an explicit artifact allowlist. The implementation may follow the official `security-guidance` plugin's Agent SDK pattern, but must use the user's configured Claude authentication rather than introducing a separate credential requirement.
+The reviewer runs as a separate Claude call with fresh context, a reviewer-only system prompt, plugin hooks disabled, and no tools at all. It uses the user's configured Claude authentication and introduces no separate credential requirement.
+
+The committed invocation is:
+
+```bash
+claude -p --model "${SELF_IMPROVE_REVIEW_MODEL:-sonnet}" \
+  --system-prompt-file "<plugin>/reviewer/prompt.md" \
+  --tools "" --disallowedTools "*" --strict-mcp-config \
+  --settings '{"disableAllHooks": true}' \
+  --output-format json --max-turns 1
+```
+
+The reviewer receives its entire evidence bundle on standard input. Candidate owner paths and summaries are gathered deterministically by the orchestrator and inlined, so the reviewer needs no filesystem access whatsoever. This is strictly stronger than the read-only artifact allowlist this section would otherwise permit: the reviewer has no tool with which to read, write, or execute anything.
+
+`SELF_IMPROVE_REVIEWER=1` is set in the reviewer's environment so that any session it originates suppresses reflection.
 
 ### 7.4 Reviewer output
 
@@ -279,6 +338,23 @@ Preference order:
 4. propose a new skill only when no suitable owner exists.
 
 The MVP may patch one explicitly selected artifact or create one personal/project skill. It must not perform broad configuration cleanup, delete artifacts, modify Claude-managed auto-memory, rewrite hooks/settings, or consolidate multiple files.
+
+### 8.1 Path allowlist
+
+A proposal may target only these paths. The list is normative and is enforced by the mutator, not by the reviewer or by any model-authored instruction.
+
+| Scope | Allowed targets |
+| --- | --- |
+| User | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md` |
+| Project | `./CLAUDE.md`, `./.claude/CLAUDE.md`, `./.claude/rules/*.md`, `./.claude/skills/<name>/SKILL.md` |
+
+Paths are resolved to their real location before the check, and containment and shape are both decided on the resolved path. Traversal outside an allowed root and non-regular files are rejected before any I/O.
+
+Symlink rejection is scoped deliberately. A symlink for the target itself is always refused, because the indirection makes the reviewed destination and the written destination two different things, as is any symlinked component between an allowed root and the target. Components above the root are not checked: symlinked prefixes are ordinary and outside this system's concern, since macOS reaches `/tmp` and `/etc` through them and a home or checkout directory may be one too. Rejecting those would refuse most scratch directories while protecting nothing.
+
+`AGENTS.md` is deliberately excluded, including in repositories such as this one that keep their instructions there and import them from `CLAUDE.md`. Claude Code does not load `AGENTS.md` directly, so it is not an owner this system can reason about; a lesson belonging to such a repository is routed to the importing `CLAUDE.md` or to a rule.
+
+Everything not listed above is rejected, including `settings.json`, hook configuration, Claude-managed auto-memory, and arbitrary source files.
 
 A proposal must contain:
 
@@ -323,6 +399,24 @@ Runtime state is private to the user and separated into:
 - verified mutation backups; and
 - redacted diagnostics and proposal fingerprints.
 
+### 10.1 State layout
+
+Relative to the state root defined in section 4.1. Directories are created mode `0700` and files mode `0600`.
+
+| Path | Contents | Lifetime |
+| --- | --- | --- |
+| `turns/<session>/<turn>.json` | bounded event records for one turn | deleted after review; expires after 1 hour |
+| `candidates/<id>.json` | accepted reviewer output awaiting presentation | expires after 24 hours |
+| `proposals/<id>.json` | immutable staged bytes and hashes | expires after 24 hours |
+| `authorizations/<nonce>.json` | one-time apply, reject, or rollback grant | expires after 10 minutes |
+| `backups/<mutation_id>/` | mode-preserving verified preimage | retained |
+| `inflight.json` | interrupted-mutation reconciliation marker | cleared on completion |
+| `mutations.jsonl` | redacted mutation and rollback journal | retained |
+| `fingerprints.json` | accepted and rejected proposal fingerprints | retained |
+| `counters.json` | cooldown and daily invocation counters | retained |
+| `pending.json` | candidates awaiting an available session | expires with the candidate |
+| `diagnostics.jsonl` | redacted error classes only | retained |
+
 Permissions default to user-only access. Durable state must not contain:
 
 - raw prompts or assistant responses;
@@ -338,6 +432,7 @@ The plugin never edits or parses Claude-managed auto-memory internals.
 
 - Capture/gating failure: fail open and preserve the completed task.
 - Reviewer timeout, authentication failure, or malformed output: stay silent and record only a redacted error class.
+- Reviewer unavailability distinct from reviewer disagreement: the recorded class must name a provider failure — rate limit, overload, usage limit, unreachable model, or other API error — separately from a review that ran and proposed nothing. Both stay silent; only the class distinguishes a transient condition from a decision, and the class is all a later investigation has.
 - Session unavailable when review completes: retain the staged candidate for explicit retrieval on the next session start; do not mutate.
 - Duplicate candidate: suppress it.
 - User rejection: invalidate the candidate and retain only its fingerprint and rejection reason category.
@@ -414,7 +509,7 @@ These remain hypothetical extensions rather than MVP dependencies.
 
 ### Real packaged smoke test
 
-At least one supported Claude Code CLI version must demonstrate:
+This test requires an interactive Claude Code session and is therefore a documented manual procedure in [`docs/smoke-test.md`](../smoke-test.md) rather than part of the automated suite. At least one supported Claude Code CLI version must demonstrate:
 
 1. a completed task with a verified correction returns its normal response without waiting for review;
 2. the asynchronous reviewer wakes the same idle session with one candidate;
