@@ -41,3 +41,7 @@ When the MVP changes, update together:
 - `docs/specs/0001-hermes-style-experiential-learning-mvp.md`.
 
 Do not rewrite hypothetical extension specifications merely to match the MVP. Validate relative Markdown links before committing.
+
+## Debugging
+
+Never use plain `make wake`, debug with `make wake-echo` and always capture output to a file.
