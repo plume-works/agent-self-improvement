@@ -103,6 +103,14 @@ verifies it against a candidate identifier it reads from disk rather than
 against anything on screen. It has not yet completed a passing live run, so the
 manual procedure below is still the supported way to verify the wake.
 
+When `make wake` fails, read its trace before anything else: it names each step
+as it starts, beats every five seconds while waiting, and echoes the screen after
+every turn, and the raw terminal stream of the run is left in
+`tmp/smoke/<test>/<name>.pty.log`. `make wake-echo` drives the same harness
+against a fake terminal that only echoes what it captured — no model, no cost —
+and a pass there means the input reached the session and the failure is on the
+other side of the pty.
+
 So `make smoke` pauses, prints instructions, and opens a real session in your
 terminal. The scratch repository for this check gets a `Makefile` and a small
 passing suite, because the correction has to be about something that really

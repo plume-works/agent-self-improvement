@@ -1,6 +1,6 @@
 # Spec-0002: Automated verification of the asynchronous wake
 
-- **Status:** Implemented; **unverified**. The harness is `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`. Its model-free self-checks pass; its two live checks have not yet completed a passing run, so acceptance criteria 1 and 2 in section 6 are not met.
+- **Status:** Implemented; **partially verified**. The harness is `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`. Its model-free self-checks and its echo-mode checks pass. Of the two live checks, the negative control (`make wake`, 2026-07-31) has been observed passing — a candidate stored on disk and its identifier absent from the screen when the `Stop` hook cannot signal — so acceptance criterion 2 in section 6 is met. The positive check has still never passed: in that run the scripted exchange completed in 39s and review ran, but the reviewer stored no candidate, so nothing existed to wake with. Criterion 1 is not met.
 - **Scope:** Test tooling only. No change to the plugin, its hooks, or its mutation protocol.
 - **Depends on:** [Spec-0001](0001-hermes-style-experiential-learning-mvp.md), implemented
 
@@ -114,7 +114,19 @@ The harness is normally run from inside a Claude Code session, which exports var
 
 A permission prompt is fatal here in a way it is not in print mode. The session stops and waits, the turn never ends, no `Stop` hook fires for an unfinished turn, and the wake under test cannot happen. The harness must not answer prompts — that would mean reading the interface — so every command the scripted turns may reasonably use is allowed up front, and an unlisted one fails the run with a readable message rather than executing unreviewed.
 
-### 7.4 Only one run at a time
+### 7.4 The harness must say where it is
+
+A harness that types blind produces one ambiguous failure: nothing happened, and nothing says whether the input arrived. Two facilities remove that ambiguity, and both are debugging tools rather than assertions — nothing in the harness reads them to decide anything.
+
+**A live trace.** Every step names itself as it starts, repeats itself every five seconds while a wait is running, and reports how it ended. Deadline checks print what is left of the budget. After each turn the flattened screen is echoed, which is the only record of whether a prompt was captured as a prompt: a correction folded into the turn already running looks, in plugin state, exactly like a review that decided against proposing anything. The raw terminal stream of every run, escape sequences included, is written to `<name>.pty.log` beside the workspace under `tmp/smoke/`. On by default; `WAKE_TRACE=0` silences the stdout half. `WAKE_BUDGET` overrides the per-check budget, in both directions — shorter to see a stall fail quickly, longer to find out whether a check that keeps expiring would ever have finished.
+
+**Echo mode.** `tests/smoke/echo_terminal.py` is a fake interactive program that echoes each captured line with a marker, redraws for a moment so quiescence has something to detect, and can emit an unprompted marker seconds later — the shape of the wake, without a model. `tests/smoke/test_echo_mode.py` drives it with the same harness the live checks use and asserts the four things they depend on: input is delivered a line at a time, turn boundaries are detected from quiescence, a marker arriving with nothing typed is seen, and one that never arrives is not. It costs nothing and is coupled to no interface, so unlike the live checks it is not marked `pty` and runs in `make test`; `make wake-echo` runs it alone with the trace on.
+
+Together they partition a stalled live run. If echo mode passes, the harness delivers input and detects turns, and the stall is in the session under test — which the trace then locates by step.
+
+**A failing check must not wait twice.** When the candidate wait runs its full window and review stored nothing, the run does not spend a second window looking again; waiting the same interval a second time cannot change the answer, and doubling a failing check's runtime is most of what makes this harness feel like it has hung. The second wait is spent only when the first was cut short by the budget rather than by its own limit, where a late review and a missing wake are still genuinely distinguishable.
+
+### 7.5 Only one run at a time
 
 Both live checks reuse per-test workspaces under `tmp/smoke/`, and the fixture wipes a workspace at the start of each test. Two concurrent runs therefore delete each other's state mid-flight, and neither result means anything. This has already happened once. `make wake` must be run alone.
 
@@ -123,8 +135,19 @@ Both live checks reuse per-test workspaces under `tmp/smoke/`, and the fixture w
 Under the evidence rule in [`AGENTS.md`](../../AGENTS.md#specification-status) this specification stays `Implemented; unverified` until all of the following have been observed and recorded:
 
 1. `make wake` completing with both live checks passing;
-2. the negative control failing the run when the wake is suppressed, as its own passing assertion;
+2. ~~the negative control failing the run when the wake is suppressed, as its own passing assertion~~ — **observed 2026-07-31.** The control ran the full script against a `Stop` hook that discards its exit code, stored `cand-0785fcbaf540`, and reported no wake; the check passed in 91s, inside its budget;
 3. `make wake-repeat` completing ten consecutive runs without a failure; and
-4. a run in which the budget is *not* consumed — evidence that three minutes is genuinely generous rather than the thing being measured.
+4. a run in which the budget is *not* consumed — evidence that three minutes is genuinely generous rather than the thing being measured. **Partially observed 2026-07-31**, by the control above; the positive check has not yet finished inside its budget for a reason other than a stall.
 
 Item 4 exists because a check that always finishes at its deadline is not passing, it is timing out somewhere quiet.
+
+### 8.1 What the first traced run showed
+
+The trace added in section 7.4 was written to debug a run that looked like a hang. It was not one, and it named the difference on its first use:
+
+- the scripted exchange worked. Both prompts were captured as their own turns — visible in the echoed screen — and the correcting turn ended 39s into the check, well inside every limit;
+- review ran. `counters.json` recorded `count: 1` with `last_review_at` set, and the turn files were consumed;
+- no candidate was stored, and no diagnostic was journalled — the shape of a reviewer that completed and returned `discard`, not of a reviewer that failed; and
+- the check then spent its remaining 120s in two consecutive waits for a candidate that could no longer arrive, which is what made three minutes per check feel like a hang. Section 7.4 now forbids the second wait.
+
+In the same run the control produced a candidate from the identical script, so the positive check's empty result is a reviewer outcome that varies rather than a broken exchange. The screen also showed the session writing its own auto-memory for the correction during the turn under test, which is a plausible reason for a reviewer to find nothing durable left to propose. That belongs to Spec-0001's gate and reviewer, not to this harness, and is recorded here only as the observation that led there.

@@ -30,6 +30,7 @@ import select
 import signal
 import struct
 import subprocess
+import sys
 import termios
 import time
 
@@ -64,8 +65,102 @@ CHECK_BUDGET = 180.0
 EXIT_TIMEOUT = 10.0
 
 
+# How often a wait that is still running says so. Without this a stalled check
+# is indistinguishable from a working one until its budget expires, which is the
+# whole difficulty in debugging this harness: everything interesting happens
+# between two log lines that are three minutes apart.
+HEARTBEAT_SECONDS = 5.0
+
+# How much of the flattened screen an echo line shows. Enough to see whether a
+# prompt landed and what came back, short enough to stay readable in a trace.
+ECHO_CHARACTERS = 400
+
+
 class Expired(Exception):
     """The budget for this check ran out. Carries no state; the caller reports."""
+
+
+class Trace:
+    """A timestamped account of what the harness did and what came back.
+
+    The failure this exists for is not a wrong assertion, it is a check that
+    sits there. A run that stalls has to say *where* it stalled — which prompt
+    was sent, whether anything was read afterwards, which wait it is inside —
+    and it has to say it while it is still stalling rather than in a post-mortem
+    three minutes later.
+
+    Three streams, each with a different job:
+
+    - ``event`` lines to stdout, the readable narrative of the run;
+    - ``echo`` lines, the flattened screen after each step, which is what shows
+      whether input the harness typed was actually captured by the session; and
+    - a raw transcript file, every byte the pty produced, escape sequences
+      included, for when the flattened view is not enough.
+
+    Off by nothing: tracing costs nothing measurable and these checks are opt-in
+    already. ``WAKE_TRACE=0`` silences stdout; the transcript is always written
+    when a directory is given, since a workspace is kept after a run anyway.
+    """
+
+    def __init__(self, name, directory=None, stream=None):
+        self.name = name
+        self.started = time.time()
+        self.stream = stream if stream is not None else sys.stdout
+        self.enabled = os.environ.get("WAKE_TRACE", "1") not in ("0", "", "no")
+        self.transcript = None
+        if directory is not None:
+            with contextlib.suppress(OSError):
+                os.makedirs(str(directory), exist_ok=True)
+                self.transcript = open(  # noqa: SIM115 - closed in close()
+                    os.path.join(str(directory), "%s.pty.log" % name),
+                    "w", encoding="utf-8")
+
+    def elapsed(self):
+        return time.time() - self.started
+
+    def event(self, kind, detail=""):
+        line = "[wake %6.1fs] %-22s %s" % (self.elapsed(), kind, detail)
+        if self.enabled:
+            self.stream.write(line.rstrip() + "\n")
+            self.stream.flush()
+        if self.transcript is not None:
+            self.transcript.write("### " + line.strip() + "\n")
+            self.transcript.flush()
+
+    def echo(self, label, text, characters=ECHO_CHARACTERS):
+        """What the terminal is showing, with everything the renderer owns gone.
+
+        This is the echo of captured input: the harness types blind — it never
+        reads the screen to decide anything — so this is the only place a person
+        can see whether what was typed arrived, arrived twice, or landed inside
+        the previous turn instead of starting its own.
+        """
+        visible = ANSI.sub("", text)
+        lines = [line.rstrip() for line in visible.splitlines() if line.strip()]
+        self.event("echo/" + label, "%d chars" % len(text))
+        if not self.enabled:
+            return
+        for line in "\n".join(lines)[-characters:].splitlines():
+            self.stream.write("             | %s\n" % line)
+        self.stream.flush()
+
+    def raw(self, text):
+        if self.transcript is not None:
+            self.transcript.write(text)
+            self.transcript.flush()
+
+    def close(self):
+        if self.transcript is not None:
+            self.transcript.close()
+            self.transcript = None
+
+
+class SilentTrace(Trace):
+    """A trace that records nothing, for the self-checks that do not want one."""
+
+    def __init__(self):
+        Trace.__init__(self, "silent")
+        self.enabled = False
 
 
 class Deadline:
@@ -76,9 +171,15 @@ class Deadline:
     wait was within its own limit and the check still ran for eighteen minutes.
     """
 
-    def __init__(self, budget=CHECK_BUDGET):
-        self.budget = budget
+    def __init__(self, budget=None, trace=None):
+        # ``WAKE_BUDGET`` exists for debugging, in both directions: a shorter
+        # budget to see a stall fail quickly, a longer one to find out whether a
+        # check that keeps expiring would ever have finished. It is not a
+        # setting — the normative bound in Spec-0002 section 7.1 is the default.
+        self.budget = float(os.environ.get("WAKE_BUDGET") or CHECK_BUDGET) \
+            if budget is None else budget
         self.started = time.time()
+        self.trace = trace if trace is not None else SilentTrace()
 
     def remaining(self):
         return max(0.0, self.budget - (time.time() - self.started))
@@ -94,6 +195,8 @@ class Deadline:
         return min(timeout, self.remaining())
 
     def check(self, what):
+        self.trace.event("budget", "%s: %.0fs used, %.0fs left of %.0fs"
+                         % (what, self.elapsed(), self.remaining(), self.budget))
         if self.expired():
             raise Expired("%s: the %.0fs budget for this check ran out"
                           % (what, self.budget))
@@ -107,11 +210,13 @@ def flatten(text):
 class PtySession:
     """One interactive session on a pty, driven a line at a time."""
 
-    def __init__(self, command, cwd, env, deadline=None):
+    def __init__(self, command, cwd, env, deadline=None, trace=None):
         self.command = list(command)
         # Shared with the caller, so a wait started here can never outlive the
         # check's budget even if its own timeout is generous.
         self.deadline = deadline
+        self.trace = trace or (deadline.trace if deadline is not None
+                               else SilentTrace())
         self.cwd = str(cwd)
         self.env = dict(env)
         self.env.update({
@@ -135,6 +240,8 @@ class PtySession:
     # Lifecycle ------------------------------------------------------------
 
     def start(self):
+        self.trace.event("start", " ".join(self.command))
+        self.trace.event("cwd", self.cwd)
         master, slave = pty.openpty()
         fcntl.ioctl(master, termios.TIOCSWINSZ,
                     struct.pack("HHHH", LINES, COLUMNS, 0, 0))
@@ -145,6 +252,7 @@ class PtySession:
         )
         os.close(slave)
         self.master = master
+        self.trace.event("started", "pid %d" % self.process.pid)
         return self
 
     def _bound(self, timeout):
@@ -167,6 +275,7 @@ class PtySession:
         if self.process is None:
             return None
         status = None
+        self.trace.event("close", "asking the session to exit")
         try:
             if self.process.poll() is None:
                 self.send_line("/exit")
@@ -175,11 +284,15 @@ class PtySession:
                 status = self.process.returncode
         finally:
             if self.process.poll() is None:
+                self.trace.event("close/kill",
+                                 "the session ignored /exit; terminating")
                 self._terminate()
                 status = None
             if self.master is not None:
                 os.close(self.master)
                 self.master = None
+        self.trace.event("closed", "exit status %r" % (status,))
+        self.trace.close()
         return status
 
     def _wait(self, timeout):
@@ -207,6 +320,7 @@ class PtySession:
     # Input ----------------------------------------------------------------
 
     def send_line(self, text):
+        self.trace.event("send", repr(text))
         self.write(text + "\r")
 
     def write(self, data):
@@ -237,9 +351,11 @@ class PtySession:
             raise
         text = chunk.decode("utf-8", errors="replace")
         self.buffer += text
+        self.trace.raw(text)
         return text
 
-    def wait_until_quiet(self, quiet=QUIET_SECONDS, timeout=TURN_TIMEOUT):
+    def wait_until_quiet(self, quiet=QUIET_SECONDS, timeout=TURN_TIMEOUT,
+                         label="turn"):
         """Block until the session stops emitting for ``quiet`` seconds.
 
         This is the turn boundary. It is deliberately not "a prompt appeared":
@@ -248,31 +364,68 @@ class PtySession:
 
         Returns True if the stream went quiet, False if it never did.
         """
-        deadline = time.time() + self._bound(timeout)
+        allowed = self._bound(timeout)
+        deadline = time.time() + allowed
+        started = time.time()
+        self.trace.event("wait/%s" % label,
+                         "quiet for %.1fs, up to %.0fs" % (quiet, allowed))
+        received = 0
         last = time.time()
+        beat = time.time()
         while time.time() < deadline:
-            if self._read_available(0.5):
+            chunk = self._read_available(0.5)
+            if chunk:
+                received += len(chunk)
                 last = time.time()
-                continue
-            if self.process is not None and self.process.poll() is not None:
+            elif self.process is not None and self.process.poll() is not None:
+                self.trace.event("wait/%s exit" % label,
+                                 "the session ended after %.1fs, %d chars"
+                                 % (time.time() - started, received))
                 return True
-            if time.time() - last >= quiet:
+            elif time.time() - last >= quiet:
+                self.trace.event("wait/%s quiet" % label,
+                                 "after %.1fs, %d chars"
+                                 % (time.time() - started, received))
                 return True
+            if time.time() - beat >= HEARTBEAT_SECONDS:
+                beat = time.time()
+                self.trace.event("wait/%s ..." % label,
+                                 "%.0fs elapsed, %d chars, %.1fs since output, "
+                                 "%.0fs left" % (time.time() - started, received,
+                                                 time.time() - last,
+                                                 deadline - time.time()))
+        self.trace.event("wait/%s TIMEOUT" % label,
+                         "still talking after %.1fs, %d chars"
+                         % (time.time() - started, received))
         return False
 
-    def watch(self, predicate, timeout, poll=0.5):
+    def watch(self, predicate, timeout, poll=0.5, label="condition"):
         """Read until ``predicate()`` holds, or the timeout expires.
 
         ``predicate`` takes no arguments and is re-checked after every read, so
         a caller can wait on disk state, on the screen, or on both at once.
         """
-        deadline = time.time() + self._bound(timeout)
+        allowed = self._bound(timeout)
+        deadline = time.time() + allowed
+        started = time.time()
+        self.trace.event("watch/%s" % label, "up to %.0fs" % allowed)
+        beat = time.time()
         while True:
             if predicate():
+                self.trace.event("watch/%s met" % label,
+                                 "after %.1fs" % (time.time() - started))
                 return True
             if time.time() >= deadline:
+                self.trace.event("watch/%s TIMEOUT" % label,
+                                 "never met, %.1fs" % (time.time() - started))
                 return False
             self._read_available(poll)
+            if time.time() - beat >= HEARTBEAT_SECONDS:
+                beat = time.time()
+                self.trace.event("watch/%s ..." % label,
+                                 "%.0fs elapsed, %.0fs left"
+                                 % (time.time() - started,
+                                    deadline - time.time()))
 
     def screen(self):
         return self.buffer

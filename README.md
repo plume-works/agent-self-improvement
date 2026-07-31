@@ -6,7 +6,7 @@ A Claude Code learning loop that turns verified corrections and hard-won workflo
 
 All four slices of [Spec-0001](docs/specs/0001-hermes-style-experiential-learning-mvp.md) are in `plugin/`, with an offline suite covering the ten acceptance conditions of its section 15, and a [packaged smoke test](docs/smoke-test.md) that drives a real Claude Code session.
 
-The offline suite passes, and nine of the ten smoke checks pass. The tenth — an asynchronous review waking an idle session — cannot be observed in print mode, where a turn ends at `result` and there is no idle session to wake. The pseudo-terminal harness of [Spec-0002](docs/specs/0002-pty-wake-harness.md) automates it behind `make wake`, but has not yet completed a passing live run, so that check is currently evidenced only by the interactive question in `make smoke`.
+The offline suite passes, and nine of the ten smoke checks pass. The tenth — an asynchronous review waking an idle session — cannot be observed in print mode, where a turn ends at `result` and there is no idle session to wake. The pseudo-terminal harness of [Spec-0002](docs/specs/0002-pty-wake-harness.md) automates it behind `make wake`. Its negative control passes — a suppressed wake is detected — but the positive check has not yet passed, so an arriving wake is currently evidenced only by the interactive question in `make smoke`.
 
 The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
 
@@ -51,10 +51,13 @@ make check       # the three above
 make smoke       # packaged smoke test against a real session; spends model usage
 make smoke-auto  # the same, skipping the one interactive check
 make wake        # the asynchronous wake, verified automatically on a pty
+make wake-echo   # the same harness against a fake terminal; no model, no cost
 make wake-repeat # ten consecutive wake runs, to measure its stability
 ```
 
-`make smoke` and `make wake` leave their scratch workspaces under `tmp/smoke/` so a failure can be opened and read.
+`make smoke` and `make wake` leave their scratch workspaces under `tmp/smoke/` so a failure can be opened and read, along with the raw terminal stream of each pty run.
+
+`make wake` traces itself as it goes — every step, a heartbeat every five seconds while it waits, and the screen after each turn — so a stalled run says where it stalled while it is still stalling. `WAKE_TRACE=0` silences it; `WAKE_BUDGET=<seconds>` overrides the per-check budget. When a live run stalls, `make wake-echo` says which half to suspect: it drives the same harness against a fake terminal that only echoes what it captured, so if it passes, input is being delivered and the stall is in the session under test.
 
 `make wake` is opt-in and gates nothing. It spends model usage on two real reviews, and it is the one component here coupled to a terminal interface with no compatibility contract. Each of its checks is bounded to three minutes and run **one at a time** — two concurrent runs share the same scratch workspaces and destroy each other's results.
 

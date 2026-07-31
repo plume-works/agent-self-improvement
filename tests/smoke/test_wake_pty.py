@@ -47,6 +47,7 @@ from tests.smoke.pty_harness import (
     Deadline,
     Expired,
     PtySession,
+    Trace,
 )
 
 pytestmark = pytest.mark.pty
@@ -109,9 +110,15 @@ def drive_the_correcting_exchange(session, deadline):
     Anything typed mid-turn is folded into the turn already running, so the
     correction would never arrive as a prompt of its own and the gate would see
     no signal. Waiting for quiescence between them is what keeps them separate.
+
+    Every step echoes the screen it produced. The harness types blind, so this
+    is the only record of whether a prompt was captured as a prompt — and a
+    correction folded into the previous turn looks, in plugin state, exactly
+    like a review that decided against proposing anything.
     """
-    if not session.wait_until_quiet(timeout=STARTUP_TIMEOUT):
+    if not session.wait_until_quiet(timeout=STARTUP_TIMEOUT, label="startup"):
         raise Expired("the session never settled after starting")
+    session.trace.echo("startup", session.screen())
     deadline.check("after startup")
 
     # A first-run trust dialog would otherwise sit there forever. Enter accepts
@@ -119,17 +126,20 @@ def drive_the_correcting_exchange(session, deadline):
     # which does nothing. This is not a match on the interface — nothing is read
     # to decide it, it is sent unconditionally.
     session.send_line("")
-    session.wait_until_quiet(quiet=2.0, timeout=STARTUP_TIMEOUT)
+    session.wait_until_quiet(quiet=2.0, timeout=STARTUP_TIMEOUT, label="dialog")
+    session.trace.echo("dialog", session.screen())
     deadline.check("after clearing any startup dialog")
 
     session.send_line(FIRST_TURN)
-    if not session.wait_until_quiet(timeout=TURN_TIMEOUT):
+    if not session.wait_until_quiet(timeout=TURN_TIMEOUT, label="turn-1"):
         raise Expired("the first turn never finished")
+    session.trace.echo("turn-1", session.screen())
     deadline.check("after the first turn")
 
     session.send_line(CORRECTION)
-    if not session.wait_until_quiet(timeout=TURN_TIMEOUT):
+    if not session.wait_until_quiet(timeout=TURN_TIMEOUT, label="turn-2"):
         raise Expired("the correcting turn never finished")
+    session.trace.echo("turn-2", session.screen())
     deadline.check("after the correcting turn")
 
 
@@ -140,12 +150,15 @@ def await_candidate(session, state, timeout=CANDIDATE_TIMEOUT):
     the single on-screen match be for a string the plugin generated rather than
     for wording someone chose.
     """
-    session.watch(lambda: bool(candidate_ids(state)), timeout=timeout)
+    session.watch(lambda: bool(candidate_ids(state)), timeout=timeout,
+                  label="candidate-on-disk")
     return candidate_ids(state)
 
 
 def forensics(state, session):
-    lines = ["state root: %s" % state]
+    lines = ["state root: %s" % state,
+             "raw terminal stream: %s.pty.log, beside the workspace"
+             % session.trace.name]
     for name in ("candidates", "turns"):
         path = os.path.join(str(state), name)
         lines.append("%s: %s" % (name, sorted(os.listdir(path))
@@ -195,32 +208,52 @@ def no_wake_plugin(workspace):
     return root
 
 
-def run_exchange(scratch, plugin_root):
+def run_exchange(scratch, plugin_root, name="wake"):
     """The whole scripted run, returning the session and what state it produced.
 
     Bounded end to end by one budget. A working run takes well under a minute;
     anything that stalls fails here with the screen attached rather than
     occupying a terminal until someone kills it.
+
+    Traced end to end as well, live rather than afterwards: the trace names the
+    step it is inside, repeats itself every few seconds while a wait is running,
+    and leaves the raw terminal stream in the workspace next to the plugin state
+    it produced.
     """
     require_cli()
     seed_runnable_project(scratch["project"])
 
-    deadline = Deadline()
+    trace = Trace(name, directory=scratch["workspace"])
+    deadline = Deadline(trace=trace)
+    trace.event("budget", "%.0fs for this check" % deadline.budget)
     session = launch(scratch["project"], plugin_root, deadline)
     candidates = []
     woke = False
     try:
         drive_the_correcting_exchange(session, deadline)
+        waited = time.time()
         candidates = await_candidate(session, scratch["state"])
+        waited = time.time() - waited
+        trace.event("candidates", str(candidates) or "(none)")
         if candidates:
             woke = session.watch(lambda: session.contains(candidates[0]),
-                                 timeout=WAKE_TIMEOUT)
-        else:
-            # A late review is a different failure from a missing wake, so spend
-            # what is left looking for the candidate before saying either.
+                                 timeout=WAKE_TIMEOUT,
+                                 label="wake-on-screen")
+            trace.echo("after-wake-wait", session.screen())
+        elif waited < CANDIDATE_TIMEOUT - 1:
+            # The wait was cut short by the budget rather than by its own limit,
+            # so review may simply be late. A late review is a different failure
+            # from a missing wake; spend what is left telling them apart.
             session.watch(lambda: bool(candidate_ids(scratch["state"])),
-                          timeout=WAKE_TIMEOUT)
+                          timeout=WAKE_TIMEOUT, label="late-candidate")
             candidates = candidate_ids(scratch["state"])
+        else:
+            # Review had its full window and stored nothing. Waiting the same
+            # window again cannot change that, and doubling a failing check's
+            # runtime is what makes this harness feel like it has hung.
+            trace.event("no candidate",
+                        "review had its full %.0fs window and stored nothing; "
+                        "not waiting again" % CANDIDATE_TIMEOUT)
         status = session.close()
     except Expired as expiry:
         status = session.close()
@@ -245,7 +278,8 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
     wrong: review never ran, review ran and proposed nothing, or the candidate
     exists and the wake never landed.
     """
-    session, candidates, woke, status = run_exchange(scratch, PLUGIN_ROOT)
+    session, candidates, woke, status = run_exchange(scratch, PLUGIN_ROOT,
+                                                     name="wake-arrives")
 
     counters = read_json(os.path.join(str(scratch["state"]), "counters.json"))
     assert counters is not None, (
@@ -293,7 +327,8 @@ def test_the_harness_fails_when_the_wake_does_not_arrive(scratch):
     above only by accident of the wake being there.
     """
     plugin_root = no_wake_plugin(scratch["workspace"])
-    session, candidates, woke, status = run_exchange(scratch, plugin_root)
+    session, candidates, woke, status = run_exchange(scratch, plugin_root,
+                                                     name="wake-control")
 
     assert candidates, (
         "the control observed nothing: with no candidate stored, this run does "
