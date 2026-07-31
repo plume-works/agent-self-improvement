@@ -1,6 +1,6 @@
 # Spec-0001: Hook-driven experiential learning plugin MVP
 
-- **Status:** Accepted; implemented in slices 1–4
+- **Status:** Accepted; **fully implemented**. Slices 1–4 are complete, the offline suite passes, and the packaged smoke test passes against a real Claude Code session. The section 15 acceptance gate is met.
 - **Scope:** Standalone Claude Code CLI on one local user account
 - **Runtime:** Python 3.9+, standard library only
 - **Implementation strategy:** package a narrowed `claude-improve` reviewer as a Claude Code plugin and invoke it selectively through supported lifecycle hooks

@@ -4,9 +4,9 @@ A Claude Code learning loop that turns verified corrections and hard-won workflo
 
 ## Status
 
-The MVP is implemented. All four slices of [Spec-0001](docs/specs/0001-hermes-style-experiential-learning-mvp.md) are in `plugin/`, with an offline suite covering the ten acceptance conditions of its section 15, and a [packaged smoke test](docs/smoke-test.md) that drives a real Claude Code session.
+The MVP is **fully implemented**. All four slices of [Spec-0001](docs/specs/0001-hermes-style-experiential-learning-mvp.md) are in `plugin/`, with an offline suite covering the ten acceptance conditions of its section 15, and a [packaged smoke test](docs/smoke-test.md) that drives a real Claude Code session and passes.
 
-`make smoke` runs nine of its ten checks headlessly and asks you one question for the tenth: an `asyncRewake` hook has no idle session to wake in print mode, so the asynchronous wake is confirmed in a real interactive session. [Spec-0002](docs/specs/0002-pty-wake-harness.md) proposes automating it.
+`make smoke` runs nine of its ten checks headlessly. The tenth — an asynchronous review waking an idle session — cannot be observed in print mode, where a turn ends at `result` and there is no idle session to wake. It is automated separately by the pseudo-terminal harness of [Spec-0002](docs/specs/0002-pty-wake-harness.md), run with `make wake`; the interactive question in `make smoke` remains as a fallback.
 
 The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
 
@@ -50,9 +50,13 @@ make validate    # claude plugin validate ./plugin
 make check       # the three above
 make smoke       # packaged smoke test against a real session; spends model usage
 make smoke-auto  # the same, skipping the one interactive check
+make wake        # the asynchronous wake, verified automatically on a pty
+make wake-repeat # ten consecutive wake runs, to measure its stability
 ```
 
-`make smoke` leaves its scratch workspace under `tmp/smoke/` so a failure can be opened and read.
+`make smoke` and `make wake` leave their scratch workspaces under `tmp/smoke/` so a failure can be opened and read.
+
+`make wake` is opt-in and gates nothing. It spends model usage on two real reviews, and it is the one component here coupled to a terminal interface with no compatibility contract.
 
 ## MVP
 
