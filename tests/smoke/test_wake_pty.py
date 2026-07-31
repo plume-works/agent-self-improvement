@@ -41,7 +41,13 @@ from tests.smoke.conftest import (
     runner_environment,
     seed_runnable_project,
 )
-from tests.smoke.pty_harness import PtySession
+from tests.smoke.pty_harness import (
+    STARTUP_TIMEOUT,
+    TURN_TIMEOUT,
+    Deadline,
+    Expired,
+    PtySession,
+)
 
 pytestmark = pytest.mark.pty
 
@@ -59,10 +65,12 @@ WAKE_ALLOWED_TOOLS = [
     "Bash(python3:*)", "Bash(python:*)", "Bash(uv:*)", "Bash(env:*)",
 ]
 
-# The wake follows a real model review of a completed turn. Two minutes is what
-# the manual procedure asks a person to wait; the same budget applies here.
-WAKE_TIMEOUT = 150.0
-CANDIDATE_TIMEOUT = 150.0
+# The wake follows a real model review of a completed turn, which is fast; the
+# manual procedure's two-minute wait is a person's patience, not a measurement.
+# These are step limits, and the whole check is bounded again by CHECK_BUDGET,
+# so a stall anywhere fails with the screen attached instead of hanging.
+WAKE_TIMEOUT = 60.0
+CANDIDATE_TIMEOUT = 60.0
 
 
 def report(label, detail=""):
@@ -86,39 +94,43 @@ def read_json(path):
         return None
 
 
-def launch(project, plugin_root):
+def launch(project, plugin_root, deadline):
     session = PtySession(
         ["claude", "--plugin-dir", str(plugin_root),
          "--allowedTools", *WAKE_ALLOWED_TOOLS],
-        cwd=project, env=runner_environment(),
+        cwd=project, env=runner_environment(), deadline=deadline,
     )
     return session.start()
 
 
-def drive_the_correcting_exchange(session):
+def drive_the_correcting_exchange(session, deadline):
     """Two prompts, each its own turn, then silence.
 
     Anything typed mid-turn is folded into the turn already running, so the
     correction would never arrive as a prompt of its own and the gate would see
     no signal. Waiting for quiescence between them is what keeps them separate.
     """
-    assert session.wait_until_quiet(timeout=120.0), \
-        "the session never settled after starting:\n%s" % session.tail()
+    if not session.wait_until_quiet(timeout=STARTUP_TIMEOUT):
+        raise Expired("the session never settled after starting")
+    deadline.check("after startup")
 
     # A first-run trust dialog would otherwise sit there forever. Enter accepts
     # its default; on a session that has no dialog it submits an empty prompt,
     # which does nothing. This is not a match on the interface — nothing is read
     # to decide it, it is sent unconditionally.
     session.send_line("")
-    session.wait_until_quiet(quiet=4.0, timeout=60.0)
+    session.wait_until_quiet(quiet=2.0, timeout=STARTUP_TIMEOUT)
+    deadline.check("after clearing any startup dialog")
 
     session.send_line(FIRST_TURN)
-    assert session.wait_until_quiet(), \
-        "the first turn never finished:\n%s" % session.tail()
+    if not session.wait_until_quiet(timeout=TURN_TIMEOUT):
+        raise Expired("the first turn never finished")
+    deadline.check("after the first turn")
 
     session.send_line(CORRECTION)
-    assert session.wait_until_quiet(), \
-        "the correcting turn never finished:\n%s" % session.tail()
+    if not session.wait_until_quiet(timeout=TURN_TIMEOUT):
+        raise Expired("the correcting turn never finished")
+    deadline.check("after the correcting turn")
 
 
 def await_candidate(session, state, timeout=CANDIDATE_TIMEOUT):
@@ -184,29 +196,44 @@ def no_wake_plugin(workspace):
 
 
 def run_exchange(scratch, plugin_root):
-    """The whole scripted run, returning the session and what state it produced."""
+    """The whole scripted run, returning the session and what state it produced.
+
+    Bounded end to end by one budget. A working run takes well under a minute;
+    anything that stalls fails here with the screen attached rather than
+    occupying a terminal until someone kills it.
+    """
     require_cli()
     seed_runnable_project(scratch["project"])
 
-    session = launch(scratch["project"], plugin_root)
+    deadline = Deadline()
+    session = launch(scratch["project"], plugin_root, deadline)
+    candidates = []
+    woke = False
     try:
-        drive_the_correcting_exchange(session)
+        drive_the_correcting_exchange(session, deadline)
         candidates = await_candidate(session, scratch["state"])
-        woke = False
         if candidates:
             woke = session.watch(lambda: session.contains(candidates[0]),
                                  timeout=WAKE_TIMEOUT)
         else:
-            # Give a late review the rest of the budget before concluding
-            # anything: no candidate is a different failure from no wake.
+            # A late review is a different failure from a missing wake, so spend
+            # what is left looking for the candidate before saying either.
             session.watch(lambda: bool(candidate_ids(scratch["state"])),
                           timeout=WAKE_TIMEOUT)
             candidates = candidate_ids(scratch["state"])
         status = session.close()
-        return session, candidates, woke, status
+    except Expired as expiry:
+        status = session.close()
+        pytest.fail("%s after %.0fs.\nA working run finishes in well under a "
+                    "minute, so this is a stalled session rather than a slow "
+                    "one — most often a turn waiting on a permission prompt or "
+                    "a dialog.\nsession exit: %r\n%s"
+                    % (expiry, deadline.elapsed(), status,
+                       forensics(scratch["state"], session)))
     finally:
         if session.process is not None and session.process.poll() is None:
             session.close()
+    return session, candidates, woke, status
 
 
 # The wake ------------------------------------------------------------------
@@ -299,6 +326,31 @@ def test_the_screen_matcher_survives_wrapping_and_styling():
     assert session.contains("cand-abc123def456")
     assert not session.contains("cand-000000000000")
     assert flatten("\x1b[31ma b\nc\x1b[0m") == "abc"
+
+
+def test_the_budget_bounds_a_session_that_never_stops_talking():
+    """No wait may outlive the check's budget, however chatty the session is.
+
+    The failure this prevents is the one that happened: every individual wait
+    was inside its own limit and the check still ran for eighteen minutes.
+    """
+    deadline = Deadline(budget=3.0)
+    session = PtySession(
+        [sys.executable, "-c",
+         "import sys, time\n"
+         "while True:\n"
+         "    sys.stdout.write('.'); sys.stdout.flush(); time.sleep(0.05)\n"],
+        cwd=os.getcwd(), env=dict(os.environ), deadline=deadline).start()
+    try:
+        started = time.time()
+        # Its own timeout is a minute; the budget is three seconds and wins.
+        assert session.wait_until_quiet(timeout=60.0) is False
+        assert time.time() - started < 15
+        assert deadline.expired()
+        with pytest.raises(Expired):
+            deadline.check("afterwards")
+    finally:
+        session.close()
 
 
 def test_the_harness_reports_a_session_it_had_to_kill():

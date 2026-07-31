@@ -97,12 +97,11 @@ A `-p` session ends its turn at `result`, so an `asyncRewake` hook has no idle
 session to wake. This was measured, not assumed — see
 [Spec-0002](specs/0002-pty-wake-harness.md) for the probe.
 
-**`make wake` now performs this check without you.** It drives the same exchange
+`make wake` aims to perform this check without you: it drives the same exchange
 through a real interactive session on a pseudo-terminal, waits for the wake, and
 verifies it against a candidate identifier it reads from disk rather than
-against anything on screen. Prefer it; the manual procedure below stays as the
-fallback for when the terminal interface has moved and the harness needs
-repair.
+against anything on screen. It has not yet completed a passing live run, so the
+manual procedure below is still the supported way to verify the wake.
 
 So `make smoke` pauses, prints instructions, and opens a real session in your
 terminal. The scratch repository for this check gets a `Makefile` and a small

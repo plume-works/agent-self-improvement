@@ -1,6 +1,6 @@
 # Spec-0002: Automated verification of the asynchronous wake
 
-- **Status:** Accepted; implemented as `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`
+- **Status:** Implemented; **unverified**. The harness is `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`. Its model-free self-checks pass; its two live checks have not yet completed a passing run, so acceptance criteria 1 and 2 in section 6 are not met.
 - **Scope:** Test tooling only. No change to the plugin, its hooks, or its mutation protocol.
 - **Depends on:** [Spec-0001](0001-hermes-style-experiential-learning-mvp.md), implemented
 
@@ -95,3 +95,36 @@ Three decisions differ from, or sharpen, what section 3 anticipated.
 **The negative control suppresses the wake signal rather than the `asyncRewake` flag.** Section 6.2 proposed disabling the flag, but that control does not discriminate: without it the `Stop` hook still runs and still exits 2, synchronously inside the turn, so Claude is still told about the candidate and the marker still reaches the screen. The control would pass whether or not the wake worked. The harness instead runs a copy of the plugin whose `Stop` hook discards its exit code, leaving the gate, the reviewer, and the stored candidate exactly as they are and removing only the wake. A candidate is then required on disk — a control that observed nothing proves nothing — and the marker is required to be absent from the screen.
 
 Two failure modes are separated in the assertions, because they have different causes and different fixes: review never ran or proposed nothing, versus a candidate that exists while no wake arrived. Only the second is a wake failure.
+
+### 7.1 Bounded runtime
+
+**A working run of either live check finishes in well under a minute. Every check is bounded end to end by a single wall-clock budget of three minutes, and no wait in the harness may block without a deadline.**
+
+This is normative rather than a tuning preference. The first implementation gave each step a generous timeout — five minutes for a turn, two and a half for the wake — and no overall limit. Each wait was inside its own limit and a check still occupied a terminal for eighteen minutes without reaching a verdict. A harness that hangs is worse than the manual procedure it replaces: the manual one at least ends when the person walks away.
+
+The budget is one `Deadline` shared by the session and every wait taken from it, so a step's own timeout can never extend past what remains overall. When it runs out the check fails immediately, reporting the elapsed time, the session's exit status, the plugin state, and the screen tail — a stalled session, not a slow one, and almost always a turn waiting on a permission prompt or a dialog. Shutdown is the one thing that runs after the budget: it has its own short limit and escalates to a kill.
+
+A model-free self-check asserts the budget wins over a longer step timeout, so this cannot regress silently.
+
+### 7.2 Environment the session must not inherit
+
+The harness is normally run from inside a Claude Code session, which exports variables marking its children as nested sessions. Inherited, they turn the session under test into a child session with transcript saving disabled — not the ordinary session whose idle state the wake is claimed to reach. `CLAUDE_CODE_*` and `CLAUDECODE` are therefore stripped, along with `CLAUDE_PLUGIN_DATA`, which would otherwise outrank the isolated state root. `CLAUDE_CONFIG_DIR` is deliberately kept: it carries the authentication every check needs.
+
+### 7.3 Permission prompts end the run
+
+A permission prompt is fatal here in a way it is not in print mode. The session stops and waits, the turn never ends, no `Stop` hook fires for an unfinished turn, and the wake under test cannot happen. The harness must not answer prompts — that would mean reading the interface — so every command the scripted turns may reasonably use is allowed up front, and an unlisted one fails the run with a readable message rather than executing unreviewed.
+
+### 7.4 Only one run at a time
+
+Both live checks reuse per-test workspaces under `tmp/smoke/`, and the fixture wipes a workspace at the start of each test. Two concurrent runs therefore delete each other's state mid-flight, and neither result means anything. This has already happened once. `make wake` must be run alone.
+
+## 8. Outstanding evidence
+
+Under the evidence rule in [`AGENTS.md`](../../AGENTS.md#specification-status) this specification stays `Implemented; unverified` until all of the following have been observed and recorded:
+
+1. `make wake` completing with both live checks passing;
+2. the negative control failing the run when the wake is suppressed, as its own passing assertion;
+3. `make wake-repeat` completing ten consecutive runs without a failure; and
+4. a run in which the budget is *not* consumed — evidence that three minutes is genuinely generous rather than the thing being measured.
+
+Item 4 exists because a check that always finishes at its deadline is not passing, it is timing out somewhere quiet.

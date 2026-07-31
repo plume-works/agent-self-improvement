@@ -44,8 +44,6 @@ WHITESPACE = re.compile(r"\s+")
 COLUMNS = 120
 LINES = 40
 
-# Long enough that a pause for a model call is not read as the end of a turn,
-# short enough that a scripted exchange does not take all afternoon.
 # Anything marking this process as living inside a Claude Code session. Running
 # the harness from one is the normal case — a developer debugging it is in a
 # session — and inheriting these makes the child a nested session: transcript
@@ -54,9 +52,51 @@ LINES = 40
 # ``CLAUDE_CONFIG_DIR`` is deliberately not in here; it carries authentication.
 NESTED_SESSION_VARIABLES = {"CLAUDECODE", "CLAUDE_PLUGIN_DATA"}
 
-QUIET_SECONDS = 8.0
-TURN_TIMEOUT = 300.0
-STARTUP_TIMEOUT = 120.0
+# Every wait is bounded, and all of them together are bounded again by a single
+# per-check budget. A scripted exchange takes well under a minute when it works;
+# when it does not, the useful outcome is a failure with the screen attached,
+# not a harness sitting on a dead session until someone notices. Nothing here
+# may block without a deadline.
+QUIET_SECONDS = 4.0
+TURN_TIMEOUT = 60.0
+STARTUP_TIMEOUT = 30.0
+CHECK_BUDGET = 180.0
+EXIT_TIMEOUT = 10.0
+
+
+class Expired(Exception):
+    """The budget for this check ran out. Carries no state; the caller reports."""
+
+
+class Deadline:
+    """One wall-clock budget shared by every wait in a check.
+
+    Individual timeouts stop any single wait from running away. This stops the
+    sum of them from doing so, which is the failure that actually happened: each
+    wait was within its own limit and the check still ran for eighteen minutes.
+    """
+
+    def __init__(self, budget=CHECK_BUDGET):
+        self.budget = budget
+        self.started = time.time()
+
+    def remaining(self):
+        return max(0.0, self.budget - (time.time() - self.started))
+
+    def elapsed(self):
+        return time.time() - self.started
+
+    def expired(self):
+        return self.remaining() <= 0.0
+
+    def bound(self, timeout):
+        """The smaller of a step's own timeout and what is left overall."""
+        return min(timeout, self.remaining())
+
+    def check(self, what):
+        if self.expired():
+            raise Expired("%s: the %.0fs budget for this check ran out"
+                          % (what, self.budget))
 
 
 def flatten(text):
@@ -67,8 +107,11 @@ def flatten(text):
 class PtySession:
     """One interactive session on a pty, driven a line at a time."""
 
-    def __init__(self, command, cwd, env):
+    def __init__(self, command, cwd, env, deadline=None):
         self.command = list(command)
+        # Shared with the caller, so a wait started here can never outlive the
+        # check's budget even if its own timeout is generous.
+        self.deadline = deadline
         self.cwd = str(cwd)
         self.env = dict(env)
         self.env.update({
@@ -104,7 +147,17 @@ class PtySession:
         self.master = master
         return self
 
-    def close(self, timeout=30):
+    def _bound(self, timeout):
+        """A step's timeout, never exceeding what is left of the check's budget.
+
+        Exit is deliberately not bounded this way: shutting the session down is
+        what runs *after* the budget is gone, and it has its own short limit.
+        """
+        if self.deadline is None:
+            return timeout
+        return max(0.0, self.deadline.bound(timeout))
+
+    def close(self, timeout=EXIT_TIMEOUT):
         """Ask the session to exit, and report how it went.
 
         Returns the exit status, or None if it had to be killed. The caller
@@ -146,7 +199,7 @@ class PtySession:
             except OSError:
                 return
             try:
-                self.process.wait(timeout=10)
+                self.process.wait(timeout=5)
                 return
             except subprocess.TimeoutExpired:
                 continue
@@ -195,7 +248,7 @@ class PtySession:
 
         Returns True if the stream went quiet, False if it never did.
         """
-        deadline = time.time() + timeout
+        deadline = time.time() + self._bound(timeout)
         last = time.time()
         while time.time() < deadline:
             if self._read_available(0.5):
@@ -213,7 +266,7 @@ class PtySession:
         ``predicate`` takes no arguments and is re-checked after every read, so
         a caller can wait on disk state, on the screen, or on both at once.
         """
-        deadline = time.time() + timeout
+        deadline = time.time() + self._bound(timeout)
         while True:
             if predicate():
                 return True
