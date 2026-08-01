@@ -10,7 +10,8 @@ import os
 
 import pytest
 
-from selfimprove import capture, gate, journal, orchestrate, proposals, store
+from selfimprove import (capture, gate, journal, orchestrate, proposals, schema,
+                         store)
 from tests.fake_reviewer import PROPOSAL
 
 STOP = {
@@ -171,6 +172,26 @@ def test_an_already_rejected_lesson_is_suppressed(run_si, corrected_turn,
     assert run_stop(run_si, corrected_turn).returncode == 0
 
 
+def test_a_suppressed_duplicate_says_so_in_the_journal(run_si, corrected_turn,
+                                                       fake_reviewer, state_root):
+    """A duplicate is the other outcome that is silent and leaves no candidate.
+
+    It is the good case — the lesson is already known — but from state alone it
+    reads exactly like a reviewer that proposed nothing, so it says which it was.
+    """
+    fake_reviewer.mode("propose")
+    fingerprint = proposals.fingerprint(PROPOSAL["lesson"],
+                                        PROPOSAL["destination_scope"],
+                                        PROPOSAL["destination_kind"])
+    journal.record_fingerprint(fingerprint, "accepted")
+    run_stop(run_si, corrected_turn)
+
+    outcomes = [record for record in _diagnostics(state_root)
+                if record["stage"] == "review_outcome"]
+    assert [(record["error_class"], record["reason"]) for record in outcomes] \
+        == [("duplicate", "accepted")]
+
+
 def test_the_candidate_is_queued_before_the_wake(run_si, corrected_turn,
                                                  fake_reviewer, project):
     """A wake that never lands must still be recoverable."""
@@ -240,3 +261,79 @@ def test_forced_review_reports_when_there_is_no_lesson(run_si, state_root, proje
     result = run_si("improve", stdin=event)
     assert result.returncode == 0
     assert json.loads(result.stdout)["outcome"] == "no_lesson"
+
+
+def _diagnostics(state_root):
+    path = os.path.join(str(state_root), "diagnostics.jsonl")
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding="utf-8") as handle:
+        return [json.loads(line) for line in handle if line.strip()]
+
+
+def test_a_declined_review_says_so_in_the_journal(run_si, corrected_turn,
+                                                  fake_reviewer, state_root):
+    """A decline must leave a trace, or it cannot be told from a review that
+    never ran.
+
+    Both look identical in durable state otherwise: no candidate, no
+    fingerprint, an incremented counter and a deleted turn. Diagnosing that
+    difference used to mean re-running a live check that costs real model usage,
+    and the re-run produced the same absence of evidence.
+    """
+    fake_reviewer.mode("discard")
+    run_stop(run_si, corrected_turn)
+
+    outcomes = [record for record in _diagnostics(state_root)
+                if record["stage"] == "review_outcome"]
+    assert len(outcomes) == 1, "a review that ran left no outcome record"
+    assert outcomes[0]["error_class"] == "no_lesson"
+    assert outcomes[0]["reason"] == "one_off_instruction"
+
+
+def test_a_decline_without_a_category_is_still_journaled(run_si, corrected_turn,
+                                                         fake_reviewer, state_root):
+    """The field is optional, so its absence must not cost the record."""
+    fake_reviewer.mode("bare_discard")
+    run_stop(run_si, corrected_turn)
+
+    outcomes = [record for record in _diagnostics(state_root)
+                if record["stage"] == "review_outcome"]
+    assert [(record["error_class"], record["reason"]) for record in outcomes] \
+        == [("no_lesson", "reviewer_discarded")]
+
+
+def test_the_journaled_reason_is_a_category_never_model_text(run_si, corrected_turn,
+                                                             fake_reviewer,
+                                                             state_root):
+    """Section 10: nothing durable may carry prose the reviewer wrote.
+
+    The category is bounded precisely so the diagnostics file stays shareable
+    without a transcript, which is the only reason it can be journaled at all.
+    """
+    fake_reviewer.mode("discard")
+    run_stop(run_si, corrected_turn)
+
+    reasons = {record["reason"] for record in _diagnostics(state_root)
+               if record["stage"] == "review_outcome"}
+    assert reasons <= set(schema.load_schema()["properties"]["discard_reason"]["enum"])
+
+
+def test_a_review_that_never_reached_the_model_is_distinguishable(run_si,
+                                                                  corrected_turn,
+                                                                  fake_reviewer,
+                                                                  state_root):
+    """The distinction the outcome record exists to draw.
+
+    A transport failure and a considered decline both end as a discard, and the
+    caller cannot tell them apart from the return value alone. In the journal
+    they differ: the transport failure carries its own class as the reason.
+    """
+    fake_reviewer.mode("crash")
+    run_stop(run_si, corrected_turn)
+
+    outcomes = [record for record in _diagnostics(state_root)
+                if record["stage"] == "review_outcome"]
+    assert len(outcomes) == 1
+    assert outcomes[0]["reason"] != "reviewer_discarded", \
+        "a reviewer that was never reached is being reported as a decline"

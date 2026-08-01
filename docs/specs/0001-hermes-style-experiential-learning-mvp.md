@@ -325,11 +325,16 @@ The reviewer returns strict structured data:
   "destination_scope": "project | user",
   "destination_kind": "CLAUDE.md | rule | skill",
   "owner_query": "terms used to find an existing owner",
-  "confidence": "high | medium | low"
+  "confidence": "high | medium | low",
+  "discard_reason": "bounded category, discard only"
 }
 ```
 
 Malformed output, low confidence, unsupported destinations, and policy violations become `discard`.
+
+A discard may name why, as one of a fixed set of categories rather than a sentence, and that category is journaled as the review's outcome. It is optional and never fatal: an absent or unrecognized value is dropped and the discard stands. Turning a correct decline into a schema failure over its label would misreport what the reviewer said.
+
+Every review that ends without a candidate records its outcome — a decline with its category, a transport or schema failure with its error class, a suppressed duplicate with the fingerprint status. Without this the three are indistinguishable in durable state, since all of them delete the turn, store no candidate, and leave only an incremented counter behind; diagnosing which one occurred would otherwise require re-running a check that costs real model usage. A review that produced a candidate needs no such record, because the candidate is the record.
 
 Brevity is not grounds for discard. A stated directive is explicit evidence even when the user supplies no rationale and never asks for it to be remembered — that inference is this system's job, not the user's. The reviewer proposes the behavior that was stated and does not invent a justification for it. What it still discards is an instruction about the turn in hand rather than a standing one.
 
@@ -424,7 +429,7 @@ Relative to the state root defined in section 4.1. Directories are created mode 
 | `fingerprints.json` | accepted and rejected proposal fingerprints | retained |
 | `counters.json` | cooldown and daily invocation counters | retained |
 | `pending.json` | candidates awaiting an available session | expires with the candidate |
-| `diagnostics.jsonl` | redacted error classes only | retained |
+| `diagnostics.jsonl` | bounded error classes and review outcomes; never prose | retained |
 
 Permissions default to user-only access. Durable state must not contain:
 

@@ -57,9 +57,24 @@ def run(event, forced=False, focus=None):
 
     result = reviewer.review(bundle)
     if result.get("decision") != schema.PROPOSE:
+        reason = result.get("discard_reason", "reviewer_discarded")
+        # A clean decline used to leave no trace anywhere: the turn was deleted,
+        # nothing was journaled, and the only evidence a review had happened at
+        # all was the counter it incremented. That makes "the reviewer declined"
+        # indistinguishable after the fact from "the reviewer was never reached",
+        # which is expensive to tell apart when the run costs a real model call.
+        # The category is bounded and carries no model prose, so the diagnostics
+        # file stays shareable without a transcript.
+        #
+        # This fires for a transport or schema failure too, which those paths
+        # have already recorded under their own stage. The duplication is the
+        # point: every review that ended without a candidate says so under one
+        # stage, so the journal can be read for what happened rather than for
+        # what is missing from it. A review that produced a candidate needs no
+        # such record — the candidate is the record.
+        journal.diagnostic("review_outcome", "no_lesson", reason=reason)
         capture.discard_turn(event, turn)
-        return {"outcome": "no_lesson",
-                "reason": result.get("discard_reason", "reviewer_discarded")}
+        return {"outcome": "no_lesson", "reason": reason}
 
     fingerprint = proposals.fingerprint(result["lesson"],
                                         result["destination_scope"],
@@ -67,7 +82,10 @@ def run(event, forced=False, focus=None):
     status = journal.fingerprint_status(fingerprint)
     if status is not None:
         # Section 11: a duplicate candidate is suppressed, whether the user
-        # accepted this lesson before or declined it.
+        # accepted this lesson before or declined it. Silent from the outside
+        # and identical in state to a decline, so it is journaled for the same
+        # reason.
+        journal.diagnostic("review_outcome", "duplicate", reason=status)
         capture.discard_turn(event, turn)
         return {"outcome": "duplicate", "status": status}
 

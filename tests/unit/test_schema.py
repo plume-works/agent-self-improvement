@@ -24,6 +24,37 @@ def test_accepts_a_bare_discard():
     assert schema.validate({"decision": "discard"}) == {"decision": "discard"}
 
 
+def test_a_discard_may_name_a_category_and_it_is_carried_through():
+    """The category is what makes a decline legible after the session ends.
+
+    Without it a clean discard is indistinguishable from a reviewer that was
+    never reached: same absent candidate, same absent diagnostics, same
+    incremented counter.
+    """
+    result = schema.validate({"decision": "discard",
+                              "discard_reason": "inferred_not_stated"})
+    assert result == {"decision": "discard",
+                      "discard_reason": "inferred_not_stated"}
+
+
+@pytest.mark.parametrize("reason", ["made_up", "", None, 7, {"a": 1}])
+def test_an_unrecognized_discard_category_is_dropped_not_fatal(reason):
+    """A decline must never become a schema failure over how it was labelled.
+
+    The label is journal decoration; the decision is the answer. Rejecting the
+    object would turn a correct discard into a `SchemaError`, which is both a
+    worse diagnostic and a lie about what the reviewer said.
+    """
+    assert schema.validate({"decision": "discard", "discard_reason": reason}) \
+        == {"decision": "discard"}
+
+
+def test_the_category_does_not_travel_with_a_proposal():
+    """Nothing downstream should read a discard reason off an accepted lesson."""
+    result = schema.validate(dict(PROPOSAL, discard_reason="no_durable_lesson"))
+    assert "discard_reason" not in result
+
+
 def test_low_confidence_is_rejected():
     with pytest.raises(schema.SchemaError) as caught:
         schema.validate(dict(PROPOSAL, confidence="low"))

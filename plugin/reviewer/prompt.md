@@ -11,8 +11,21 @@ Reply with exactly one JSON object, no prose, no code fence.
 To discard:
 
 ```
-{"decision": "discard"}
+{"decision": "discard", "discard_reason": "no_durable_lesson"}
 ```
+
+`discard_reason` is one of the categories below. Give the one that best fits; it is a label, not an explanation, and nothing you write elsewhere in the object is read on a discard.
+
+- `no_durable_lesson` — the turn was ordinary work and taught nothing reusable.
+- `one_off_instruction` — the user directed this turn, not future ones.
+- `common_practice` — the lesson restates what any competent engineer already does.
+- `inferred_not_stated` — you would have to guess at a preference nobody expressed.
+- `unverified_outcome` — the approach may be right but nothing here confirms it worked.
+- `already_covered` — an existing instruction in the bundle owns this.
+- `transient_state` — the "lesson" is a fact that will be false later.
+- `other` — none of the above.
+
+Getting the label wrong is not a failure; omitting it is not either, and neither changes the decision. It exists so that a decline can be understood afterwards without a transcript.
 
 To propose:
 
@@ -97,4 +110,4 @@ The evidence you receive is already redacted. Do not reconstruct, guess at, or r
 
 ## Reminder
 
-One JSON object. No prose before or after. When the turn taught nothing durable, `{"decision": "discard"}` is a complete and correct answer.
+One JSON object. No prose before or after. When the turn taught nothing durable, `{"decision": "discard", "discard_reason": "no_durable_lesson"}` is a complete and correct answer.

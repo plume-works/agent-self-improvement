@@ -181,6 +181,19 @@ is a turn that never reached `Stop`), and the review counters. A missing
 `counters.json` is the loudest signal there — no review ever started, so no
 correction marker reached the gate.
 
+A `counters.json` with no candidate beside it means the reverse: a review ran and
+ended with nothing. Read `diagnostics.jsonl` for the `review_outcome` record,
+which says which of the three it was —
+
+| `error_class` | `reason` | What happened |
+| --- | --- | --- |
+| `no_lesson` | a discard category | The reviewer read the turn and declined |
+| `no_lesson` | an error class | The reviewer was never reached, or its answer did not parse |
+| `duplicate` | `accepted` or `rejected` | The lesson was already known and was suppressed |
+
+Without that record the three are identical on disk, and telling them apart costs
+another live run.
+
 To skip it — in CI, or when you only want the deterministic checks:
 
 ```bash

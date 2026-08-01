@@ -292,7 +292,10 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
 
     assert candidates, (
         "review ran but stored no candidate, so there was nothing to wake with. "
-        "That is a reviewer outcome, not a wake failure.\n%s"
+        "That is a reviewer outcome, not a wake failure. The `review_outcome` "
+        "record in the diagnostics below says which one: a discard category "
+        "means the reviewer read the turn and declined, an error class means it "
+        "was never reached, `duplicate` means the lesson was already known.\n%s"
         % forensics(scratch["state"], session))
 
     candidate_id = candidates[0]

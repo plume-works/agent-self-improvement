@@ -118,6 +118,12 @@ def validate(payload, schema=None):
 
     A ``discard`` decision is accepted with no further fields; the reviewer is
     expected to discard most turns and should not have to justify doing so.
+
+    It may name a category, and that category is carried through so the outcome
+    can be journaled. It is never required and never fatal: an absent or
+    unrecognized value is dropped and the discard still stands. A reviewer that
+    declined must not have its decision turned into a schema failure by the way
+    it explained itself.
     """
     schema = schema or load_schema()
     properties = schema["properties"]
@@ -133,7 +139,11 @@ def validate(payload, schema=None):
     if decision not in properties["decision"]["enum"]:
         raise SchemaError("bad_decision")
     if decision == DISCARD:
-        return {"decision": DISCARD}
+        result = {"decision": DISCARD}
+        reason = payload.get("discard_reason")
+        if reason in properties["discard_reason"]["enum"]:
+            result["discard_reason"] = reason
+        return result
 
     result = {"decision": PROPOSE}
     for field in schema["requiredWhenProposing"]:
