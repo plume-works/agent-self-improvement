@@ -72,7 +72,13 @@ def run(event, forced=False, focus=None):
         # stage, so the journal can be read for what happened rather than for
         # what is missing from it. A review that produced a candidate needs no
         # such record — the candidate is the record.
-        journal.diagnostic("review_outcome", "no_lesson", reason=reason)
+        #
+        # The signal goes with it, for the same cost and the same reason: a
+        # decline reads completely differently depending on which turn was
+        # reviewed, and without this the journal cannot say. It is one of the
+        # gate's own bounded labels, never anything the user or the model wrote.
+        journal.diagnostic("review_outcome", "no_lesson", reason=reason,
+                           signal=signal.get("type"))
         capture.discard_turn(event, turn)
         return {"outcome": "no_lesson", "reason": reason}
 
