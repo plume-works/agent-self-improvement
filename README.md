@@ -28,7 +28,23 @@ To keep it across sessions, install it from the marketplace this repository publ
 /reload-plugins
 ```
 
-The marketplace may also be added by its remote, `chocobot-farm/agent-self-improvement`, in which case Claude Code fetches the plugin itself and no local clone is needed. Installing copies the plugin into Claude Code's own cache, so a later `git pull` changes nothing until `/plugin marketplace update agent-self-improvement`.
+The marketplace may also be added by its remote, `chocobot-farm/agent-self-improvement`, in which case Claude Code fetches the plugin itself and no local clone is needed.
+
+### Refreshing a local install
+
+Installing **copies** the plugin into Claude Code's own cache under `~/.claude/plugins/cache/agent-self-improvement/self-improve/<version>/`, so editing this repository or pulling new commits changes nothing about the installed plugin until it is refreshed. Refresh the marketplace first, then reinstall:
+
+```bash
+claude plugin marketplace update agent-self-improvement
+claude plugin install self-improve@agent-self-improvement
+claude plugin details self-improve@agent-self-improvement
+```
+
+The reinstall re-copies the cache and re-stamps `gitCommitSha` in `~/.claude/plugins/installed_plugins.json` to the commit checked out here — the fastest way to confirm which revision is actually loaded.
+
+`claude plugin update` was observed to leave `gitCommitSha` and the cache untouched when only files outside `plugin/` had changed. Whether it re-copies when `plugin/` itself changes under an unchanged `version` has not been tested here; reinstall is the reliable path until it is.
+
+For iterating on the plugin, prefer `--plugin-dir` over any of this. It loads `plugin/` in place, with no cache copy and no reinstall between edits.
 
 Check the install invariants at any time:
 
