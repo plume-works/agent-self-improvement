@@ -17,6 +17,7 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+*.log
 
 # Runtime state must never enter the repository
 .self-improvement/

@@ -44,4 +44,4 @@ Do not rewrite hypothetical extension specifications merely to match the MVP. Va
 
 ## Debugging
 
-Never use plain `make wake`, debug with `make wake-echo` and always capture output to a file.
+When running `make wake` always capture output to a file, running it costs real money.
