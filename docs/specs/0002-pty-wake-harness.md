@@ -159,3 +159,19 @@ The harness therefore sets `CLAUDE_CODE_DISABLE_AUTO_MEMORY` on every session it
 Setting it was not enough on its own. The harness strips every inherited `CLAUDE_CODE*` variable so the session under test is an ordinary one rather than a nested child of whatever started the harness, and that prefix rule removed the variable the harness had just set — costing a further live run that reproduced the original failure exactly. Variables the launch site sets deliberately are now named at the launch site and exempted there, rather than allowlisted in the harness: an exemption listed centrally outlives whatever needed it, and a launch site that stops setting a variable stops exempting it.
 
 The interaction keeps a check of its own, behind `make wake-memory`, which drives the identical exchange with auto memory on and asserts coherence rather than a candidate: the reviewer either defers with `already_covered` or proposes and wakes. Failing means the two systems interfere — no review, an unreachable reviewer, or a candidate stored and never queued.
+
+### 8.2 The exchange itself was reviewable, and was reviewed for the wrong turn
+
+The run that followed confirmed the auto-memory fix and replaced the failure with another. No `memory/` directory existed under the scratch project, and the journalled reason changed from `already_covered` to `transient_state` — but still no candidate.
+
+The trace and the counters together named the cause without a further run:
+
+- `counters.json` held `count: 1`, and its `last_review_at` matched the end of the **first** turn to the second;
+- the journalled outcome was six seconds later, inside that same review; and
+- the correcting turn ended ten seconds after the first, against a 120-second cooldown.
+
+The scripted exchange opens by asking the session to run the test suite. In that run `pytest` failed and a retry succeeded, which is a genuine verified-workaround signal over ordinary work, carrying no prompt into the bundle. It spent the turn's one permitted review and armed the cooldown, and the correction that followed was suppressed unreviewed. `transient_state` was the reviewer's label for a bundle that contained tool signatures and no user text; the reviewer never saw the directive at all.
+
+This is a Spec-0001 gate defect rather than a harness one, and is fixed there: section 6 now ranks the two rate limits against the signals, and a stated directive passes a cooldown. It is recorded here because the harness's own script is what exposed it, and because the script must keep exposing it — an opening prompt that never produces incidental tool activity would make the wake check pass without exercising the ordering that broke it.
+
+The lesson for this specification is narrower and general: a wake that does not arrive has at least four distinct causes — the exchange, the reviewer's judgement, another system reaching the conclusion first, and the gate declining to ask — and the harness alone cannot tell them apart. Each was separated by reading state the run left behind rather than by re-running it, and each fix was cheap only because the previous one had already made its own failure legible.

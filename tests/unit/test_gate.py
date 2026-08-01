@@ -156,6 +156,78 @@ def test_manual_force_overrides_rate_limiting_but_not_safety(state_root):
                          forced=True) is None
 
 
+# What a rate limit may and may not drop.
+#
+# A cooldown bounds spending; it is not a reason to stop reading what the user
+# typed. These pin the precedence, because getting it wrong is silent: the turn
+# is discarded, nothing is journaled, and the only trace is a review that went
+# to something else.
+
+@pytest.mark.parametrize("marker", ["correction", "retention"])
+def test_a_stated_directive_passes_a_cooldown(state_root, marker):
+    """The live wake failure of 2026-07-31.
+
+    Turn 1 was "run the tests with pytest": pytest failed, a retry succeeded,
+    and that verified transition is a true signal about ordinary work. It spent
+    the review and armed the cooldown. Ten seconds later the user typed "no,
+    always use `make test` in this repo, not pytest directly" — and the gate
+    dropped it unreviewed, so the reviewer never saw the one thing the whole
+    check exists to observe.
+
+    The weaker signals are inferred from work Claude did. A directive is
+    inferred from nothing, and it does not come round again.
+    """
+    gate.note_review()
+    assert gate.suppressed(STOP) == "cooldown"
+
+    signal = gate.evaluate(STOP, turn=turn(markers=[marker]))
+    assert signal is not None
+    assert signal["include_prompt"] is True
+
+
+@pytest.mark.parametrize("weak", [
+    {"events": [failure(), success()]},
+    {"events": [failure() for _ in range(config.REPEATED_FRICTION_THRESHOLD)]},
+    {"markers": ["confirmation"], "events": [failure()]},
+])
+def test_an_inferred_signal_does_not_pass_a_cooldown(state_root, weak):
+    """The exemption is for the user's own words, not for a strong-looking turn.
+
+    Without this the cooldown would stop bounding anything: these are the
+    signals that fire on ordinary work, which is most turns.
+    """
+    gate.note_review()
+    assert gate.evaluate(STOP, turn=turn(**weak)) is None
+
+
+def test_nothing_automatic_passes_the_daily_limit(state_root):
+    """The cooldown paces spending; the daily cap is the ceiling.
+
+    A directive may arrive at any time, so exempting it from the cooldown puts
+    no bound on the day. This is the bound.
+    """
+    for _ in range(config.DAILY_REVIEW_LIMIT):
+        gate.note_review(now=time.time() - config.COOLDOWN_SECONDS - 1)
+    assert gate.suppressed(STOP) == "daily_limit_reached"
+    assert gate.evaluate(STOP, turn=turn(markers=["correction"])) is None
+    assert gate.evaluate(STOP, turn=turn(markers=["retention"])) is None
+
+
+@pytest.mark.parametrize("suppressor", [
+    {"stop_hook_active": True},
+    {"background_tasks": [{"id": "x"}]},
+    {"session_crons": [{"id": "x"}]},
+])
+def test_a_safety_guard_still_outranks_a_stated_directive(state_root, suppressor):
+    """Only the rate limits were relaxed.
+
+    These guards are what stop a woken session waking itself, and a correction
+    is exactly the kind of turn that would recur if they were passable.
+    """
+    event = dict(STOP, **suppressor)
+    assert gate.evaluate(event, turn=turn(markers=["correction"])) is None
+
+
 # The default answer.
 
 def test_an_ordinary_turn_produces_no_signal(state_root):

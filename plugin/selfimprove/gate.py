@@ -29,6 +29,10 @@ MANUAL_FORCE = "manual_force"
 # and the one most likely to fire on ordinary work.
 COMPLETION_MINIMUM_EVENTS = 6
 
+# The suppressors that bound spending rather than protect correctness. Everything
+# else in `suppressed` is a safety guard and is decisive for every caller.
+RATE_LIMITS = ("cooldown", "daily_limit_reached")
+
 
 def _counters_path():
     return paths.state_path(COUNTERS)
@@ -129,16 +133,39 @@ def evaluate(event, turn=None, forced=False, focus=None, now=None):
     evidence bundle.
     """
     reason = suppressed(event, now=now)
-    if reason and not (forced and reason in {"cooldown", "daily_limit_reached"}):
-        # A direct request overrides rate limiting but not the safety guards.
+    if reason is not None and reason not in RATE_LIMITS:
+        # A safety guard is decisive for everyone, including a direct request.
         return None
 
+    # Read before the rate limits are applied, because whether a cooldown may be
+    # passed depends on what the user said, and that cannot be known without
+    # looking. This is the one file read the gate was always allowed; it now
+    # happens on cooldown turns too, which is the price of not dropping a
+    # directive that arrives moments after unrelated work.
     turn = turn if turn is not None else capture.load_turn(event)
     events = turn.get("events", [])
     found = turn.get("markers", [])
 
     if forced:
+        # A direct request overrides both rate limits.
         return _signal(MANUAL_FORCE, include_prompt=True, focus=focus)
+
+    if reason == "daily_limit_reached":
+        # The real spending ceiling, and nothing automatic passes it.
+        return None
+
+    if reason == "cooldown" and not markers.justifies_keeping_prompt(found):
+        # Signals 1 and 2 are the user's own words. The cooldown exists so a
+        # burst of ordinary work cannot bill a review per turn, and the weaker
+        # signals are inferred from that work — but a stated directive is not
+        # inferred from anything, and it does not come round again.
+        #
+        # This is the failure it was written for: `pytest` failed, a retry
+        # succeeded, and that verified transition — a true signal about ordinary
+        # work — spent the review. The correction that followed ten seconds
+        # later, "always use `make test` in this repo", was dropped unreviewed.
+        # The cheaper reading of the turn won over the one the user typed.
+        return None
 
     if markers.has_retention(found):
         return _signal(EXPLICIT_RETENTION, include_prompt=True)

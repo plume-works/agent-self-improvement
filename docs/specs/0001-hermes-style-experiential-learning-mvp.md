@@ -261,6 +261,10 @@ The MVP enforces:
 - proposal fingerprint deduplication; and
 - recursion guards for reviewer and plugin-generated sessions.
 
+The recursion and safety guards are decisive for every turn. The two rate limits are not, and rank against the signals as follows.
+
+The cooldown does not suppress signals 1 and 2. Those are read from the user's own words; the remaining automatic signals are inferred from work Claude itself did, and inferring one is what arms the cooldown in the first place. A directive that arrives moments after unrelated work must still be reviewed: it will not be repeated, and the turn that displaced it was, by construction, the cheaper reading of the session. The daily invocation limit is the spending ceiling and suppresses every automatic signal, including 1 and 2. Manual force (signal 7) passes both rate limits and neither guard.
+
 ## 7. Independent reviewer
 
 ### 7.1 Relationship to `claude-improve`

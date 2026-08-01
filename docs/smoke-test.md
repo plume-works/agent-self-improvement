@@ -227,6 +227,12 @@ which says which of the three it was —
 Without that record the three are identical on disk, and telling them apart costs
 another live run.
 
+No record at all is a fourth case: the gate never asked. Check `count` in
+`counters.json` against how many turns the trace shows. One review across two
+turns means it went to the earlier one — the opening prompt runs the test suite,
+and a retry that succeeds there is a real signal in its own right. Compare
+`last_review_at` with the trace timestamps to see which turn was spent.
+
 To skip it — in CI, or when you only want the deterministic checks:
 
 ```bash
