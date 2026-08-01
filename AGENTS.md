@@ -30,6 +30,7 @@ Where evidence is partial, say exactly which part is covered and which is not, i
 - Search for and patch an existing artifact before creating a new skill or rule.
 - Human-authored artifacts remain review-only.
 - Use conventional commits.
+- Commit at checkpoints as meaningful progress is achieved, rather than accumulating a whole task into one commit at the end.
 - Add executable acceptance tests for every MVP behavioral requirement.
 
 ## Documentation consistency
