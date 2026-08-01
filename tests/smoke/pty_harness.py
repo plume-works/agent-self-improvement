@@ -210,7 +210,8 @@ def flatten(text):
 class PtySession:
     """One interactive session on a pty, driven a line at a time."""
 
-    def __init__(self, command, cwd, env, deadline=None, trace=None):
+    def __init__(self, command, cwd, env, deadline=None, trace=None,
+                 configured=()):
         self.command = list(command)
         # Shared with the caller, so a wait started here can never outlive the
         # check's budget even if its own timeout is generous.
@@ -230,7 +231,22 @@ class PtySession:
             "CI": "1",
         })
         self.env.pop("FORCE_COLOR", None)
+        # The scrub below is a prefix match, which is right for anything
+        # inherited and wrong for anything the caller set on purpose. It
+        # silently removed CLAUDE_CODE_DISABLE_AUTO_MEMORY for a whole live run,
+        # so the session kept writing its own memory for the lesson the reviewer
+        # was about to be asked about — a failure that had already been
+        # configured away.
+        #
+        # `configured` is named by the caller rather than listed here on
+        # purpose. A module-level allowlist would be a place to park exemptions,
+        # and each one would outlive whatever needed it; naming the variable at
+        # the launch site keeps the exemption owned by the code that set it, and
+        # a launch site that stops setting it stops exempting it.
+        configured = set(configured)
         for name in list(self.env):
+            if name in configured:
+                continue
             if name in NESTED_SESSION_VARIABLES or name.startswith("CLAUDE_CODE"):
                 del self.env[name]
         self.master = None

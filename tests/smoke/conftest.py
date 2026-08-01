@@ -142,6 +142,10 @@ def seed_runnable_project(project):
 # Code's, not this suite's.
 DEFAULT_SMOKE_AUTO_MEMORY = "0"
 
+# Named so a launch site can declare it deliberate. The pty harness scrubs
+# inherited CLAUDE_CODE* variables, and this one has to survive that.
+AUTO_MEMORY_VARIABLE = "CLAUDE_CODE_DISABLE_AUTO_MEMORY"
+
 
 def auto_memory_enabled():
     """Whether driving sessions may read and write Claude Code's auto memory."""
@@ -158,7 +162,7 @@ def with_auto_memory(environment, enabled=None):
     """
     if enabled is None:
         enabled = auto_memory_enabled()
-    environment["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "0" if enabled else "1"
+    environment[AUTO_MEMORY_VARIABLE] = "0" if enabled else "1"
     return environment
 
 

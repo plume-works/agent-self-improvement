@@ -35,6 +35,7 @@ import time
 import pytest
 
 from tests.smoke.conftest import (
+    AUTO_MEMORY_VARIABLE,
     CORRECTION,
     FIRST_TURN,
     INTERACTIVE_ALLOWED_TOOLS,
@@ -116,6 +117,9 @@ def launch(project, plugin_root, deadline, auto_memory=None):
         ["claude", "--plugin-dir", str(plugin_root), *session_args(),
          "--allowedTools", *WAKE_ALLOWED_TOOLS],
         cwd=project, env=runner_environment(auto_memory), deadline=deadline,
+        # Set here on purpose, so the harness's rule about inherited
+        # CLAUDE_CODE* variables does not take it back out again.
+        configured=(AUTO_MEMORY_VARIABLE,),
     )
     return session.start()
 
