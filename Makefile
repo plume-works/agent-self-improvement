@@ -2,6 +2,14 @@
 
 UV := $(shell command -v uv 2>/dev/null)
 
+# The model the smoke and wake *driving* sessions run on. The reviewer under
+# test is a separate dial and stays on SELF_IMPROVE_REVIEW_MODEL. `?=` leaves an
+# exported shell value in charge, and `make wake SMOKE_MODEL=` restores the
+# CLI's own default.
+SMOKE_MODEL ?= sonnet
+SMOKE_EFFORT ?= low
+export SMOKE_MODEL SMOKE_EFFORT
+
 # An activated virtualenv in the developer's shell is not this project's
 # environment; unset it so uv manages .venv without warning on every run.
 unexport VIRTUAL_ENV
@@ -13,6 +21,12 @@ help:
 	@echo "make wake        verify the asynchronous wake automatically, on a pty"
 	@echo "make wake-echo   drive the pty harness against a fake terminal (no model)"
 	@echo "make wake-repeat run the wake check ten times to measure its stability"
+	@echo ""
+	@echo "What the smoke and wake driving sessions cost to run:"
+	@echo "  SMOKE_MODEL=m  default sonnet; empty restores the CLI default"
+	@echo "  SMOKE_EFFORT=l default low; empty restores the CLI default (high)"
+	@echo "  the reviewer under test has its own dials, unaffected by these:"
+	@echo "  SELF_IMPROVE_REVIEW_MODEL (sonnet), SELF_IMPROVE_REVIEW_EFFORT (medium)"
 	@echo ""
 	@echo "Debugging the wake harness:"
 	@echo "  WAKE_TRACE=0   silence the step-by-step trace (on by default)"

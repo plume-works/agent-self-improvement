@@ -171,6 +171,7 @@ The explicit override precedes the plugin data directory because Claude Code set
 | Variable | Purpose |
 | --- | --- |
 | `SELF_IMPROVE_REVIEW_MODEL` | Reviewer model; defaults to `sonnet` |
+| `SELF_IMPROVE_REVIEW_EFFORT` | Reviewer effort level; defaults to `medium`. Empty accepts the CLI default |
 | `SELF_IMPROVE_REVIEW_TIMEOUT` | Seconds to wait for the reviewer before giving up silently |
 | `SELF_IMPROVE_DISABLE` | Set to `1` to disable the plugin without uninstalling it |
 | `SELF_IMPROVE_REVIEWER` | Set to `1` in the reviewer's own environment; suppresses reflection in reviewer-originated sessions |
@@ -302,6 +303,8 @@ claude -p --model "${SELF_IMPROVE_REVIEW_MODEL:-sonnet}" \
 The reviewer receives its entire evidence bundle on standard input. Candidate owner paths and summaries are gathered deterministically by the orchestrator and inlined, so the reviewer needs no filesystem access whatsoever. This is strictly stronger than the read-only artifact allowlist this section would otherwise permit: the reviewer has no tool with which to read, write, or execute anything.
 
 `SELF_IMPROVE_REVIEWER=1` is set in the reviewer's environment so that any session it originates suppresses reflection.
+
+Effort is carried by `CLAUDE_CODE_EFFORT_LEVEL` in that same environment, defaulting to `medium` against a Claude Code default of `high`. The review is one bounded judgement over an already-assembled evidence bundle, with no tools and a single turn, so it does not need the default; `medium` keeps the ownership and phrasing decisions the schema cannot check. It is deliberately *not* the `--effort` flag: review failure is silent by design, so a CLI too old to know the flag would abort every review with nothing on screen to explain it, whereas an unrecognized environment variable is ignored and the review still happens at the default level. Losing the saving is the acceptable failure; losing the review is not.
 
 ### 7.4 Reviewer output
 

@@ -60,7 +60,7 @@ This harness is expected to be the least stable component in the repository.
 - **Interface coupling.** Anything matched on screen is coupled to a renderer with no compatibility contract. Keep the matched surface to one plugin-controlled marker.
 - **Timing.** The wake arrives after a real model call. A timeout long enough to be reliable is long enough to make the suite slow, and a flaky assertion here is worse than no assertion.
 - **Terminal environment.** Dimensions, `TERM`, and color support all change what is emitted. Pin them explicitly.
-- **Cost.** Every run spends model usage on a real review.
+- **Cost.** Every run spends model usage on a real review. The driven session is pinned to `sonnet` at `low` effort rather than inheriting the developer's CLI default, since nothing this harness observes depends on either: the session follows a written procedure. `SMOKE_MODEL` and `SMOKE_EFFORT` override them, and setting either empty restores the CLI default for reproducing a model- or effort-specific failure. Effort is passed as `--effort` rather than `CLAUDE_CODE_EFFORT_LEVEL` because that variable is inherited and would reach the reviewer subprocess inside the session, retuning the component under test. The reviewer keeps its own `SELF_IMPROVE_REVIEW_MODEL` and `SELF_IMPROVE_REVIEW_EFFORT`.
 
 Because of these, the harness must be opt-in — its own marker and its own make target — and must never gate `make test` or `make check`.
 

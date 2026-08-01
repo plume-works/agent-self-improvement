@@ -166,6 +166,59 @@ PROVIDER_PHRASES = re.compile(
 
 SESSION_RETRY_DELAY = 20
 
+# The model the *driving* session runs on. Not the reviewer: that is the
+# component under test, it stays on SELF_IMPROVE_REVIEW_MODEL, and lowering it
+# would make a green run stop saying anything about what ships. The driving
+# sessions only follow a short scripted procedure, so they default to sonnet
+# rather than to whatever the developer's CLI prefers — observing a plugin
+# behaviour that does not depend on the model should not cost Opus usage.
+DEFAULT_SMOKE_MODEL = "sonnet"
+
+
+def smoke_model():
+    """The driving session's model, or None to accept the CLI default.
+
+    ``SMOKE_MODEL=`` (empty) is the way back to the CLI default, which a
+    model-specific failure has to be reproducible against.
+    """
+    return os.environ.get("SMOKE_MODEL", DEFAULT_SMOKE_MODEL).strip() or None
+
+
+# Claude Code defaults to `high` effort. These sessions follow a written
+# procedure — run the suite, state a correction, accept a proposal — which is
+# not reasoning work, so they are dropped to `low`. The reviewer is a separate
+# dial and stays higher; see SELF_IMPROVE_REVIEW_EFFORT.
+DEFAULT_SMOKE_EFFORT = "low"
+
+
+def smoke_effort():
+    """The driving session's effort level, or None to accept the CLI default."""
+    return os.environ.get("SMOKE_EFFORT", DEFAULT_SMOKE_EFFORT).strip() or None
+
+
+def model_args():
+    model = smoke_model()
+    return ["--model", model] if model else []
+
+
+def effort_args():
+    """``--effort``, not ``CLAUDE_CODE_EFFORT_LEVEL``.
+
+    The environment variable would be inherited by every session the harness
+    starts *and* by the reviewer subprocesses inside them, overriding the
+    reviewer's own level. The flag reaches only the session it launches. An
+    unknown flag is also a loud CLI error, which is what this suite wants: the
+    version floor is already checked, so an effort level that stopped being
+    accepted should fail rather than silently run at some other level.
+    """
+    effort = smoke_effort()
+    return ["--effort", effort] if effort else []
+
+
+def session_args():
+    """Everything that decides how much a driving session costs to run."""
+    return model_args() + effort_args()
+
 
 def mangle_path(path):
     """The CLI's directory key for a working directory.
@@ -379,6 +432,7 @@ def _run_session_once(cwd, messages, timeout=600, extra_args=None):
         "--include-hook-events",
         "--verbose",
         "--plugin-dir", PLUGIN_ROOT,
+        *session_args(),
         "--allowedTools", *ALLOWED_TOOLS,
         "--max-turns", "40",
     ]

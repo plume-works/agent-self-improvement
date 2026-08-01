@@ -55,6 +55,10 @@ make wake-echo   # the same harness against a fake terminal; no model, no cost
 make wake-repeat # ten consecutive wake runs, to measure its stability
 ```
 
+The sessions `make smoke` and `make wake` drive run on `sonnet` at `low` effort, overridable with `SMOKE_MODEL` and `SMOKE_EFFORT`; setting either to empty restores your CLI's own default, which is what a suspected model- or effort-specific failure has to be reproduced against. They only follow a written procedure, so neither dial changes what the checks observe, and an unconfigured run should not bill Opus at the default `high` effort to find that out.
+
+The reviewer *under test* has its own dials — `SELF_IMPROVE_REVIEW_MODEL` (`sonnet`) and `SELF_IMPROVE_REVIEW_EFFORT` (`medium`) — and the harness deliberately leaves them alone. Its prompt meeting the configuration that ships is the point of the exercise.
+
 `make smoke` and `make wake` leave their scratch workspaces under `tmp/smoke/` so a failure can be opened and read, along with the raw terminal stream of each pty run.
 
 `make wake` traces itself as it goes — every step, a heartbeat every five seconds while it waits, and the screen after each turn — so a stalled run says where it stalled while it is still stalling. `WAKE_TRACE=0` silences it; `WAKE_BUDGET=<seconds>` overrides the per-check budget. When a live run stalls, `make wake-echo` says which half to suspect: it drives the same harness against a fake terminal that only echoes what it captured, so if it passes, input is being delivered and the stall is in the session under test.

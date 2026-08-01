@@ -162,6 +162,28 @@ def test_reviewer_environment_marks_the_child_and_hides_state(state_root):
     assert "CLAUDE_PLUGIN_DATA" not in environment
 
 
+def test_reviewer_runs_at_the_configured_effort(state_root, monkeypatch):
+    """Medium by default, and carried by the environment rather than a flag.
+
+    The flag is the tempting shape, and it is the wrong one: review failure is
+    silent, so a CLI too old to know `--effort` would abort every review with
+    nothing on screen to explain it. An unknown variable is ignored, and the
+    review still happens at the default level.
+    """
+    monkeypatch.delenv("SELF_IMPROVE_REVIEW_EFFORT", raising=False)
+    assert reviewer.build_environment()["CLAUDE_CODE_EFFORT_LEVEL"] == "medium"
+    assert "--effort" not in reviewer.build_command("/tmp/prompt.md")
+
+    monkeypatch.setenv("SELF_IMPROVE_REVIEW_EFFORT", "high")
+    assert reviewer.build_environment()["CLAUDE_CODE_EFFORT_LEVEL"] == "high"
+
+
+def test_an_empty_reviewer_effort_leaves_the_cli_to_decide(state_root, monkeypatch):
+    monkeypatch.setenv("SELF_IMPROVE_REVIEW_EFFORT", "")
+    monkeypatch.delenv("CLAUDE_CODE_EFFORT_LEVEL", raising=False)
+    assert "CLAUDE_CODE_EFFORT_LEVEL" not in reviewer.build_environment()
+
+
 def test_reviewer_prompt_forbids_tool_use_in_its_own_text():
     """The prompt should not invite behavior the flags already prevent."""
     with open(os.path.join(paths.plugin_root(), "reviewer", "prompt.md"),

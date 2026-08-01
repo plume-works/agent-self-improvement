@@ -28,6 +28,9 @@ from tests.smoke.conftest import (
     PLUGIN_ROOT,
     ask,
     expansion,
+    session_args,
+    smoke_effort,
+    smoke_model,
     run_session,
     runner_environment,
     seed_runnable_project,
@@ -386,6 +389,7 @@ INTERACTIVE_SCRIPT = """
 
   Working directory: %s
   Plugin state:      %s
+  Session model:     %s at %s effort
 ==============================================================================
 """
 
@@ -473,11 +477,14 @@ def test_2_the_async_wake_reaches_an_idle_session(scratch):
 
     seed_runnable_project(scratch["project"])
 
-    sys.stdout.write(INTERACTIVE_SCRIPT % (scratch["project"], scratch["state"]))
+    sys.stdout.write(INTERACTIVE_SCRIPT % (
+        scratch["project"], scratch["state"],
+        smoke_model() or "the CLI default",
+        smoke_effort() or "default"))
     sys.stdout.flush()
     input("  Press Enter to launch the session... ")
 
-    subprocess.run(["claude", "--plugin-dir", PLUGIN_ROOT,
+    subprocess.run(["claude", "--plugin-dir", PLUGIN_ROOT, *session_args(),
                     "--allowedTools", *INTERACTIVE_ALLOWED_TOOLS],
                    cwd=str(scratch["project"]), env=runner_environment(),
                    check=False)

@@ -29,6 +29,32 @@ and the [section 15 acceptance gate](specs/0001-hermes-style-experiential-learni
 
 Nothing else. There is no directory to create and no file to seed.
 
+## What a run costs
+
+Two sets of dials, and they are not interchangeable:
+
+| | Model | Effort |
+| --- | --- | --- |
+| The session the suite *drives* | `SMOKE_MODEL`, default `sonnet` | `SMOKE_EFFORT`, default `low` |
+| The reviewer *under test* | `SELF_IMPROVE_REVIEW_MODEL`, default `sonnet` | `SELF_IMPROVE_REVIEW_EFFORT`, default `medium` |
+
+Setting any of them to empty accepts the CLI's own default — `high` effort, and
+whichever model you normally run — which is what a suspected model- or
+effort-specific failure has to be reproduced against.
+
+The driving session is pinned rather than inherited. It follows a written
+procedure: run the suite, state a correction, accept a proposal. None of that is
+reasoning work, nothing these checks observe depends on it, and an unconfigured
+run should not bill Opus at `high` effort to find that out.
+
+The reviewer is the component being tested. Its prompt meeting the model and
+effort that ship is the point of the exercise, so leave its two alone unless you
+are deliberately measuring a different reviewer — a green run on a weaker one
+says nothing about production. The harness sets the driving session's effort
+with the `--effort` flag rather than `CLAUDE_CODE_EFFORT_LEVEL` for exactly this
+reason: the variable is inherited, so it would reach the reviewer subprocess
+inside the session and quietly retune the thing under test.
+
 ## What it does not touch
 
 The scratch repository, the plugin state, and every mutation live under

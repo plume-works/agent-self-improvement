@@ -83,9 +83,19 @@ def build_environment():
     suppresses reflection, which is the recursion guard of section 5.5. The
     state directory override is removed so a reviewer cannot be pointed at, or
     write to, the state it is being asked to reason about.
+
+    Effort is set here rather than as a ``--effort`` flag on purpose. Review
+    failure is silent by design: a candidate simply never appears. A CLI too old
+    to know the flag would abort on an unknown option and take every review with
+    it, with nothing on screen to say why; an environment variable it does not
+    know is ignored and the review still happens, at the default level. Losing
+    the saving is the acceptable failure here, losing the review is not.
     """
     environment = dict(os.environ)
     environment["SELF_IMPROVE_REVIEWER"] = "1"
+    effort = config.review_effort()
+    if effort:
+        environment["CLAUDE_CODE_EFFORT_LEVEL"] = effort
     environment.pop("SELF_IMPROVE_STATE_DIR", None)
     environment.pop("CLAUDE_PLUGIN_DATA", None)
     return environment

@@ -40,6 +40,7 @@ from tests.smoke.conftest import (
     require_cli,
     runner_environment,
     seed_runnable_project,
+    session_args,
 )
 from tests.smoke.pty_harness import (
     STARTUP_TIMEOUT,
@@ -97,7 +98,7 @@ def read_json(path):
 
 def launch(project, plugin_root, deadline):
     session = PtySession(
-        ["claude", "--plugin-dir", str(plugin_root),
+        ["claude", "--plugin-dir", str(plugin_root), *session_args(),
          "--allowedTools", *WAKE_ALLOWED_TOOLS],
         cwd=project, env=runner_environment(), deadline=deadline,
     )
