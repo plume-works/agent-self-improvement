@@ -44,7 +44,7 @@ help:
 	@echo "  the raw terminal stream of each run is left in tmp/smoke/<test>/"
 	@echo "make lint        run ruff"
 	@echo "make fmt         apply ruff formatting fixes"
-	@echo "make validate    validate the plugin manifest with the Claude CLI"
+	@echo "make validate    validate the plugin and marketplace manifests with the Claude CLI"
 	@echo "make check       test + lint + validate"
 
 ifeq ($(UV),)
@@ -125,6 +125,7 @@ validate:
 	  echo "event as an invalid key, the CLI predates that event."; \
 	  echo "Upgrade with: npm install -g @anthropic-ai/claude-code"; \
 	  exit 1; }
+	@claude plugin validate .
 
 check: test lint validate
 
