@@ -8,6 +8,8 @@ All four slices of [Spec-0001](docs/specs/0001-hermes-style-experiential-learnin
 
 The offline suite passes, and nine of the ten smoke checks pass. The tenth — an asynchronous review waking an idle session — cannot be observed in print mode, where a turn ends at `result` and there is no idle session to wake. The pseudo-terminal harness of [Spec-0002](docs/specs/0002-pty-wake-harness.md) automates it behind `make wake`. Its negative control passes — a suppressed wake is detected — but the positive check has not yet passed, so an arriving wake is currently evidenced only by the interactive question in `make smoke`.
 
+Codex is not currently supported. [Spec-0003](docs/specs/0003-codex-integration.md) maps every Claude-specific integration point to Codex and proposes a dual-host package. It records the current parity gaps explicitly: no documented asynchronous idle-session wake, command-expansion event, generic tool-failure event, no-tools reviewer switch, or behavioral equivalent of Claude's path-scoped Markdown rules.
+
 The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
 
 ## Install
@@ -160,6 +162,10 @@ See [`docs/case-study/README.md`](docs/case-study/README.md):
 - [Hooks reference](https://code.claude.com/docs/en/hooks)
 - [Skills](https://code.claude.com/docs/en/skills)
 - [Memory](https://code.claude.com/docs/en/memory)
+- [Codex plugin packaging](https://developers.openai.com/plugins/build/plugins)
+- [Codex hooks](https://learn.chatgpt.com/docs/hooks)
+- [Codex skills](https://learn.chatgpt.com/docs/build-skills)
+- [Codex `AGENTS.md`](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
 
 ## License
 
