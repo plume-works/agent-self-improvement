@@ -1,4 +1,4 @@
-.PHONY: help test smoke smoke-auto wake wake-echo wake-repeat lint fmt validate check clean
+.PHONY: help test smoke smoke-auto wake wake-repeat test-harness lint fmt validate check clean
 
 UV := $(shell command -v uv 2>/dev/null)
 
@@ -19,8 +19,11 @@ help:
 	@echo "make smoke       run the packaged smoke test against a real Claude session"
 	@echo "make smoke-auto  the same, skipping the one interactive check"
 	@echo "make wake        verify the asynchronous wake automatically, on a pty"
-	@echo "make wake-echo   drive the pty harness against a fake terminal (no model)"
 	@echo "make wake-repeat run the wake check ten times to measure its stability"
+	@echo ""
+	@echo "make test-harness  self-check the pty harness against a fake terminal."
+	@echo "                   Costs nothing and already runs inside 'make test';"
+	@echo "                   this target reruns it alone, with the trace on."
 	@echo ""
 	@echo "What the smoke and wake driving sessions cost to run:"
 	@echo "  SMOKE_MODEL=m  default sonnet; empty restores the CLI default"
@@ -38,7 +41,7 @@ help:
 	@echo "make check       test + lint + validate"
 
 ifeq ($(UV),)
-test smoke smoke-auto wake wake-echo wake-repeat lint fmt:
+test smoke smoke-auto wake wake-repeat test-harness lint fmt:
 	@echo "uv is required for development tooling."
 	@echo "Install it with 'brew install uv' or from https://docs.astral.sh/uv/."
 	@echo "The plugin itself needs no dependencies; this is only for tests."
@@ -65,12 +68,17 @@ smoke-auto:
 wake:
 	uv run --group dev pytest -m pty -s -v -rs
 
-# The same harness against a fake terminal that only echoes what it captured, so
-# a stalled live run can be attributed: if this passes, input is being delivered
-# and turn boundaries are being detected, and the stall is in the session under
-# test. No model, no cost — these also run inside `make test`.
-wake-echo:
-	uv run --group dev pytest -m echo -s -v -rs
+# A self-check of the harness, not of the plugin — which is why it is named for
+# the harness and not for the wake. It drives the same PtySession against a fake
+# terminal that only echoes what it captured, so a stalled live run can be
+# attributed: if this passes, input is being delivered and turn boundaries are
+# being detected, and the stall is in the session under test.
+#
+# No model and no cost, so these are ordinary tests and run inside `make test`
+# like everything else. This target only reruns them alone with the trace on,
+# which is what you want mid-debugging.
+test-harness:
+	uv run --group dev pytest -m harness -s -v -rs
 
 # Acceptance criterion 1: reliable across ten consecutive runs. Stops at the
 # first failure, since that is the answer.

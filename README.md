@@ -51,7 +51,7 @@ make check       # the three above
 make smoke       # packaged smoke test against a real session; spends model usage
 make smoke-auto  # the same, skipping the one interactive check
 make wake        # the asynchronous wake, verified automatically on a pty
-make wake-echo   # the same harness against a fake terminal; no model, no cost
+make test-harness # self-check the pty harness alone; already part of make test
 make wake-repeat # ten consecutive wake runs, to measure its stability
 ```
 
@@ -61,7 +61,7 @@ The reviewer *under test* has its own dials — `SELF_IMPROVE_REVIEW_MODEL` (`so
 
 `make smoke` and `make wake` leave their scratch workspaces under `tmp/smoke/` so a failure can be opened and read, along with the raw terminal stream of each pty run.
 
-`make wake` traces itself as it goes — every step, a heartbeat every five seconds while it waits, and the screen after each turn — so a stalled run says where it stalled while it is still stalling. `WAKE_TRACE=0` silences it; `WAKE_BUDGET=<seconds>` overrides the per-check budget. When a live run stalls, `make wake-echo` says which half to suspect: it drives the same harness against a fake terminal that only echoes what it captured, so if it passes, input is being delivered and the stall is in the session under test.
+`make wake` traces itself as it goes — every step, a heartbeat every five seconds while it waits, and the screen after each turn — so a stalled run says where it stalled while it is still stalling. `WAKE_TRACE=0` silences it; `WAKE_BUDGET=<seconds>` overrides the per-check budget. When a live run stalls, `make test-harness` says which half to suspect: it drives the same harness against a fake terminal that only echoes what it captured, so if it passes, input is being delivered and the stall is in the session under test. It tests the harness rather than the plugin, costs nothing, and is an ordinary part of `make test` — the target just reruns it alone with the trace on.
 
 `make wake` is opt-in and gates nothing. It spends model usage on two real reviews, and it is the one component here coupled to a terminal interface with no compatibility contract. Each of its checks is bounded to three minutes and run **one at a time** — two concurrent runs share the same scratch workspaces and destroy each other's results.
 

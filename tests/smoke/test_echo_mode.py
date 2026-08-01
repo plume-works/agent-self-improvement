@@ -1,4 +1,9 @@
-"""Echo mode: the pty harness driving a program that only echoes what it captured.
+"""A self-check of the pty harness, driving a program that only echoes its input.
+
+These test the harness, not the plugin: nothing here touches ``claude``, the
+gate, or the reviewer. That is why they are marked ``harness`` rather than named
+for the wake — the wake is what the harness is used to observe, not what these
+checks observe.
 
 The harness types blind. It never reads the screen to decide anything, which is
 what keeps it uncoupled from an interface with no compatibility contract — and
@@ -14,9 +19,9 @@ detected from quiescence, a marker arriving with nothing typed is seen, and one
 that never arrives is not.
 
 No model, no cost, nothing that can change underneath them — so unlike the live
-checks these are not marked ``pty`` and run in ``make test``. When a live check
+checks these are ordinary tests and run in ``make test``. When a live check
 stalls and these pass, the harness is delivering input and the stall is in the
-session under test. ``make wake-echo`` runs them alone, with the trace on.
+session under test. ``make test-harness`` only reruns them alone, trace on.
 """
 
 import os
@@ -26,7 +31,7 @@ import pytest
 
 from tests.smoke.pty_harness import Deadline, PtySession, Trace
 
-pytestmark = pytest.mark.echo
+pytestmark = pytest.mark.harness
 
 FIRST_TURN = "run the tests with pytest"
 CORRECTION = "no, always use `make test` in this repo, not pytest directly"
