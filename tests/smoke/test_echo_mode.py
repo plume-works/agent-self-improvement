@@ -29,12 +29,10 @@ import sys
 
 import pytest
 
+from tests.smoke.conftest import CORRECTION, FIRST_TURN
 from tests.smoke.pty_harness import Deadline, PtySession, Trace
 
 pytestmark = pytest.mark.harness
-
-FIRST_TURN = "run the tests with pytest"
-CORRECTION = "no, always use `make test` in this repo, not pytest directly"
 
 
 ECHO_COMMAND = [sys.executable, "-u", "-m", "tests.smoke.echo_terminal"]

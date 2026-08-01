@@ -247,6 +247,10 @@ The gate is deterministic and cheap. It requests model review only when at least
 6. **reusable completion:** the final response identifies a completed multi-step procedure with verified outputs; or
 7. **manual force:** `/self-improve:improve` was invoked.
 
+Signals 1 and 2 are read from the user's own words, in the form users actually write them. A bare standing directive — “always use `make test` here”, “never push to main” — is an explicit retention request whether or not it carries a reason, and whether or not the user asks for it to be remembered. The gate recognizes the adverb in any instruction, not in a fixed list of verbs.
+
+The same words describing the world rather than instructing — “the build always fails on CI”, “that never worked” — are not a signal. Only a clause opening with the adverb is read as a rule, which is what keeps the widened pattern from spending a review on a complaint.
+
 A signal is permission to reflect, not proof that a durable lesson exists. The reviewer may and often should return no candidate.
 
 The MVP enforces:
@@ -326,6 +330,8 @@ The reviewer returns strict structured data:
 ```
 
 Malformed output, low confidence, unsupported destinations, and policy violations become `discard`.
+
+Brevity is not grounds for discard. A stated directive is explicit evidence even when the user supplies no rationale and never asks for it to be remembered — that inference is this system's job, not the user's. The reviewer proposes the behavior that was stated and does not invent a justification for it. What it still discards is an instruction about the turn in hand rather than a standing one.
 
 The reviewer does not emit final file bytes and cannot write files.
 

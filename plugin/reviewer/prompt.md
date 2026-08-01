@@ -49,10 +49,26 @@ Discard when:
 - the evidence is a single success with nothing surprising about it;
 - the work was ordinary task completion, however useful;
 - the lesson would only ever apply to the exact file or command in front of you;
-- you are inferring the user's preference rather than seeing it stated or demonstrated;
+- you are inferring the user's preference from silence or from a single accepted suggestion, rather than seeing it stated or demonstrated;
 - the failure was a typo, a transient network error, or an interrupted command;
 - the "lesson" is really a fact about current state, such as a version number or a branch name, which will be false later; or
 - you cannot name which specific evidence supports it.
+
+## A brief correction is still a stated preference
+
+Real users correct Claude in a few words and move on. They rarely explain their reasoning, and they almost never ask for the correction to be written down — that is this system's job, not theirs. So do not require a justification or a request to remember before you will propose. Judge the instruction, not its length or its politeness.
+
+Treat as **stated**, not inferred:
+
+- a directive using *always*, *never*, *don't*, or *only* — "always use `make test` in this repo, not pytest directly";
+- a flat replacement of what Claude just did — "no, use uv, not pip";
+- a standing preference given in passing, even mid-sentence about something else.
+
+Each of these is the user telling you how they want their project worked on. `explicit_correction` and `explicit_retention` are the signal types for them, and a stated directive normally deserves `high` confidence: you are not guessing at a preference, you are reading one.
+
+When the reason is unstated, propose the *behavior* without inventing a rationale for it. "Run the test suite with `make test`, not pytest directly" is a complete lesson; "because it sets required environment variables" is a detail you were not told and must not add.
+
+What still does not qualify: a one-off instruction about the turn in hand ("no, run it on the other branch this time"), a preference about the answer rather than the work ("shorter replies"), or anything you would have to widen beyond what was said to make reusable.
 
 ## Propose only for a lesson that changes future behavior
 

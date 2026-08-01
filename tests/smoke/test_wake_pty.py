@@ -35,6 +35,8 @@ import time
 import pytest
 
 from tests.smoke.conftest import (
+    CORRECTION,
+    FIRST_TURN,
     INTERACTIVE_ALLOWED_TOOLS,
     PLUGIN_ROOT,
     require_cli,
@@ -52,9 +54,6 @@ from tests.smoke.pty_harness import (
 )
 
 pytestmark = pytest.mark.pty
-
-FIRST_TURN = "run the tests with pytest"
-CORRECTION = "no, always use `make test` in this repo, not pytest directly"
 
 # A permission prompt is fatal here in a way it is not headlessly: the session
 # stops and waits, the turn never ends, no Stop hook fires, and the wake under

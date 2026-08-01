@@ -25,6 +25,43 @@ def test_retention_requests_are_detected(prompt):
 
 
 @pytest.mark.parametrize("prompt", [
+    "always prefer uv",
+    "never push to main",
+    "always format with black",
+    "no, always use `make test` in this repo, not pytest directly",
+    "use uv, and never call pip directly",
+    "fix the imports, then always sort them",
+])
+def test_a_standing_directive_is_a_retention_request_whatever_verb_follows(prompt):
+    """`always` and `never` are not tied to a list of blessed verbs.
+
+    A user who says "always format with black" is stating a rule as plainly as
+    one who says "always run make test", and the gate that only knew a handful
+    of verbs decided the difference for them. It is the standing scope that
+    makes this a lesson, not the particular word after it.
+    """
+    assert markers.RETENTION in markers.detect(prompt)
+
+
+@pytest.mark.parametrize("prompt", [
+    "the build always fails on CI",
+    "that never worked",
+    "the flag was never set",
+    "this is always the case",
+    "tests never seem to pass",
+    "I have never seen that",
+])
+def test_always_and_never_describing_the_world_are_not_directives(prompt):
+    """The other half of widening the pattern, and the expensive half to get wrong.
+
+    "the build always fails" is a report, not a rule, and reviewing it costs a
+    real model call. Only a clause that opens with the adverb is read as an
+    instruction.
+    """
+    assert markers.RETENTION not in markers.detect(prompt)
+
+
+@pytest.mark.parametrize("prompt", [
     "no, that's the wrong directory",
     "actually, use the staging config",
     "that's wrong",

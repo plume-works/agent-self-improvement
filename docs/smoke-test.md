@@ -117,6 +117,13 @@ else uses a deterministic fake. If it fails, the prompt has drifted or become
 too conservative; the candidate it produced, or the reason it declined, is in
 that test's `state/` directory.
 
+Every check drives the same one-line correction — *no, always use `make test` in
+this repo, not pytest directly* — with no reason given and no request to
+remember it, because that is what a real correction looks like. Inferring the
+durable lesson from a few words is the product, so a check that spelled out its
+own rationale would be grading the user rather than the reviewer. Keep it terse
+when editing these.
+
 ## Check 2: the interactive one
 
 A `-p` session ends its turn at `result`, so an `asyncRewake` hook has no idle

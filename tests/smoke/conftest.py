@@ -44,6 +44,22 @@ SEED_CLAUDE_MD = """# Scratch project
 - Build with `make build`.
 """
 
+# The correction every suite drives, deliberately as terse as a real one.
+#
+# Shared rather than written per suite so that no check can quietly make itself
+# pass by explaining more than a user would. An earlier version stated the
+# reason for the rule and asked in so many words for it to be remembered; that
+# is not how people correct Claude, and a reviewer tuned against it learns to
+# wait for a rationale nobody supplies. Inferring the durable lesson from a few
+# words *is* the product, so the prompt under test has to be a few words.
+#
+# What it does carry is a standing scope ("in this repo") and an `always`, which
+# is what separates a rule from an instruction about the turn in hand. Both
+# markers fire on it: `correction` from the leading "no,", `retention` from
+# "always use".
+FIRST_TURN = "run the tests with pytest"
+CORRECTION = "no, always use `make test` in this repo, not pytest directly"
+
 # The skill needs to read candidate owners and run the dispatcher. It is granted
 # nothing that can write a file: staging goes through si, which is the only
 # component allowed to touch a target.
