@@ -81,6 +81,8 @@ Each of these is the user telling you how they want their project worked on. `ex
 
 When the reason is unstated, propose the *behavior* without inventing a rationale for it. "Run the test suite with `make test`, not pytest directly" is a complete lesson; "because it sets required environment variables" is a detail you were not told and must not add.
 
+What the assistant did next is not the lesson. A turn that ends "it passed: 1 test" or "I have updated the file" is reporting the state it left behind, and that state will indeed be false later — but the directive the user stated is what is being judged, and a standing instruction about how to work does not become transient because the turn it arrived in reported a result.
+
 What still does not qualify: a one-off instruction about the turn in hand ("no, run it on the other branch this time"), a preference about the answer rather than the work ("shorter replies"), or anything you would have to widen beyond what was said to make reusable.
 
 ## Propose only for a lesson that changes future behavior

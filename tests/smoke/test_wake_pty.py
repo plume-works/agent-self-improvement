@@ -91,9 +91,6 @@ WAKE_DENIED_TOOLS = ["Edit", "Write", "NotebookEdit"]
 # so a stall anywhere fails with the screen attached instead of hanging.
 WAKE_TIMEOUT = 60.0
 CANDIDATE_TIMEOUT = 60.0
-# Only the gap between two consecutive writes in one process, so this is a
-# guard against reading mid-write, not a wait for anything to be decided.
-QUEUE_TIMEOUT = 10.0
 
 
 def report(label, detail=""):
@@ -107,12 +104,6 @@ def candidate_ids(state):
         return []
     return sorted(name[: -len(".json")] for name in os.listdir(directory)
                   if name.endswith(".json"))
-
-
-def pending_ids(state):
-    """The candidates queued for the next session start, if any."""
-    record = read_json(os.path.join(str(state), "pending.json")) or {}
-    return [entry.get("candidate_id") for entry in record.get("candidates", [])]
 
 
 def read_json(path):
@@ -276,7 +267,6 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
     trace.event("budget", "%.0fs for this check" % deadline.budget)
     session = launch(scratch["project"], plugin_root, deadline, auto_memory)
     candidates = []
-    queued = []
     woke = False
     try:
         drive_the_correcting_exchange(session, deadline)
@@ -284,21 +274,6 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
         candidates = await_candidate(session, scratch["state"])
         waited = time.time() - waited
         trace.event("candidates", str(candidates) or "(none)")
-        # Snapshot the queue here, before the wake is acted on. A session that
-        # acts on the wake reads the candidate, and reading it is what drops it
-        # from the queue — so by the end of a *successful* run the queue is
-        # legitimately empty, and only what was queued at review time says
-        # whether a lost wake would have been recoverable.
-        #
-        # Queueing happens moments after the candidate file appears, and the
-        # watch above returns on the file. Give the write its moment; nothing
-        # can consume the entry yet, because the wake is not signalled until
-        # the hook that queues it has exited.
-        if candidates:
-            session.watch(lambda: candidates[0] in pending_ids(scratch["state"]),
-                          timeout=QUEUE_TIMEOUT, label="candidate-queued")
-        queued = pending_ids(scratch["state"])
-        trace.event("queued", str(queued) or "(none)")
         if candidates:
             woke = session.watch(lambda: session.contains(candidates[0]),
                                  timeout=WAKE_TIMEOUT,
@@ -311,7 +286,6 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
             session.watch(lambda: bool(candidate_ids(scratch["state"])),
                           timeout=WAKE_TIMEOUT, label="late-candidate")
             candidates = candidate_ids(scratch["state"])
-            queued = pending_ids(scratch["state"])
         else:
             # Review had its full window and stored nothing. Waiting the same
             # window again cannot change that, and doubling a failing check's
@@ -331,7 +305,7 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
     finally:
         if session.process is not None and session.process.poll() is None:
             session.close()
-    return session, candidates, queued, woke, status
+    return session, candidates, woke, status
 
 
 # The wake ------------------------------------------------------------------
@@ -343,8 +317,8 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
     wrong: review never ran, review ran and proposed nothing, or the candidate
     exists and the wake never landed.
     """
-    session, candidates, queued, woke, status = run_exchange(
-        scratch, PLUGIN_ROOT, name="wake-arrives")
+    session, candidates, woke, status = run_exchange(scratch, PLUGIN_ROOT,
+                                                     name="wake-arrives")
 
     counters = read_json(os.path.join(str(scratch["state"]), "counters.json"))
     assert counters is not None, (
@@ -369,12 +343,13 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
     assert record and record.get("lesson"), \
         "the candidate record is unusable: %r" % (record,)
 
-    assert candidate_id in queued, (
-        "the candidate was never queued, so a lost wake would not be "
-        "recoverable at the next session start. This is read from the snapshot "
-        "taken when the candidate appeared, not from the file now: a session "
-        "that acts on the wake reads the candidate and empties the queue.\n%s"
-        % forensics(scratch["state"], session))
+    # Nothing here asserts on the queue. Queueing before the wake is what makes
+    # a lost wake recoverable, and it is checked deterministically in
+    # tests/integration/test_async_review.py. From outside a live session it is
+    # not observable: acting on the wake reads the candidate, and reading it is
+    # what drops the entry — so on the runs where the wake works best, the queue
+    # is empty before anything here can look at it. forensics() still prints the
+    # file when something else fails.
 
     assert woke, (
         "the candidate %s was staged but its identifier never reached the "
@@ -412,7 +387,7 @@ def test_the_two_learning_systems_do_not_collide(scratch):
     reached, a candidate stored but never queued. Those would mean the two
     systems interfere rather than defer.
     """
-    session, candidates, _queued, woke, status = run_exchange(
+    session, candidates, woke, status = run_exchange(
         scratch, PLUGIN_ROOT, name="wake-auto-memory", auto_memory=True)
 
     counters = read_json(os.path.join(str(scratch["state"]), "counters.json"))
@@ -454,7 +429,7 @@ def test_the_harness_fails_when_the_wake_does_not_arrive(scratch):
     above only by accident of the wake being there.
     """
     plugin_root = no_wake_plugin(scratch["workspace"])
-    session, candidates, _queued, woke, status = run_exchange(
+    session, candidates, woke, status = run_exchange(
         scratch, plugin_root, name="wake-control")
 
     assert candidates, (
