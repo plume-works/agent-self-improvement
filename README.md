@@ -51,11 +51,14 @@ make check       # the three above
 make smoke       # packaged smoke test against a real session; spends model usage
 make smoke-auto  # the same, skipping the one interactive check
 make wake        # the asynchronous wake, verified automatically on a pty
+make wake-memory # how the wake interacts with Claude's own auto memory
 make test-harness # self-check the pty harness alone; already part of make test
 make wake-repeat # ten consecutive wake runs, to measure its stability
 ```
 
 The sessions `make smoke` and `make wake` drive run on `sonnet` at `low` effort, overridable with `SMOKE_MODEL` and `SMOKE_EFFORT`; setting either to empty restores your CLI's own default, which is what a suspected model- or effort-specific failure has to be reproduced against. They only follow a written procedure, so neither dial changes what the checks observe, and an unconfigured run should not bill Opus at the default `high` effort to find that out.
+
+Every driving session also runs with Claude Code's own auto memory disabled, and `CLAUDE_CODE_DISABLE_AUTO_MEMORY` is set explicitly rather than inherited. Auto memory records the lesson these checks drive *during the turn that teaches it*, before this plugin's `Stop` hook runs, so the reviewer finds it already owned and correctly declines — right behavior that reads as a broken wake. `SMOKE_AUTO_MEMORY=1` turns it back on, and `make wake-memory` is the check that deliberately does so: it asserts the two systems defer to each other rather than interfere. See [docs/smoke-test.md](docs/smoke-test.md#auto-memory).
 
 The reviewer *under test* has its own dials — `SELF_IMPROVE_REVIEW_MODEL` (`sonnet`) and `SELF_IMPROVE_REVIEW_EFFORT` (`medium`) — and the harness deliberately leaves them alone. Its prompt meeting the configuration that ships is the point of the exercise.
 

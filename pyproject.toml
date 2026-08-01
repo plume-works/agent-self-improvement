@@ -28,6 +28,7 @@ markers = [
     "interactive: needs a person at the terminal; skipped with SMOKE_SKIP_INTERACTIVE=1",
     "pty: drives a real session on a pseudo-terminal to observe the asynchronous wake; spends model usage and is excluded from every other target (see `make wake`)",
     "harness: self-checks the pty harness against a fake terminal, not the plugin; no model, no cost, and it runs in `make test` like any other test (see `make test-harness`)",
+    "auto_memory: drives a session with Claude Code's own auto memory left on, to observe how the two learning systems interact; a third live session, so it is excluded from `make wake` and run by `make wake-memory`",
 ]
 
 [tool.ruff]

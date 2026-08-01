@@ -129,7 +129,40 @@ def seed_runnable_project(project):
     return project
 
 
-def runner_environment():
+# Claude Code's own auto memory writes a lesson into
+# ~/.claude/projects/<project>/memory/ during the turn that teaches it, before
+# this plugin's Stop hook ever runs. On the correction these suites drive, it
+# reliably records "always run `make test` in this repo" first — so the reviewer
+# is handed a turn whose lesson is already owned, and correctly declines with
+# `already_covered`. That is the right answer to the wrong question: the check
+# is meant to observe the wake, not to race another system for the same lesson.
+#
+# So it is off by default, and the two systems meeting is a separate check that
+# says so in its name. `1` disables and `0` forces on; that polarity is Claude
+# Code's, not this suite's.
+DEFAULT_SMOKE_AUTO_MEMORY = "0"
+
+
+def auto_memory_enabled():
+    """Whether driving sessions may read and write Claude Code's auto memory."""
+    value = os.environ.get("SMOKE_AUTO_MEMORY", DEFAULT_SMOKE_AUTO_MEMORY).strip()
+    return value.lower() not in ("", "0", "false", "no", "off")
+
+
+def with_auto_memory(environment, enabled=None):
+    """Set auto memory explicitly, whichever way — never leave it inherited.
+
+    A default that varies with the developer's settings would make a decline
+    reproduce for one person and not another, which is the failure this whole
+    dial exists to stop happening again.
+    """
+    if enabled is None:
+        enabled = auto_memory_enabled()
+    environment["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "0" if enabled else "1"
+    return environment
+
+
+def runner_environment(auto_memory=None):
     """The environment for a session that is expected to run ``pytest``.
 
     The scratch project has no interpreter of its own, and the plugin has no
@@ -141,7 +174,7 @@ def runner_environment():
     environment = dict(os.environ)
     environment["PATH"] = os.pathsep.join(
         [os.path.dirname(sys.executable), environment.get("PATH", "")])
-    return environment
+    return with_auto_memory(environment, auto_memory)
 
 
 def require_cli():
@@ -463,7 +496,8 @@ def _run_session_once(cwd, messages, timeout=600, extra_args=None):
 
     started = time.time()
     process = subprocess.run(command, input=payload, capture_output=True,
-                             text=True, cwd=str(cwd), timeout=timeout)
+                             text=True, cwd=str(cwd), timeout=timeout,
+                             env=with_auto_memory(dict(os.environ)))
     elapsed = time.time() - started
 
     events = []

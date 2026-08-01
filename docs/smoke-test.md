@@ -38,6 +38,10 @@ Two sets of dials, and they are not interchangeable:
 | The session the suite *drives* | `SMOKE_MODEL`, default `sonnet` | `SMOKE_EFFORT`, default `low` |
 | The reviewer *under test* | `SELF_IMPROVE_REVIEW_MODEL`, default `sonnet` | `SELF_IMPROVE_REVIEW_EFFORT`, default `medium` |
 
+A third dial is not about cost. `SMOKE_AUTO_MEMORY` is off by default, and every
+driving session is launched with `CLAUDE_CODE_DISABLE_AUTO_MEMORY` set explicitly
+either way, never inherited — see [Auto memory](#auto-memory) below for why.
+
 Setting any of them to empty accepts the CLI's own default — `high` effort, and
 whichever model you normally run — which is what a suspected model- or
 effort-specific failure has to be reproduced against.
@@ -88,6 +92,35 @@ outlive `tmp/smoke`, so without this a second run begins already holding the
 first run's memory of the lesson under test — which is how check 2 once ended in
 "already saved in memory, so no update needed". The deletion is guarded on the
 scratch root and can only match a smoke workspace.
+
+## Auto memory
+
+Claude Code has a learning system of its own. On the correction these checks
+drive, it writes `memory/feedback_use_make_test.md` **during the turn that
+teaches it** — before this plugin's `Stop` hook has run at all. The reviewer is
+then handed a turn whose lesson is already owned, and correctly declines with
+`already_covered`.
+
+That is right behavior producing a useless check: `make wake` was failing at
+`assert candidates` for two live runs, and neither run was about the wake.
+
+So every driving session sets `CLAUDE_CODE_DISABLE_AUTO_MEMORY` explicitly, and
+by default it is `1`. Explicitly matters as much as the default — `autoMemoryEnabled`
+is a user setting, so leaving it inherited means a failure that reproduces for
+one person and not another, on a check that costs a live run to observe.
+
+The interaction is not ignored, just moved somewhere it can be seen:
+
+```bash
+make wake-memory
+```
+
+This drives the identical exchange with auto memory left on and asserts
+coherence rather than a candidate. Either outcome passes — the reviewer declines
+because the lesson is already owned, or it proposes anyway and the wake arrives.
+What fails is incoherence: no review at all, a reviewer that could not be
+reached, or a candidate stored but never queued. It is a third live session, so
+it is not part of `make wake`.
 
 ## The checks
 

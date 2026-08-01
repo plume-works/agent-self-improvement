@@ -1,4 +1,4 @@
-.PHONY: help test smoke smoke-auto wake wake-repeat test-harness lint fmt validate check clean
+.PHONY: help test smoke smoke-auto wake wake-memory wake-repeat test-harness lint fmt validate check clean
 
 UV := $(shell command -v uv 2>/dev/null)
 
@@ -10,6 +10,10 @@ SMOKE_MODEL ?= sonnet
 SMOKE_EFFORT ?= low
 export SMOKE_MODEL SMOKE_EFFORT
 
+# No default here: the suite's own is off, and duplicating it would give two
+# places to change. This only forwards an override the caller supplied.
+export SMOKE_AUTO_MEMORY
+
 # An activated virtualenv in the developer's shell is not this project's
 # environment; unset it so uv manages .venv without warning on every run.
 unexport VIRTUAL_ENV
@@ -19,6 +23,7 @@ help:
 	@echo "make smoke       run the packaged smoke test against a real Claude session"
 	@echo "make smoke-auto  the same, skipping the one interactive check"
 	@echo "make wake        verify the asynchronous wake automatically, on a pty"
+	@echo "make wake-memory verify how the wake interacts with Claude's own auto memory"
 	@echo "make wake-repeat run the wake check ten times to measure its stability"
 	@echo ""
 	@echo "make test-harness  self-check the pty harness against a fake terminal."
@@ -28,6 +33,8 @@ help:
 	@echo "What the smoke and wake driving sessions cost to run:"
 	@echo "  SMOKE_MODEL=m  default sonnet; empty restores the CLI default"
 	@echo "  SMOKE_EFFORT=l default low; empty restores the CLI default (high)"
+	@echo "  SMOKE_AUTO_MEMORY=1 leave Claude's own auto memory on (default off:"
+	@echo "                   it records the lesson first, so the reviewer defers)"
 	@echo "  the reviewer under test has its own dials, unaffected by these:"
 	@echo "  SELF_IMPROVE_REVIEW_MODEL (sonnet), SELF_IMPROVE_REVIEW_EFFORT (medium)"
 	@echo ""
@@ -41,7 +48,7 @@ help:
 	@echo "make check       test + lint + validate"
 
 ifeq ($(UV),)
-test smoke smoke-auto wake wake-repeat test-harness lint fmt:
+test smoke smoke-auto wake wake-memory wake-repeat test-harness lint fmt:
 	@echo "uv is required for development tooling."
 	@echo "Install it with 'brew install uv' or from https://docs.astral.sh/uv/."
 	@echo "The plugin itself needs no dependencies; this is only for tests."
@@ -66,7 +73,16 @@ smoke-auto:
 # it spends model usage on two real reviews, and it is the component here most
 # exposed to changes in the terminal interface, so it never gates anything.
 wake:
-	uv run --group dev pytest -m pty -s -v -rs
+	uv run --group dev pytest -m "pty and not auto_memory" -s -v -rs
+
+# The same exchange with Claude Code's own auto memory left on, which the wake
+# check deliberately disables. Auto memory records the lesson during the turn
+# that teaches it, so this plugin's reviewer finds it already owned and declines
+# — correct behavior that would nonetheless read as a broken wake. Separate
+# target because it is a third live session, and because what it observes is the
+# interaction rather than the wake.
+wake-memory:
+	uv run --group dev pytest -m "pty and auto_memory" -s -v -rs
 
 # A self-check of the harness, not of the plugin — which is why it is named for
 # the harness and not for the wake. It drives the same PtySession against a fake
@@ -85,7 +101,7 @@ test-harness:
 wake-repeat:
 	@for run in 1 2 3 4 5 6 7 8 9 10; do \
 	  echo "=== wake run $$run/10 ==="; \
-	  uv run --group dev pytest -m pty -q -rs || exit 1; \
+	  uv run --group dev pytest -m "pty and not auto_memory" -q -rs || exit 1; \
 	done
 	@echo "=== ten consecutive wake runs, no failures ==="
 

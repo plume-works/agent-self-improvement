@@ -95,11 +95,27 @@ def read_json(path):
         return None
 
 
-def launch(project, plugin_root, deadline):
+def read_diagnostics(state):
+    """Every journaled record, or nothing if the file was never written."""
+    path = os.path.join(str(state), "diagnostics.jsonl")
+    if not os.path.exists(path):
+        return []
+    records = []
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                try:
+                    records.append(json.loads(line))
+                except ValueError:
+                    continue
+    return records
+
+
+def launch(project, plugin_root, deadline, auto_memory=None):
     session = PtySession(
         ["claude", "--plugin-dir", str(plugin_root), *session_args(),
          "--allowedTools", *WAKE_ALLOWED_TOOLS],
-        cwd=project, env=runner_environment(), deadline=deadline,
+        cwd=project, env=runner_environment(auto_memory), deadline=deadline,
     )
     return session.start()
 
@@ -208,7 +224,7 @@ def no_wake_plugin(workspace):
     return root
 
 
-def run_exchange(scratch, plugin_root, name="wake"):
+def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
     """The whole scripted run, returning the session and what state it produced.
 
     Bounded end to end by one budget. A working run takes well under a minute;
@@ -226,7 +242,7 @@ def run_exchange(scratch, plugin_root, name="wake"):
     trace = Trace(name, directory=scratch["workspace"])
     deadline = Deadline(trace=trace)
     trace.event("budget", "%.0fs for this check" % deadline.budget)
-    session = launch(scratch["project"], plugin_root, deadline)
+    session = launch(scratch["project"], plugin_root, deadline, auto_memory)
     candidates = []
     woke = False
     try:
@@ -319,6 +335,65 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
     assert status == 0, "the session did not exit cleanly (status %r)" % (status,)
     report("wake observed for candidate", candidate_id)
     report("lesson:", record["lesson"])
+
+
+# Auto memory ---------------------------------------------------------------
+
+@pytest.mark.auto_memory
+def test_the_two_learning_systems_do_not_collide(scratch):
+    """The same exchange with Claude Code's own auto memory left on.
+
+    This is not a variant of the wake check; it is the interaction the wake
+    check had to be insulated from, given a test of its own so that insulating
+    it did not mean forgetting about it.
+
+    Auto memory writes its lesson during the turn that teaches it, so by the
+    time the Stop hook runs the lesson is already recorded — and this plugin's
+    reviewer, seeing it owned, declines with `already_covered`. That is correct
+    behaviour, not a failure, and it is why the wake check runs with auto memory
+    off: the plugin was losing a race it should never have been entered into.
+
+    So the assertion here is coherence, not a candidate. Exactly one of two
+    things must happen, and either is a pass:
+
+    - the reviewer declines because the lesson is already owned; or
+    - it proposes anyway, and the wake arrives as it would otherwise.
+
+    What fails is incoherence: no review at all, a reviewer that could not be
+    reached, a candidate stored but never queued. Those would mean the two
+    systems interfere rather than defer.
+    """
+    session, candidates, woke, status = run_exchange(
+        scratch, PLUGIN_ROOT, name="wake-auto-memory", auto_memory=True)
+
+    counters = read_json(os.path.join(str(scratch["state"]), "counters.json"))
+    assert counters is not None, (
+        "no review ran at all, so this says nothing about how the two systems "
+        "interact.\n%s" % forensics(scratch["state"], session))
+
+    if candidates:
+        assert woke, (
+            "the reviewer proposed alongside auto memory but the wake never "
+            "arrived, which is a wake failure and not an interaction.\n%s"
+            % forensics(scratch["state"], session))
+        report("proposed despite auto memory", candidates[0])
+    else:
+        outcomes = [record for record in read_diagnostics(scratch["state"])
+                    if record.get("stage") == "review_outcome"]
+        assert outcomes, (
+            "review ran, stored nothing, and recorded no outcome — the one "
+            "combination that cannot be explained from state.\n%s"
+            % forensics(scratch["state"], session))
+        reasons = [record.get("reason") for record in outcomes]
+        assert "already_covered" in reasons, (
+            "the reviewer declined for %r rather than because the lesson was "
+            "already owned. With auto memory on, the lesson is recorded during "
+            "the turn, so `already_covered` is the outcome that shows the two "
+            "systems deferring to each other rather than failing "
+            "independently.\n%s" % (reasons, forensics(scratch["state"], session)))
+        report("deferred to auto memory, as expected", reasons[0])
+
+    assert status == 0, "the session did not exit cleanly (status %r)" % (status,)
 
 
 # The control ---------------------------------------------------------------

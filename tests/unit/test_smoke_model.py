@@ -7,6 +7,8 @@ default still exists. The reviewer's own dials are separate and are covered by
 tests/integration/test_reviewer.py.
 """
 
+import pytest
+
 from tests.smoke import conftest
 
 
@@ -42,6 +44,57 @@ def test_an_empty_override_restores_the_cli_default(monkeypatch):
     monkeypatch.setenv("SMOKE_MODEL", "   ")
     monkeypatch.setenv("SMOKE_EFFORT", "   ")
     assert conftest.session_args() == []
+
+
+def test_auto_memory_is_off_by_default(monkeypatch):
+    """Claude Code's own auto memory records the lesson during the turn.
+
+    It gets there before this plugin's Stop hook runs, so the reviewer is handed
+    a turn whose lesson is already owned and correctly declines. The wake check
+    is not a race between two learning systems, so it does not enter one.
+    """
+    monkeypatch.delenv("SMOKE_AUTO_MEMORY", raising=False)
+    assert conftest.auto_memory_enabled() is False
+    assert conftest.with_auto_memory({})["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "1"
+
+
+@pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "on"])
+def test_auto_memory_can_be_turned_back_on(monkeypatch, value):
+    monkeypatch.setenv("SMOKE_AUTO_MEMORY", value)
+    assert conftest.auto_memory_enabled() is True
+    assert conftest.with_auto_memory({})["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "0"
+
+
+@pytest.mark.parametrize("value", ["0", "false", "no", "off", "", "  "])
+def test_falsey_values_leave_auto_memory_off(monkeypatch, value):
+    monkeypatch.setenv("SMOKE_AUTO_MEMORY", value)
+    assert conftest.auto_memory_enabled() is False
+
+
+def test_an_explicit_argument_outranks_the_environment(monkeypatch):
+    """The paired checks choose per test, not per run.
+
+    `make wake` and `make wake-memory` must observe what they say they observe
+    whatever the developer exported.
+    """
+    monkeypatch.setenv("SMOKE_AUTO_MEMORY", "1")
+    assert conftest.with_auto_memory({}, False)["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "1"
+    monkeypatch.setenv("SMOKE_AUTO_MEMORY", "0")
+    assert conftest.with_auto_memory({}, True)["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "0"
+
+
+def test_auto_memory_is_never_left_to_the_developers_settings(monkeypatch):
+    """Always set, either way — never inherited.
+
+    `autoMemoryEnabled` is a user setting, so an unset variable means the check
+    behaves differently for different people. That is exactly the failure this
+    dial exists to prevent: a decline that reproduces for one person and not
+    another, on a check that costs a live run to observe.
+    """
+    monkeypatch.delenv("SMOKE_AUTO_MEMORY", raising=False)
+    for enabled in (None, True, False):
+        assert "CLAUDE_CODE_DISABLE_AUTO_MEMORY" in conftest.with_auto_memory({}, enabled)
+    assert conftest.runner_environment()["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "1"
 
 
 def test_effort_is_a_flag_and_never_an_inherited_variable(monkeypatch):
