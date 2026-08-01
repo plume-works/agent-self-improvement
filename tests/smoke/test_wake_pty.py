@@ -73,12 +73,27 @@ WAKE_ALLOWED_TOOLS = [
     "Skill(self-improve:improve)", "Skill(self-improve:improve *)",
 ]
 
+# The other way the driving session records the lesson before the Stop hook can
+# review it. Auto memory was the first, and disabling it left this one: told
+# "always use `make test` in this repo", the session writes that into the
+# project's own CLAUDE.md mid-turn — so by the time review runs an instruction
+# already owns the lesson and the reviewer correctly declines `already_covered`.
+# Correct behaviour, and again the right answer to the wrong question: this
+# check is about whether the wake arrives, not about who writes the lesson down
+# first. Editing is not otherwise part of the exchange, so denying it costs the
+# check nothing. A denied tool is refused and the turn continues, unlike an
+# unallowed one, which stops for a dialog.
+WAKE_DENIED_TOOLS = ["Edit", "Write", "NotebookEdit"]
+
 # The wake follows a real model review of a completed turn, which is fast; the
 # manual procedure's two-minute wait is a person's patience, not a measurement.
 # These are step limits, and the whole check is bounded again by CHECK_BUDGET,
 # so a stall anywhere fails with the screen attached instead of hanging.
 WAKE_TIMEOUT = 60.0
 CANDIDATE_TIMEOUT = 60.0
+# Only the gap between two consecutive writes in one process, so this is a
+# guard against reading mid-write, not a wait for anything to be decided.
+QUEUE_TIMEOUT = 10.0
 
 
 def report(label, detail=""):
@@ -127,7 +142,8 @@ def read_diagnostics(state):
 def launch(project, plugin_root, deadline, auto_memory=None):
     session = PtySession(
         ["claude", "--plugin-dir", str(plugin_root), *session_args(),
-         "--allowedTools", *WAKE_ALLOWED_TOOLS],
+         "--allowedTools", *WAKE_ALLOWED_TOOLS,
+         "--disallowedTools", *WAKE_DENIED_TOOLS],
         cwd=project, env=runner_environment(auto_memory), deadline=deadline,
         # Set here on purpose, so the harness's rule about inherited
         # CLAUDE_CODE* variables does not take it back out again.
@@ -273,6 +289,14 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
         # from the queue — so by the end of a *successful* run the queue is
         # legitimately empty, and only what was queued at review time says
         # whether a lost wake would have been recoverable.
+        #
+        # Queueing happens moments after the candidate file appears, and the
+        # watch above returns on the file. Give the write its moment; nothing
+        # can consume the entry yet, because the wake is not signalled until
+        # the hook that queues it has exited.
+        if candidates:
+            session.watch(lambda: candidates[0] in pending_ids(scratch["state"]),
+                          timeout=QUEUE_TIMEOUT, label="candidate-queued")
         queued = pending_ids(scratch["state"])
         trace.event("queued", str(queued) or "(none)")
         if candidates:
