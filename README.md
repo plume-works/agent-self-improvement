@@ -17,18 +17,18 @@ Requires Claude Code **2.1.196 or later**; earlier versions have no `UserPromptE
 Try it in one session without installing anything:
 
 ```bash
-claude --plugin-dir /path/to/claude-self-improvement/plugin
+claude --plugin-dir /path/to/agent-self-improvement/plugin
 ```
 
 To keep it across sessions, install it from the marketplace this repository publishes at its root. From inside Claude Code:
 
 ```text
-/plugin marketplace add /path/to/claude-self-improvement
-/plugin install self-improve@claude-self-improvement
+/plugin marketplace add /path/to/agent-self-improvement
+/plugin install self-improve@agent-self-improvement
 /reload-plugins
 ```
 
-The marketplace may also be added by its remote, `chocobot-farm/agent-self-improvement`, in which case Claude Code fetches the plugin itself and no local clone is needed. Installing copies the plugin into Claude Code's own cache, so a later `git pull` changes nothing until `/plugin marketplace update claude-self-improvement`.
+The marketplace may also be added by its remote, `chocobot-farm/agent-self-improvement`, in which case Claude Code fetches the plugin itself and no local clone is needed. Installing copies the plugin into Claude Code's own cache, so a later `git pull` changes nothing until `/plugin marketplace update agent-self-improvement`.
 
 Check the install invariants at any time:
 
