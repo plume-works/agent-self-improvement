@@ -1,6 +1,6 @@
 # Spec-0002: Automated verification of the asynchronous wake
 
-- **Status:** Implemented; **partially verified**. The harness is `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`. Its model-free self-checks and its harness self-checks (`make test-harness`) pass. Of the two live checks, the negative control (`make wake`, 2026-07-31) has been observed passing — a candidate stored on disk and its identifier absent from the screen when the `Stop` hook cannot signal — so acceptance criterion 2 in section 6 is met. The positive check has still never passed: in that run the scripted exchange completed in 39s and review ran, but the reviewer stored no candidate, so nothing existed to wake with. Criterion 1 is not met.
+- **Status:** Implemented; **partially verified**. The harness is `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`. Its model-free self-checks and its harness self-checks (`make test-harness`) pass. Both live checks have now been observed passing in one run (`make wake`, 2026-08-01, Claude Code 2.1.220): the wake arrived at an idle session for `cand-12f3c9117d4c`, and the negative control stored `cand-d5552db5fde5` and saw no wake when the `Stop` hook cannot signal. Acceptance criteria 1 and 2 in section 6 are met. Criterion 3 is not: `make wake-repeat` has never been run to completion, and a single green run says nothing about the ten consecutive ones it asks for.
 - **Scope:** Test tooling only. No change to the plugin, its hooks, or its mutation protocol.
 - **Depends on:** [Spec-0001](0001-hermes-style-experiential-learning-mvp.md), implemented
 
@@ -96,6 +96,12 @@ Three decisions differ from, or sharpen, what section 3 anticipated.
 
 Two failure modes are separated in the assertions, because they have different causes and different fixes: review never ran or proposed nothing, versus a candidate that exists while no wake arrived. Only the second is a wake failure.
 
+**A review that stored no candidate skips the check rather than failing it.** Both live checks need a candidate before they can observe anything: one watches for a wake carrying its identifier, the other for the absence of one. With nothing stored there is no identifier and no wake either way, and the run has observed nothing about the mechanism under test.
+
+That is not a rare case. Replaying the scripted exchange's own evidence bundle through the real reviewer 56 times declined 3 of them with `transient_state`, on a bundle the other 53 proposed from — around one review in twenty, and two live reviews run per `make wake`. Failing on a decline therefore made a red run the expected outcome roughly one time in eight, every one of them pointing at a wake that was never in question. A harness that cries wolf at that rate stops being read.
+
+So a review that ran and stored nothing skips, carrying its journalled reason, the same way a check whose model call never went through already does. A skip is not a pass: `-rs` prints the reason at the end of every run, and the evidence in section 8 still requires observing these checks pass. What must never skip is a review that never ran, or one that stored nothing and journalled nothing — those are the exchange and the gate failing, which is what these checks exist to catch.
+
 ### 7.1 Bounded runtime
 
 **A working run of either live check finishes in well under a minute. Every check is bounded end to end by a single wall-clock budget of three minutes, and no wait in the harness may block without a deadline.**
@@ -124,6 +130,8 @@ A harness that types blind produces one ambiguous failure: nothing happened, and
 
 Together they partition a stalled live run. If echo mode passes, the harness delivers input and detects turns, and the stall is in the session under test — which the trace then locates by step.
 
+The cost-free checks living in the live module carry the same `harness` mark for the same reason, and the `pty` mark is applied per test rather than to the module. They drive no session: they cover the screen matcher, the budget, a session that ignores `/exit`, and the precondition that decides between skipping a run that observed nothing and failing one whose review never happened. A module-level `pty` mark kept all of that behind a paid target, where a change breaking the harness's own decision logic would not surface until someone chose to spend on a live run.
+
 **A failing check must not wait twice.** When the candidate wait runs its full window and review stored nothing, the run does not spend a second window looking again; waiting the same interval a second time cannot change the answer, and doubling a failing check's runtime is most of what makes this harness feel like it has hung. The second wait is spent only when the first was cut short by the budget rather than by its own limit, where a late review and a missing wake are still genuinely distinguishable.
 
 ### 7.5 Only one run at a time
@@ -134,10 +142,10 @@ Both live checks reuse per-test workspaces under `tmp/smoke/`, and the fixture w
 
 Under the evidence rule in [`AGENTS.md`](../../AGENTS.md#specification-status) this specification stays `Implemented; unverified` until all of the following have been observed and recorded:
 
-1. `make wake` completing with both live checks passing;
+1. ~~`make wake` completing with both live checks passing~~ — **observed 2026-08-01.** Both checks passed in 120s together, against Claude Code 2.1.220: the wake arrived for `cand-12f3c9117d4c` carrying the lesson under test, and the control stored `cand-d5552db5fde5` and saw no wake;
 2. ~~the negative control failing the run when the wake is suppressed, as its own passing assertion~~ — **observed 2026-07-31.** The control ran the full script against a `Stop` hook that discards its exit code, stored `cand-0785fcbaf540`, and reported no wake; the check passed in 91s, inside its budget;
 3. `make wake-repeat` completing ten consecutive runs without a failure; and
-4. a run in which the budget is *not* consumed — evidence that three minutes is genuinely generous rather than the thing being measured. **Partially observed 2026-07-31**, by the control above; the positive check has not yet finished inside its budget for a reason other than a stall.
+4. ~~a run in which the budget is *not* consumed~~ — evidence that three minutes is genuinely generous rather than the thing being measured. **Observed 2026-08-01**: the positive check completed and closed its session 32s into a 180s budget, having watched for the wake and found it rather than having waited out a timeout.
 
 Item 4 exists because a check that always finishes at its deadline is not passing, it is timing out somewhere quiet.
 
