@@ -32,5 +32,8 @@ locks/
 *.sqlite-shm
 *.sqlite-wal
 
-# Test scratch
+# Test scratch. Every live run gets its own directory under test-runs/ and is
+# left there to be read afterwards; /tmp/ is where they used to go, and stays
+# ignored until `make clean` clears whatever is still sitting in it.
+/test-runs/
 /tmp/

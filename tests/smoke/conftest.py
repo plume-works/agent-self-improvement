@@ -33,6 +33,8 @@ import time
 
 import pytest
 
+from tests.smoke import workspaces
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PLUGIN_ROOT = os.path.join(REPO_ROOT, "plugin")
 SI = os.path.join(PLUGIN_ROOT, "scripts", "si")
@@ -201,8 +203,6 @@ def cli_version():
     return version
 
 
-SCRATCH_ROOT = os.path.join(REPO_ROOT, "tmp", "smoke")
-
 # Provider-side failures: the CLI ran, the call inside it did not. These say
 # nothing about the plugin, so a check that hits one is retried and then skipped
 # rather than reported as a product failure. Everything else fails loudly.
@@ -273,62 +273,32 @@ def session_args():
     return model_args() + effort_args()
 
 
-def mangle_path(path):
-    """The CLI's directory key for a working directory.
-
-    Every character outside ``[A-Za-z0-9-]`` becomes a dash, so
-    ``/tmp/smoke/test_2_x/project`` keys as ``-tmp-smoke-test-2-x-project``.
-    Underscores are included: they are converted, not kept.
-    """
-    return re.sub(r"[^A-Za-z0-9-]", "-", str(path))
-
-
-def claude_session_dir(project):
-    """Where Claude Code keeps its own transcripts and memories for a directory."""
-    home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(
-        os.path.expanduser("~"), ".claude")
-    return os.path.join(home, "projects", mangle_path(project))
-
-
-def forget_previous_runs(project):
-    """Drop Claude's own transcripts and memories for a scratch directory.
-
-    These live outside the workspace, so wiping ``tmp/smoke`` does not reach
-    them and the next run starts holding the previous run's memory of the very
-    lesson under test. In check 2 that appeared as Claude answering "already
-    saved in memory, so no update needed" instead of taking the proposal, and in
-    check 6 it would let a fresh session answer from memory rather than from the
-    instruction that was just applied.
-
-    Guarded on the scratch root, so it can only ever remove state belonging to a
-    smoke workspace. If the CLI ever derives these paths differently the guard
-    stops matching and nothing is deleted, which loses repeatability rather than
-    touching anything it should not.
-    """
-    directory = claude_session_dir(project)
-    if os.path.basename(directory).startswith(mangle_path(SCRATCH_ROOT)):
-        shutil.rmtree(directory, ignore_errors=True)
-    return directory
-
-
 @pytest.fixture
 def scratch(request, monkeypatch, cli_version):
     """A throwaway git repository with isolated plugin state.
 
-    Lives under the repository's own gitignored ``tmp/`` rather than the system
-    temporary directory, so that after a failure the workspace, the plugin
-    state, and the diagnostics are all sitting somewhere obvious. It is wiped at
-    the start of each run and deliberately left behind at the end.
+    Lives under this process's own directory in the repository's gitignored
+    ``test-runs/`` rather than the system temporary directory, so that after a
+    failure the workspace, the plugin state, and the diagnostics are all sitting
+    somewhere obvious — and so that they are still sitting there after the next
+    run, whichever target starts it. Deliberately left behind at the end.
+
+    Nothing is wiped on the way in. The run root is named to the nanosecond and
+    created moments ago, so there is nothing in it to wipe: that is what makes
+    ten runs of `make wake-repeat` ten readable results instead of one.
+
+    Claude Code's own ``~/.claude/projects/<mangled-path>/`` follows the scratch
+    path, so a unique path also means a session that starts with no memory of
+    any earlier run — the thing ``forget_previous_runs`` used to delete by hand.
+    What those directories now need is clearing occasionally, which is
+    ``make clean-claude``.
     """
-    workspace = os.path.join(SCRATCH_ROOT, request.node.name)
-    if os.path.isdir(workspace):
-        shutil.rmtree(workspace)
+    workspace = os.path.join(workspaces.run_root(), request.node.name)
 
     project = pathlib.Path(workspace) / "project"
     project.mkdir(parents=True)
     (project / "CLAUDE.md").write_text(SEED_CLAUDE_MD)
     subprocess.run(["git", "init", "-q"], cwd=str(project), check=True)
-    forget_previous_runs(project)
 
     state = pathlib.Path(workspace) / "state"
     monkeypatch.setenv("SELF_IMPROVE_STATE_DIR", str(state))
