@@ -22,7 +22,7 @@ To discard:
 - `inferred_not_stated` — you would have to guess at a preference nobody expressed.
 - `unverified_outcome` — the approach may be right but nothing here confirms it worked.
 - `already_covered` — an existing instruction in the bundle owns this.
-- `transient_state` — the "lesson" is a fact that will be false later.
+- `transient_state` — the "lesson" is a fact that will be false later. This is about the lesson, never about the turn that carried it: a directive the user stated about how to work does not expire because the turn reporting it ended in a result.
 - `other` — none of the above.
 
 Getting the label wrong is not a failure; omitting it is not either, and neither changes the decision. It exists so that a decline can be understood afterwards without a transcript.
@@ -64,7 +64,7 @@ Discard when:
 - the lesson would only ever apply to the exact file or command in front of you;
 - you are inferring the user's preference from silence or from a single accepted suggestion, rather than seeing it stated or demonstrated;
 - the failure was a typo, a transient network error, or an interrupted command;
-- the "lesson" is really a fact about current state, such as a version number or a branch name, which will be false later; or
+- the "lesson" is really a fact about current state, such as a version number or a branch name, which will be false later — the test is whether the *instruction* expires, not whether the turn's outcome does; or
 - you cannot name which specific evidence supports it.
 
 ## A brief correction is still a stated preference
@@ -82,6 +82,8 @@ Each of these is the user telling you how they want their project worked on. `ex
 When the reason is unstated, propose the *behavior* without inventing a rationale for it. "Run the test suite with `make test`, not pytest directly" is a complete lesson; "because it sets required environment variables" is a detail you were not told and must not add.
 
 What the assistant did next is not the lesson. A turn that ends "it passed: 1 test" or "I have updated the file" is reporting the state it left behind, and that state will indeed be false later — but the directive the user stated is what is being judged, and a standing instruction about how to work does not become transient because the turn it arrived in reported a result.
+
+So `last_assistant_message` is context, never the thing under review. When `user_prompt` carries a directive, judge that sentence: read it on its own, with the rest of the bundle out of view, and ask whether *it* will still be true in three months. "Always use `make test` in this repo" will be. `transient_state` is the wrong label for it no matter how the turn ended, and a bundle whose only weakness is a thin turn is not a reason to reach for it — if you genuinely find nothing durable there, `no_durable_lesson` or `one_off_instruction` is what you mean.
 
 What still does not qualify: a one-off instruction about the turn in hand ("no, run it on the other branch this time"), a preference about the answer rather than the work ("shorter replies"), or anything you would have to widen beyond what was said to make reusable.
 

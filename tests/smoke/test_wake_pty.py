@@ -33,6 +33,7 @@ import sys
 import time
 
 import pytest
+from _pytest.outcomes import Skipped
 
 from tests.smoke.conftest import (
     AUTO_MEMORY_VARIABLE,
@@ -54,7 +55,12 @@ from tests.smoke.pty_harness import (
     Trace,
 )
 
-pytestmark = pytest.mark.pty
+# Marked per test rather than for the module: the three live checks spend model
+# usage and belong behind `make wake`, while the self-checks at the foot of the
+# file drive no session at all. A module-level `pty` mark kept those behind a
+# paid target, where a change that broke the harness's own decision logic would
+# not be caught until someone chose to spend on a live run.
+live = pytest.mark.pty
 
 # A permission prompt is fatal here in a way it is not headlessly: the session
 # stops and waits, the turn never ends, no Stop hook fires, and the wake under
@@ -194,6 +200,64 @@ def await_candidate(session, state, timeout=CANDIDATE_TIMEOUT):
     return candidate_ids(state)
 
 
+def review_outcomes(state):
+    """The bounded label of every review that ended without a candidate."""
+    return [record for record in read_diagnostics(state)
+            if record.get("stage") == "review_outcome"]
+
+
+def require_a_candidate(candidates, state, session):
+    """Both live checks need a candidate before they can observe anything.
+
+    Neither check is about the reviewer's judgement. The positive one watches
+    for a wake carrying a candidate identifier and the control watches for the
+    absence of one; with no candidate stored, there is no identifier and no
+    wake either way, and the run observed nothing about the mechanism under
+    test.
+
+    That outcome is measured, not hypothetical: replaying this exchange's own
+    evidence bundle through the real reviewer 56 times declined 3 of them with
+    `transient_state`, on a bundle the other 53 proposed from. Two live reviews
+    run per `make wake`, so failing on a decline made a red run the expected
+    outcome roughly one time in eight — and every one of those reds pointed at
+    a wake that was never in question.
+
+    So a review that ran and stored nothing skips, carrying its journalled
+    reason, the same way `run_session` skips a check whose model call never went
+    through. A skip is not a pass: `-rs` prints the reason at the end of the
+    run, and Spec-0002's evidence still requires observing these checks pass.
+
+    What must not skip is a review that never happened, or one that stored
+    nothing and journalled nothing. Those are the exchange and the gate failing,
+    which is what these checks are here to catch.
+    """
+    if candidates:
+        return
+
+    counters = read_json(os.path.join(str(state), "counters.json"))
+    assert counters is not None, (
+        "no review ever started, so nothing here says anything about the wake. "
+        "The usual cause is a turn that never ended — a permission prompt for a "
+        "command outside WAKE_ALLOWED_TOOLS leaves the session waiting, and no "
+        "Stop hook fires for a turn that has not finished. Undiscarded turn "
+        "files below are the signature of that.\n%s"
+        % forensics(state, session))
+
+    outcomes = review_outcomes(state)
+    assert outcomes, (
+        "review ran, stored nothing, and recorded no outcome — the one "
+        "combination that cannot be explained from state.\n%s"
+        % forensics(state, session))
+
+    reasons = [record.get("reason") for record in outcomes]
+    pytest.skip(
+        "the reviewer stored no candidate (%s), so this run observed nothing "
+        "about the wake. A discard category means it read the turn and "
+        "declined, an error class means it was never reached, `duplicate` "
+        "means the lesson was already known. None of them is a wake result."
+        % ", ".join(str(reason) for reason in reasons))
+
+
 def forensics(state, session):
     lines = ["state root: %s" % state,
              "raw terminal stream: %s.pty.log, beside the workspace"
@@ -310,6 +374,7 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
 
 # The wake ------------------------------------------------------------------
 
+@live
 def test_the_async_wake_arrives_at_an_idle_session(scratch):
     """A completed correction wakes the session with nobody typing.
 
@@ -320,22 +385,7 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
     session, candidates, woke, status = run_exchange(scratch, PLUGIN_ROOT,
                                                      name="wake-arrives")
 
-    counters = read_json(os.path.join(str(scratch["state"]), "counters.json"))
-    assert counters is not None, (
-        "no review ever started, so nothing here says anything about the wake. "
-        "The usual cause is a turn that never ended — a permission prompt for a "
-        "command outside WAKE_ALLOWED_TOOLS leaves the session waiting, and no "
-        "Stop hook fires for a turn that has not finished. Undiscarded turn "
-        "files below are the signature of that.\n%s"
-        % forensics(scratch["state"], session))
-
-    assert candidates, (
-        "review ran but stored no candidate, so there was nothing to wake with. "
-        "That is a reviewer outcome, not a wake failure. The `review_outcome` "
-        "record in the diagnostics below says which one: a discard category "
-        "means the reviewer read the turn and declined, an error class means it "
-        "was never reached, `duplicate` means the lesson was already known.\n%s"
-        % forensics(scratch["state"], session))
+    require_a_candidate(candidates, scratch["state"], session)
 
     candidate_id = candidates[0]
     record = read_json(os.path.join(str(scratch["state"]), "candidates",
@@ -363,6 +413,7 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
 
 # Auto memory ---------------------------------------------------------------
 
+@live
 @pytest.mark.auto_memory
 def test_the_two_learning_systems_do_not_collide(scratch):
     """The same exchange with Claude Code's own auto memory left on.
@@ -402,8 +453,7 @@ def test_the_two_learning_systems_do_not_collide(scratch):
             % forensics(scratch["state"], session))
         report("proposed despite auto memory", candidates[0])
     else:
-        outcomes = [record for record in read_diagnostics(scratch["state"])
-                    if record.get("stage") == "review_outcome"]
+        outcomes = review_outcomes(scratch["state"])
         assert outcomes, (
             "review ran, stored nothing, and recorded no outcome — the one "
             "combination that cannot be explained from state.\n%s"
@@ -422,6 +472,7 @@ def test_the_two_learning_systems_do_not_collide(scratch):
 
 # The control ---------------------------------------------------------------
 
+@live
 def test_the_harness_fails_when_the_wake_does_not_arrive(scratch):
     """The same run against a Stop hook that never signals: no wake, by construction.
 
@@ -432,10 +483,7 @@ def test_the_harness_fails_when_the_wake_does_not_arrive(scratch):
     session, candidates, woke, status = run_exchange(
         scratch, plugin_root, name="wake-control")
 
-    assert candidates, (
-        "the control observed nothing: with no candidate stored, this run does "
-        "not show that a suppressed wake is detected.\n%s"
-        % forensics(scratch["state"], session))
+    require_a_candidate(candidates, scratch["state"], session)
 
     assert not woke, (
         "candidate %s reached the screen although the Stop hook never signalled "
@@ -449,6 +497,65 @@ def test_the_harness_fails_when_the_wake_does_not_arrive(scratch):
 
 # Harness self-checks -------------------------------------------------------
 
+def _state_with(tmp_path, counters=None, outcomes=()):
+    """A plugin state root holding only what the precondition reads."""
+    if counters is not None:
+        (tmp_path / "counters.json").write_text(json.dumps(counters))
+    if outcomes:
+        (tmp_path / "diagnostics.jsonl").write_text(
+            "".join(json.dumps(dict(record, stage="review_outcome")) + "\n"
+                    for record in outcomes))
+    return tmp_path
+
+
+class _NoSession:
+    """Stands in for a session in the forensics a failing precondition prints."""
+
+    def tail(self):
+        return "(no session)"
+
+    trace = type("_T", (), {"name": "self-check"})()
+
+
+@pytest.mark.harness
+def test_a_stored_candidate_lets_a_live_check_proceed(tmp_path):
+    """The ordinary case decides nothing and gets out of the way."""
+    require_a_candidate(["cand-abc123def456"], _state_with(tmp_path), _NoSession())
+
+
+@pytest.mark.harness
+def test_a_reviewer_decline_skips_rather_than_failing_the_run(tmp_path):
+    """A review that ran and declined observed nothing about the wake.
+
+    This is the flake the precondition exists for: the reviewer discards a
+    genuine correction a few percent of the time, and with two live reviews per
+    `make wake` that was failing runs regularly for a reason unconnected to the
+    mechanism under test. The reason has to survive into the skip, so the run
+    still says which outcome it saw.
+    """
+    state = _state_with(tmp_path, counters={"count": 1},
+                        outcomes=[{"reason": "transient_state"}])
+    with pytest.raises(Skipped) as skipped:
+        require_a_candidate([], state, _NoSession())
+    assert "transient_state" in str(skipped.value)
+
+
+@pytest.mark.harness
+def test_a_review_that_never_ran_still_fails_the_run(tmp_path):
+    """No counters means no Stop hook fired, which is a real failure."""
+    with pytest.raises(AssertionError, match="no review ever started"):
+        require_a_candidate([], _state_with(tmp_path), _NoSession())
+
+
+@pytest.mark.harness
+def test_a_review_that_journalled_nothing_still_fails_the_run(tmp_path):
+    """A review with no candidate and no outcome cannot be explained; fail."""
+    state = _state_with(tmp_path, counters={"count": 1})
+    with pytest.raises(AssertionError, match="recorded no outcome"):
+        require_a_candidate([], state, _NoSession())
+
+
+@pytest.mark.harness
 def test_the_screen_matcher_survives_wrapping_and_styling():
     """The one on-screen match must not be defeated by the renderer.
 
@@ -465,6 +572,7 @@ def test_the_screen_matcher_survives_wrapping_and_styling():
     assert flatten("\x1b[31ma b\nc\x1b[0m") == "abc"
 
 
+@pytest.mark.harness
 def test_the_budget_bounds_a_session_that_never_stops_talking():
     """No wait may outlive the check's budget, however chatty the session is.
 
@@ -490,6 +598,7 @@ def test_the_budget_bounds_a_session_that_never_stops_talking():
         session.close()
 
 
+@pytest.mark.harness
 def test_the_harness_reports_a_session_it_had_to_kill():
     """A session that ignores /exit must not be reported as a clean exit."""
     session = PtySession([sys.executable, "-c",
