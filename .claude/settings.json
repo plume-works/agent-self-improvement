@@ -3,8 +3,7 @@
     "chocobot-farm": {
       "source": {
         "source": "github",
-        "repo": "chocobot-farm/agent-devcontainer",
-        "ref": "spec/catalog-distribution-02-claude-plugin"
+        "repo": "chocobot-farm/agent-devcontainer"
       }
     }
   },
