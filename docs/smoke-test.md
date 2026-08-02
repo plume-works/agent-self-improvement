@@ -62,17 +62,29 @@ inside the session and quietly retune the thing under test.
 ## What it does not touch
 
 The scratch repository, the plugin state, and every mutation live under
-`tmp/smoke/<test-name>/`, which is gitignored. Each run wipes its own workspace
-at the start and **leaves it in place afterwards**, so a failure can be opened
-and read:
+`test-runs/<target>_<timestamp>/<test-name>/`, which is gitignored. Every run
+claims a directory of its own and **leaves everything in place afterwards**, so
+a failure can be opened and read — including after the next run:
 
 ```bash
-tmp/smoke/test_3_a_real_reviewer_produces_a_schema_valid_candidate/
-├── project/          the scratch repository, with its CLAUDE.md
-└── state/            candidates, proposals, backups, diagnostics.jsonl
+test-runs/
+├── latest -> smoke_2026-08-02_09-12-03.771204418
+├── latest-smoke -> smoke_2026-08-02_09-12-03.771204418
+├── latest-wake -> wake_2026-08-02_03-08-12.801409000
+└── smoke_2026-08-02_09-12-03.771204418/
+    └── test_3_a_real_reviewer_produces_a_schema_valid_candidate/
+        ├── project/     the scratch repository, with its CLAUDE.md
+        └── state/       candidates, proposals, backups, diagnostics.jsonl
 ```
 
-`make clean` removes them.
+Nothing is ever overwritten. The directory is named for the target that started
+it, so `make smoke` and `make wake` cannot collide, and to the nanosecond, so
+two runs of the same target cannot either — which is what makes the ten runs of
+`make wake-repeat` ten results rather than one. One pytest process claims one
+directory, so every check in a run shares it.
+
+`make clean` removes them all; `latest` and `latest-<target>` are there so
+finding the run you just did does not mean reading timestamps.
 
 Isolation works because `SELF_IMPROVE_STATE_DIR` outranks `CLAUDE_PLUGIN_DATA`
 when the state root is resolved. Claude Code sets `CLAUDE_PLUGIN_DATA` in every
@@ -86,12 +98,19 @@ would take the CLI's authentication with it. No check proposes a user-scope
 change, and every mutation assertion checks the file it touched is inside the
 scratch repository.
 
-One thing inside `~/.claude` is removed: `projects/<scratch-path>/`, where Claude
-Code keeps its own transcripts and memories for the scratch directory. Those
-outlive `tmp/smoke`, so without this a second run begins already holding the
-first run's memory of the lesson under test — which is how check 2 once ended in
-"already saved in memory, so no update needed". The deletion is guarded on the
-scratch root and can only match a smoke workspace.
+One thing inside `~/.claude` does grow: `projects/<scratch-path>/`, where Claude
+Code keeps its own transcripts and memories for a working directory. A run used
+to delete it, because the scratch path was the same every time and a second run
+would otherwise begin already holding the first run's memory of the lesson under
+test — which is how check 2 once ended in "already saved in memory, so no update
+needed". A path that no earlier run has used fixes that by construction, and
+nothing needs deleting mid-run.
+
+What it leaves is one small directory per run, outside the repository where
+`make clean` cannot reach it by removing files. `make clean-claude` removes
+them, and `make clean` calls it. It prints every path before deleting it and
+matches on the mangled `test-runs/` root (and the old `tmp/smoke` one), so it
+cannot name a directory belonging to a real project.
 
 ## Auto memory
 
@@ -172,7 +191,7 @@ manual procedure below is still the supported way to verify the wake.
 When `make wake` fails, read its trace before anything else: it names each step
 as it starts, beats every five seconds while waiting, and echoes the screen after
 every turn, and the raw terminal stream of the run is left in
-`tmp/smoke/<test>/<name>.pty.log`. `make test-harness` drives the same harness
+`test-runs/<target>_<timestamp>/<test>/<name>.pty.log`. `make test-harness` drives the same harness
 against a fake terminal that only echoes what it captured — no model, no cost —
 and a pass there means the input reached the session and the failure is on the
 other side of the pty.
@@ -261,7 +280,7 @@ reported success.
 The failing test names its own workspace. Include:
 
 - `claude --version` and `python3 --version`;
-- `tmp/smoke/<test-name>/state/diagnostics.jsonl`, which holds bounded error
+- `test-runs/<target>_<timestamp>/<test-name>/state/diagnostics.jsonl`, which holds bounded error
   classes and no sensitive data; and
 - `./plugin/scripts/si self-test`.
 
