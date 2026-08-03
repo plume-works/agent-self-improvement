@@ -2,7 +2,7 @@
 
 - **Status:** Proposed; not implemented. No acceptance criterion in section 12 has been observed.
 - **Scope:** A tracing facility inside `plugin/selfimprove/`, off by default, plus the reader and harness integration that make a live run analyzable afterwards.
-- **Depends on:** [Spec-0001](0001-hermes-style-experiential-learning-mvp.md), implemented; [Spec-0002](0002-pty-wake-harness.md), verified.
+- **Depends on:** [Spec-0001](0001-hermes-style-experiential-learning-mvp.md), implemented; [Spec-0002](0002-pty-wake-harness.md), verified but for its section 6.1.
 - **Amends when implemented:** [Spec-0001 section 10](0001-hermes-style-experiential-learning-mvp.md#10-state-and-privacy) gains a fifth state class, and section 4.1 gains the environment variables of section 9 here.
 
 ## 1. Problem

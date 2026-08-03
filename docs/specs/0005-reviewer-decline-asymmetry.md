@@ -2,7 +2,7 @@
 
 - **Status:** Open question; no mechanism identified. Nothing here is implemented, and nothing here blocks anything.
 - **Scope:** One measured behaviour of the reviewer under the Spec-0002 harness, the hypotheses eliminated so far, and what would settle it. No design and no proposed change.
-- **Discovered by:** [Spec-0002](0002-pty-wake-harness.md), verified — its runs produced this measurement while establishing something else entirely.
+- **Discovered by:** [Spec-0002](0002-pty-wake-harness.md), verified but for its section 6.1 — its runs produced this measurement while establishing something else entirely.
 - **Related:** [Spec-0004](0004-plugin-execution-tracing.md), proposed — the facility that would make this measurable, whose section 13 deliberately keeps the slices aimed at this question behind a named hypothesis.
 
 ## 0. How this was found
