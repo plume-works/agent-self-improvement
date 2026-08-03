@@ -32,7 +32,7 @@ To keep it across sessions, install it from the marketplace this repository publ
 /reload-plugins
 ```
 
-The marketplace may also be added by its remote, `chocobot-farm/agent-self-improvement`, in which case Claude Code fetches the plugin itself and no local clone is needed.
+The marketplace may also be added by its remote, `plume-works/agent-self-improvement`, in which case Claude Code fetches the plugin itself and no local clone is needed.
 
 ### Refreshing a local install
 

@@ -1,11 +1,11 @@
 {
   "extraKnownMarketplaces": {
-    "chocobot-farm": {
+    "plume-works": {
       "source": {
         "source": "github",
-        "repo": "chocobot-farm/agent-devcontainer"
+        "repo": "plume-works/agent-devcontainer"
       }
     }
   },
-  "enabledPlugins": { "agentdev@chocobot-farm": true }
+  "enabledPlugins": { "agentdev@plume-works": true }
 }

@@ -1,8 +1,8 @@
 {
   "name": "agent-self-improvement",
   "owner": {
-    "name": "Anton Matosov",
-    "url": "https://github.com/chocobot-farm/agent-self-improvement"
+    "name": "PlumeWorks",
+    "url": "https://github.com/plume-works/agent-self-improvement"
   },
   "description": "Local experiential-learning plugin for Claude Code surfaces.",
   "plugins": [
