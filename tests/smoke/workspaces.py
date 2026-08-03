@@ -83,15 +83,28 @@ def run_root():
     return _run_root
 
 
+def run_family(label):
+    """The label with a run number taken off it.
+
+    ``make wake-repeat`` numbers its ten iterations so they sort in the order
+    they ran, which makes every label unique — and a ``latest-<label>`` link per
+    unique label is ten links each pointing at the one run that could ever
+    match. Useless, and it buries the ones that mean something. The family is
+    what the shortcut is for: ``latest-wake-repeat`` is the newest iteration,
+    whichever number it carried.
+    """
+    return re.sub(r"-\d+$", "", label)
+
+
 def refresh_latest(root, label=None):
-    """Point ``latest`` and ``latest-<label>`` at ``root``.
+    """Point ``latest`` and ``latest-<family>`` at ``root``.
 
     A convenience for finding the run you just did without reading timestamps.
     Every failure is suppressed: a filesystem that cannot do symlinks should
     cost a shortcut, not a run.
     """
     label = run_label() if label is None else label
-    for name in ("latest", "latest-%s" % label):
+    for name in ("latest", "latest-%s" % run_family(label)):
         link = os.path.join(RUNS_ROOT, name)
         with contextlib.suppress(OSError):
             if os.path.islink(link) or os.path.exists(link):

@@ -124,6 +124,35 @@ def test_each_target_keeps_its_own_latest(runs_root, monkeypatch):
     assert os.path.realpath(str(runs_root / "latest")) == os.path.realpath(wake)
 
 
+def test_a_numbered_run_updates_its_family_link_not_one_of_its_own(runs_root,
+                                                                   monkeypatch):
+    """Ten iterations of `make wake-repeat` leave one shortcut, not ten.
+
+    Observed on the first real ten-run loop: every iteration carries its own
+    label so the directories sort in order, and a link per label meant ten
+    `latest-wake-repeat-NN` entries each pointing at the single run that could
+    ever match, burying `latest-wake` and `latest-smoke` among them.
+    """
+    for number in ("01", "02", "03"):
+        monkeypatch.setattr(workspaces, "_run_root", None)
+        monkeypatch.setenv("TEST_RUN_LABEL", "wake-repeat-%s" % number)
+        newest = workspaces.run_root()
+
+    links = sorted(name for name in os.listdir(str(runs_root))
+                   if name.startswith("latest"))
+    assert links == ["latest", "latest-wake-repeat"]
+    assert os.path.realpath(str(runs_root / "latest-wake-repeat")) == \
+        os.path.realpath(newest)
+
+
+def test_the_family_is_only_a_trailing_run_number(runs_root):
+    """A target whose name ends in a word keeps it; only digits are a number."""
+    assert workspaces.run_family("wake-repeat-07") == "wake-repeat"
+    assert workspaces.run_family("wake") == "wake"
+    assert workspaces.run_family("smoke-auto") == "smoke-auto"
+    assert workspaces.run_family("wake-memory") == "wake-memory"
+
+
 def test_a_filesystem_without_symlinks_costs_a_shortcut_not_a_run(runs_root,
                                                                   monkeypatch):
     def refuse(*_args, **_kwargs):
