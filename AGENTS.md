@@ -18,20 +18,21 @@ Where evidence is partial, say exactly which part is covered and which is not, i
 
 ## A new finding gets its own specification
 
-**Work that discovers a question does not own that question.** When a specification's own runs turn up something it did not set out to answer, write the finding into a new numbered specification and leave a one-paragraph record and a link behind. Do not grow the original.
+**Work that discovers a question does not own that question.** When a specification's own runs turn up something it did not set out to answer, the finding goes into a new numbered specification and **the original is not edited at all** — no summary paragraph, no section, no forward link. The new specification carries the backreference and the account of how the finding was discovered. References point from the newer document to the older one, never the reverse.
 
-This is the default, not a judgement call. Append to the original only when the finding changes whether *its own* acceptance criteria are met.
+This is the default, not a judgement call. The only edit a finding may cause in the original is to its own status line, and only when the finding changes whether *its own* acceptance criteria are met.
 
-The reason is that a specification is answerable. It states criteria, they are observed, and it closes. A finding appended to it makes it permanently open on a question it never scoped, so a document that has done its job reads as unfinished — and the finding itself, filed as an aside in someone else's argument, gets none of the framing it needs.
+The reason is that a specification is answerable. It states criteria, they are observed, and it closes. Anything appended to it afterwards makes a finished document read as unfinished, and a forward link to an open question does it just as effectively as a section would — a reader arriving at a closed specification should find no thread left dangling out of it. The finding is better served too: filed as an aside in someone else's argument it gets none of the framing it needs, and carrying its own discovery context costs the new document one paragraph.
 
 A finding specification is not a design. It carries:
 
 - the measurement, with its numbers and the runs that produced them;
 - every hypothesis already eliminated, and what eliminated it, so nobody pays twice for the same answer;
 - what would settle it, naming the instrument and saying honestly whether that instrument exists; and
-- what closing it looks like — including deciding it is not worth the cost, which is a legitimate outcome and must be written down as one rather than left to lapse.
+- what closing it looks like — including deciding it is not worth the cost, which is a legitimate outcome and must be written down as one rather than left to lapse; and
+- how it was found, which is the context the original would otherwise have had to keep.
 
-Worked example: [Spec-0002](docs/specs/0002-pty-wake-harness.md) met every criterion it set, and its runs exposed a reviewer asymmetry it never scoped. The asymmetry moved to [Spec-0005](docs/specs/0005-reviewer-decline-asymmetry.md); Spec-0002 kept a paragraph and closed.
+Worked example: [Spec-0002](docs/specs/0002-pty-wake-harness.md) met every criterion it set, and its runs exposed a reviewer asymmetry it never scoped. The asymmetry became [Spec-0005](docs/specs/0005-reviewer-decline-asymmetry.md), which cites the runs that produced it. Spec-0002 says nothing about it and closed.
 
 The same rule governs building for a finding: do not schedule work whose only justification is a question nobody has framed. Instrumentation proposed to answer an open finding stays behind a named hypothesis that its output could confirm or kill — see [Spec-0004 section 13](docs/specs/0004-plugin-execution-tracing.md#13-implementation-sequence).
 
