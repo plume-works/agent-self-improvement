@@ -124,6 +124,26 @@ def mangle_path(path):
     return re.sub(r"[^A-Za-z0-9-]", "-", str(path))
 
 
+# What the mangled key of a run's working directory looks like after the runs
+# root: a label, the run stamp, and whatever the run put underneath it. The
+# stamp is what makes this a rule rather than a guess. A prefix on the runs
+# root is not enough, because mangling maps `/` and `-` to the same character:
+# a real project at `<repo>/test-runs-archive/project` keys with every
+# character `<repo>/test-runs/` keys with, and this sweep deletes what it
+# names. No neighbouring path carries a date, a time, and nine digits of
+# nanoseconds in the position a run directory carries them — short of a
+# neighbour that reproduces a run directory's own name, which nothing can tell
+# apart from a run once the separators are gone.
+RUN_KEY_TAIL = r"-.+-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{9}(?:-.*)?"
+
+# The old layout had no stamp to match on: it named a workspace after the test
+# that claimed it, and Claude ran in that workspace's `project/`. Both ends are
+# required, so the neighbour that could still be mistaken for one of these would
+# have to be a Claude working directory named `project`, inside a sibling of the
+# repository's own gitignored `tmp/smoke`, under a directory beginning `test`.
+LEGACY_KEY_TAIL = r"-test-.+-project"
+
+
 def claude_config_dir():
     return os.environ.get("CLAUDE_CONFIG_DIR") or \
         os.path.join(os.path.expanduser("~"), ".claude")
@@ -137,18 +157,21 @@ def claude_session_dir(project):
 def scratch_project_dirs(config_dir=None):
     """Claude project directories belonging to a test run, newest name last.
 
-    Matched by prefix on the mangled runs root, which is what keeps this
-    incapable of naming anything outside ``test-runs/`` — or outside the old
-    ``tmp/smoke`` layout, whose directories are still out there on any machine
-    that ran the suite before.
+    A key qualifies only if it is one of the roots' keys *followed by the shape
+    a run writes underneath it* — the stamp for the current layout, a test's
+    workspace and its ``project/`` for the old one. That is what keeps this
+    incapable of naming anything outside ``test-runs/``, including the
+    neighbours of ``test-runs/`` that a prefix rule cannot tell apart from it.
     """
     projects = os.path.join(config_dir or claude_config_dir(), "projects")
-    prefixes = tuple(mangle_path(root) for root in (RUNS_ROOT, *LEGACY_ROOTS))
     if not os.path.isdir(projects):
         return []
+    patterns = [re.compile(re.escape(mangle_path(root)) + tail + r"\Z")
+                for root, tail in [(RUNS_ROOT, RUN_KEY_TAIL)]
+                + [(legacy, LEGACY_KEY_TAIL) for legacy in LEGACY_ROOTS]]
     return sorted(os.path.join(projects, entry)
                   for entry in os.listdir(projects)
-                  if entry.startswith(prefixes))
+                  if any(pattern.match(entry) for pattern in patterns))
 
 
 def sweep_claude_projects(config_dir=None, stream=None):
@@ -162,7 +185,7 @@ def sweep_claude_projects(config_dir=None, stream=None):
 
     Every path is printed before it goes: this deletes outside the repository,
     so what it deleted has to be readable afterwards rather than inferred from
-    the prefix rule.
+    the matching rule.
     """
     stream = sys.stdout if stream is None else stream
     removed = []

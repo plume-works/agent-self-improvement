@@ -172,10 +172,14 @@ def _project_entry(config_dir, path):
     return entry
 
 
+def _run_dir(runs_root, label="wake", stamp="2026-08-02_03-00-00.123456789"):
+    """A run directory named the way ``run_root()`` names one."""
+    return runs_root / ("%s_%s" % (label, stamp))
+
+
 def test_the_sweep_finds_a_directory_belonging_to_a_run(tmp_path, runs_root):
     config = tmp_path / "claude"
-    mine = _project_entry(str(config),
-                          str(runs_root / "wake_2026-08-02_03-00-00.1" / "project"))
+    mine = _project_entry(str(config), str(_run_dir(runs_root) / "project"))
 
     removed = workspaces.sweep_claude_projects(config_dir=str(config),
                                                stream=io.StringIO())
@@ -199,7 +203,7 @@ def test_the_sweep_cannot_name_anything_outside_a_test_run(tmp_path, runs_root):
     """It deletes outside the repository, so its guard is the whole safety."""
     config = tmp_path / "claude"
     theirs = _project_entry(str(config), "/Users/someone/Develop/real-project")
-    mine = _project_entry(str(config), str(runs_root / "wake_1" / "project"))
+    mine = _project_entry(str(config), str(_run_dir(runs_root) / "project"))
 
     removed = workspaces.sweep_claude_projects(config_dir=str(config),
                                                stream=io.StringIO())
@@ -208,10 +212,45 @@ def test_the_sweep_cannot_name_anything_outside_a_test_run(tmp_path, runs_root):
     assert os.path.isdir(theirs), "a real project directory was in range"
 
 
+def test_a_neighbour_of_the_runs_root_is_not_a_test_run(tmp_path, runs_root):
+    """Mangling maps `/` and `-` alike, so a prefix rule reaches too far.
+
+    `<repo>/test-runs-archive/project` keys with every character the runs root
+    keys with, and the sweep deletes what it names. What separates them is the
+    run stamp, which a directory this suite did not create does not carry.
+    """
+    config = tmp_path / "claude"
+    sibling = runs_root.parent / (runs_root.name + "-archive")
+    theirs = _project_entry(str(config), str(sibling / "project"))
+    nested = _project_entry(str(config),
+                            str(sibling / "2026" / "notes" / "project"))
+    mine = _project_entry(str(config), str(_run_dir(runs_root) / "project"))
+
+    removed = workspaces.sweep_claude_projects(config_dir=str(config),
+                                               stream=io.StringIO())
+
+    assert removed == [mine]
+    assert os.path.isdir(theirs), "a neighbouring project directory was in range"
+    assert os.path.isdir(nested), "a neighbour's own subtree was in range"
+
+
+def test_a_neighbour_of_the_old_layouts_root_is_not_a_test_run(tmp_path,
+                                                               monkeypatch):
+    config = tmp_path / "claude"
+    legacy = tmp_path / "tmp" / "smoke"
+    monkeypatch.setattr(workspaces, "LEGACY_ROOTS", (str(legacy),))
+    theirs = _project_entry(str(config),
+                            str(legacy.parent / "smoke-reports" / "project"))
+
+    assert workspaces.sweep_claude_projects(config_dir=str(config),
+                                            stream=io.StringIO()) == []
+    assert os.path.isdir(theirs), "a neighbouring project directory was in range"
+
+
 def test_the_sweep_says_what_it_deleted(tmp_path, runs_root):
     """Deleting outside the repository has to be readable, not inferred."""
     config = tmp_path / "claude"
-    mine = _project_entry(str(config), str(runs_root / "wake_1" / "project"))
+    mine = _project_entry(str(config), str(_run_dir(runs_root) / "project"))
     stream = io.StringIO()
 
     workspaces.sweep_claude_projects(config_dir=str(config), stream=stream)

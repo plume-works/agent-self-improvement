@@ -152,7 +152,7 @@ clean:
 # by removing files; this is how they go.
 #
 # It prints every path before deleting it. Deleting outside the repository has
-# to be readable afterwards rather than taken on trust in a prefix rule.
+# to be readable afterwards rather than taken on trust in a matching rule.
 clean-claude:
 	uv run python -m tests.smoke.workspaces
 endif

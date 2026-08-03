@@ -112,9 +112,12 @@ nothing needs deleting mid-run.
 
 What it leaves is one small directory per run, outside the repository where
 `make clean` cannot reach it by removing files. `make clean-claude` removes
-them, and `make clean` calls it. It prints every path before deleting it and
-matches on the mangled `test-runs/` root (and the old `tmp/smoke` one), so it
-cannot name a directory belonging to a real project.
+them, and `make clean` calls it. It prints every path before deleting it, and it
+matches a key only when the mangled `test-runs/` root (or the old `tmp/smoke`
+one) is followed by the shape a run writes underneath it — the run stamp for the
+current layout, a test's workspace and its `project/` for the old one. The root
+alone would not do: mangling maps `/` and `-` to the same character, so a real
+project under a neighbour like `test-runs-archive/` carries the same prefix.
 
 ## Auto memory
 
