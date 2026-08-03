@@ -2,8 +2,18 @@
 
 - **Status:** Open question; no mechanism identified. Nothing here is implemented, and nothing here blocks anything.
 - **Scope:** One measured behaviour of the reviewer under the Spec-0002 harness, the hypotheses eliminated so far, and what would settle it. No design and no proposed change.
-- **Depends on:** [Spec-0002](0002-pty-wake-harness.md), verified — this is the finding its runs produced, carried out of it so that specification could close.
+- **Discovered by:** [Spec-0002](0002-pty-wake-harness.md), verified — its runs produced this measurement while establishing something else entirely.
 - **Related:** [Spec-0004](0004-plugin-execution-tracing.md), proposed — the facility that would make this measurable, whose section 13 deliberately keeps the slices aimed at this question behind a named hypothesis.
+
+## 0. How this was found
+
+Spec-0002 built a pseudo-terminal harness to observe an asynchronous wake arriving at an idle session, and paired it with a negative control: the identical scripted exchange against a `Stop` hook that discards its exit code, so the wake cannot be signalled. The control exists to prove the harness can tell an absent wake from a present one.
+
+Neither check is about the reviewer. Both simply need it to stage a candidate first, because the wake carries that candidate's identifier and the identifier is the only thing either check matches on screen. A review that declines leaves nothing to watch for, and such a run is skipped rather than failed.
+
+The declines turned out to cluster on the control. That is visible only because both checks run the same script the same number of times, which no deliberate experiment on this had been set up to do — Spec-0002 was measuring the stability of its own harness, and got this for free. It met every criterion it set and closed; this document exists so that closing it did not mean losing what it happened to observe.
+
+Nothing in Spec-0002 records any of the below, deliberately: a specification that has answered its own question should not be carrying someone else's.
 
 ## 1. The measurement
 
