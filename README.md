@@ -10,6 +10,8 @@ The offline suite passes, and nine of the ten smoke checks pass. The tenth — a
 
 Codex is not currently supported. [Spec-0003](docs/specs/0003-codex-integration.md) maps every Claude-specific integration point to Codex and proposes a dual-host package. It records the current parity gaps explicitly: no documented asynchronous idle-session wake, command-expansion event, generic tool-failure event, no-tools reviewer switch, or behavioral equivalent of Claude's path-scoped Markdown rules.
 
+A live run currently records its failures and almost nothing about the path that worked, so questions of the form *why did this run behave differently from that one* can only be answered by running it again. [Spec-0004](docs/specs/0004-plugin-execution-tracing.md) proposes an opt-in trace inside the plugin — what each hook decided and why, what the review cost, and the evidence bundle as a keyed *shape* rather than its content, so two runs can be diffed. It is not implemented, it is off by default, and content never enters it outside a separately gated mode the harness does not use.
+
 The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
 
 ## Install
