@@ -7,17 +7,27 @@
 
 ## 1. Problem
 
-[Spec-0002 section 8.3](0002-pty-wake-harness.md#83-the-reviewer-declines-far-more-often-on-the-control) records a live measurement that cannot currently be explained: across the ten-run loop of 2026-08-02 plus the three earlier live runs, the negative control's review declined seven times and the wake check's declined once, on an exchange that is scripted identically for both. Four of the five declines in the loop were `transient_state`.
+[Spec-0005](0005-reviewer-decline-asymmetry.md) records a live measurement that cannot currently be explained: across the ten-run loop of 2026-08-02 plus the three earlier live runs, the negative control's review declined seven times and the wake check's declined once, on an exchange that is scripted identically for both. Four of the five declines in the loop were `transient_state`.
 
 The reason it cannot be explained is not that the answer is subtle. It is that the plugin keeps almost nothing about a review that worked as designed. After a decline the state directory holds:
 
 ```text
 counters.json                     a review happened, and when
 diagnostics.jsonl                 {"stage":"review_outcome","error_class":"no_lesson",
-                                   "reason":"transient_state","signal":"explicit_correction"}
+                                   "reason":"transient_state","signal":"explicit_retention"}
 ```
 
 That is the entire record. The evidence bundle that produced the decline was assembled in memory, written to the reviewer's standard input, and never stored; the turn file that fed it was deleted by `capture.discard_turn` one line later, by design, because it holds the prompt. Which signal fired is known. What the bundle around that signal actually looked like — how many events reached it, whether `last_assistant_message` arrived at all, whether the two checks even sent the same number of fields — is not recoverable, and it is precisely the difference the measurement is asking about.
+
+### 1.1 What has already been eliminated, and with what
+
+Two hypotheses have been tested against records that already exist, and both are dead. They are recorded here so this specification is not built to re-answer them.
+
+**The gate is not the discriminator.** Every one of the twenty reviews in the ten-run loop — both checks, declines and proposals alike — journalled `signal: explicit_retention`. The gate reached the same conclusion by the same route every time, so nothing in `capture` or `gate` distinguishes the two checks, and slice T2 should not be expected to answer this question.
+
+**The embedded test name is not the discriminator.** `candidate_owners` entries carry absolute paths, and those paths contain the check's own name: every control bundle tells the reviewer `…/test_the_harness_fails_when_the_wake_does_not_arrive/project/CLAUDE.md`, against `…/test_the_async_wake_arrives_at_an_idle_session/…` for the wake check. That is the only field that differs between the two checks *by construction* rather than by chance, and "fails", "does not arrive" is suggestive enough to be worth ruling out. Two bundles identical except for that name, fifteen reviews each: no declines either way.
+
+That second result carries a warning for section 14. The same reconstructed bundle has now been replayed 101 times across three batches and declined 3 times, against 5 declines in 20 live reviews. **The offline replay does not reproduce the phenomenon at a usable rate**, so a hypothesis that cannot be settled from a live trace cannot be settled by replaying a bundle either.
 
 The same gap shows up in four other places that have cost real time on this project:
 
@@ -42,7 +52,7 @@ The `review_outcome` diagnostic added during Spec-0002's investigation is the sh
 ## 3. Goals
 
 1. A live run leaves enough behind to reconstruct **what the plugin decided and why**, without re-running it and without a model call.
-2. Two runs can be **compared mechanically** — this is what section 8.3 needs, and comparison is a stronger requirement than readability.
+2. Runs can be **compared mechanically**, in groups rather than in pairs — this is what [Spec-0005](0005-reviewer-decline-asymmetry.md) needs, and comparison is a stronger requirement than readability.
 3. The privacy rules of Spec-0001 section 10 hold **unchanged** at the default setting. No prompt, response, transcript body, raw tool output, full command line, or credential enters a trace.
 4. Tracing **cannot break the plugin**. Every hook still fails open, still fits its timeout, and behaves identically with tracing off.
 5. Off by default in an ordinary install; on for every live check in `test-runs/`.
@@ -87,8 +97,10 @@ One JSON object per line in `trace/trace.jsonl` under the state root, sorted key
 {"t":1785652202123456789,"run_id":"wake-01","session_id":"…","turn_id":"…",
  "span_id":"a3f1c9d2","parent_span_id":null,"pid":48213,
  "kind":"span_end","name":"orchestrate.run","dur_ms":4187,
- "attrs":{"outcome":"no_lesson","reason":"transient_state","signal":"explicit_correction"}}
+ "attrs":{"outcome":"no_lesson","reason":"transient_state","signal":"explicit_retention"}}
 ```
+
+`signal` there is the *gate's* vocabulary, which is the one `orchestrate` holds. The reviewer has a vocabulary of its own — it answers `explicit_correction` on this same turn — and the two must never be merged into one field. A trace that cannot say which component said what is a trace that has to be corroborated before it can be read.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -181,7 +193,10 @@ For a mapping, the descriptor is one entry per key:
  "events":{"t":"list","n":11,"kinds":{"prompt":1,"tool_failure":6,"tool_success":4}},
  "transitions":{"t":"list","n":1},
  "last_assistant_message":{"t":"str","len":842,"h":"9c1f4e02"},
- "candidate_owners":{"t":"list","n":3},
+ "candidate_owners":{"t":"list","n":3,"entries":[
+   {"scope":"project","kind":"CLAUDE.md","exists":true,"bytes":59,"headings_n":2},
+   {"scope":"user","kind":"CLAUDE.md","exists":false},
+   {"scope":"project","kind":"CLAUDE.md","exists":false}]},
  "known_fingerprints":{"t":"list","n":0},
  "user_prompt":{"t":"str","len":96,"h":"4b7a0d31"}}
 ```
@@ -190,9 +205,12 @@ For a mapping, the descriptor is one entry per key:
 - `n` — element or member count.
 - `len` — character length for strings.
 - `kinds` — for the `events` list only, a histogram over the closed `kind` vocabulary, since that is the structure that actually varies between the two live checks.
+- `entries` — for `candidate_owners` only, one descriptor per member, built from that member's own closed-vocabulary fields.
 - `h` — a **keyed** digest of the value, 8 hex characters, described below.
 
 The rule for what gets a digest is the rule for what gets a bare count: values from closed vocabularies are recorded as themselves, free text is recorded only as a length and a digest.
+
+`candidate_owners` earns its per-entry descriptor rather than a bare count, and the reason generalizes. A bare `n` was the first draft, and it would have made a real difference invisible: the paths in that list embed the name of the check that produced them, which is the only part of the bundle that differs between the two live checks by construction. Section 1.1 rules that particular difference out as a *cause*, but the design lesson survives the hypothesis — **the field most likely to carry a systematic difference was the one flattened hardest**, and a shape that cannot represent a difference cannot be used to look for one. `scope`, `kind`, and `exists` are closed vocabularies, `bytes` and `headings_n` are counts, and section 6 already permits all five. The paths themselves stay out, at every level.
 
 ### 8.1 The digest must be keyed, and the key must be local
 
@@ -200,7 +218,7 @@ A plain `sha256` of a short free-text string is not a redaction. The candidate s
 
 So the digest is `hmac.new(key, value, sha256)` truncated to 8 hex characters, where the key is 32 random bytes generated on first use and stored mode 0600 at `trace/hmac-key` in the state root, **never** in the repository and never in a trace file.
 
-This buys the property that matters and gives up nothing that was on offer: digests are comparable across runs *on the same machine and the same state root*, which is exactly the comparison section 8.3 needs (did these two checks send the same assistant message or different ones?), and a trace file shared with anyone else is a set of opaque tokens. A trace copied into `test-runs/` is comparable with its siblings because they share a state root generation; a trace pasted into an issue reveals nothing.
+This buys the property that matters and gives up nothing that was on offer: digests are comparable across runs *on the same machine and the same state root*, which is exactly the comparison Spec-0005 needs (did these checks send the same assistant message, and does it vary within a check as much as it does across them?), and a trace file shared with anyone else is a set of opaque tokens. A trace copied into `test-runs/` is comparable with its siblings because they share a state root generation; a trace pasted into an issue reveals nothing.
 
 Truncation to 8 characters is deliberate and its consequence is stated: collisions are possible at roughly one in four billion per comparison, so a digest match is strong evidence of equality and not proof. Nothing in this design branches on a digest.
 
@@ -220,7 +238,32 @@ reviewer.decision
   discard_reason           —           transient_state
 ```
 
-That output is the deliverable. Section 8.3 of Spec-0002 asks a question of the form *what is different about the control*, and no amount of reading either run alone answers it.
+### 8.3 A pair is the wrong unit, and a diff alone would mislead
+
+The open question is not *how do these two runs differ*. It is a difference in **rates** — one check declining far more often than the other across a dozen paired runs — and a two-run diff cannot tell a systematic difference from ordinary variation.
+
+It would actively mislead. `last_assistant_message` is model prose written fresh every run, so `h differs` fires on essentially every comparison, including one wake-check run against another. A reader handed a single control-versus-wake diff would find several differing fields and no way to know which of them also differ between two runs of the *same* check.
+
+So the reader needs an aggregating mode, and it is the mode that answers the question:
+
+```text
+$ si trace tabulate test-runs/wake-repeat-*/*/state --group-by run_label
+
+                          wake-arrives (n=10)      no-wake (n=10)
+reviewer.decision
+  propose                 9                        6
+  discard/transient_state 1                        3
+  discard/one_off…        0                        1
+evidence.build
+  events.n                11 (all)                 11 (all)
+  candidate_owners.n      3 (all)                  3 (all)
+  last_assistant_message  len 512–903, 10 distinct len 486–871, 10 distinct
+  user_prompt             len 96, 1 distinct       len 96, 1 distinct
+```
+
+Two properties matter there and neither is available from a pair: a field constant within a check and different across checks is a candidate cause, and a field that varies within a check is noise however different it looks across them. **The wake check compared against itself is the baseline**, and no control-versus-wake difference should be believed until that baseline says the field is stable.
+
+`si trace diff` stays, for the narrow case of two runs known to differ in outcome once a candidate field is already named. It is not the deliverable.
 
 ## 9. Levels, and the content escape hatch
 
@@ -264,6 +307,7 @@ A new `si trace` subcommand, in `commands.py` alongside the existing ones:
 | --- | --- |
 | `si trace show [--run <id>] [--turn <id>]` | records in time order, one indented line each |
 | `si trace turns` | one row per `turn_id`: signal, gate decision, reviewer decision, total duration, cost |
+| `si trace tabulate <state>... [--group-by <attr>]` | the cross-run aggregation of section 8.3 above |
 | `si trace diff <state-a> <state-b>` | the field-by-field comparison of section 8.2 |
 | `si trace verify <path>` | asserts every record satisfies section 6 — the check section 12 automates |
 
@@ -310,21 +354,29 @@ Every criterion is executable and offline unless marked live. Nothing here may b
 
 Each slice is independently useful and independently committable.
 
+T1 through T3 are worth building for their own sake and are ordered first for that reason, not as scaffolding for the investigation.
+
 - **Slice T1 — the writer.** `plugin/selfimprove/trace.py`: levels, identifiers, the record schema, the size cap, the swallow-everything contract, rotation. Instrument `hook.invoke` only. Criteria 1, 6, 7, 10.
-- **Slice T2 — decisions.** Instrument capture, gate, orchestration, and the wake signal. Criteria 2 and 9. This slice alone would have answered Spec-0002 section 8.2 without a pty transcript.
-- **Slice T3 — the reviewer.** `reviewer.invoke` timing, envelope usage metadata, and the decision records. Adds cost reporting to every live run.
-- **Slice T4 — shape.** The descriptor, the keyed digest, `evidence.build` instrumentation. Criteria 3, 4, 5. This is the slice that targets section 8.3.
-- **Slice T5 — the reader.** `si trace show|turns|diff|verify`. Criterion 11.
+- **Slice T2 — decisions.** Instrument capture, gate, orchestration, and the wake signal. Criteria 2 and 9. Justified by Spec-0002 section 8.2, which cost a run and a pty transcript to diagnose and would have been one line here. Section 1.1 rules out its answering the open asymmetry: the gate reached the same decision in all twenty observed reviews.
+- **Slice T3 — the reviewer.** `reviewer.invoke` timing, envelope usage metadata, and the decision records. Adds cost reporting to every live run, which no target has today.
+- **Slice T4 — shape.** The descriptor, the per-entry `candidate_owners` form, the keyed digest, `evidence.build` instrumentation. Criteria 3, 4, 5.
+- **Slice T5 — the reader.** `si trace show|turns|tabulate|diff|verify`. Criterion 11.
 - **Slice T6 — harness.** Makefile variables, the shared `t` clock in the pty harness, and the documentation updates of section 15. Criteria 11 and 12.
-- **Slice T7 — content mode.** Last on purpose: it is the only part that can store a prompt, and it should land against a suite that already proves the default path does not. Criteria 8 and 12.
+- **Slice T7 — content mode.** Last on purpose: it is the only part that can store a prompt, and it should land against a suite that already proves the default path does not. Criteria 8 and 12. Section 1.1 is a reason to doubt it will help — a synthetic bundle declines far too rarely to study — so it should be built when something concrete needs it, not on the strength of this document.
+
+**T4 answers nothing on its own.** It records a shape no tool can yet read, so the smallest configuration that produces an answer about the asymmetry is T1 + T4 + T5 + T6, and that answer may still be "the shapes are identical" (section 14). T4 should be scheduled against a *named* hypothesis that a shape difference would confirm or kill. Section 1.1 has already spent the two such hypotheses that were available; a third has not been proposed, and inventing structure in the hope that a question forms around it is how a tracing facility turns into a second product.
 
 ## 14. What this does not answer
 
-Stated so that no one reads section 8.3 as solved by this document.
+Stated so that no one reads [Spec-0005](0005-reviewer-decline-asymmetry.md) as solved by this document.
 
-This proposal makes the control-versus-wake asymmetry **measurable**. It does not explain it, and it may turn out that the two bundles are identical in shape, in which case the difference is in content the trace deliberately does not keep, and the next step is content mode on a synthetic run rather than more structure.
+This proposal makes the control-versus-wake asymmetry **measurable**. It does not explain it, and it may turn out that the two bundles are identical in shape — in which case the difference is in content the trace deliberately does not keep.
+
+The obvious next step from there would be content mode on a synthetic run, and section 1.1 is a reason to expect that not to work either: the reconstructed bundle has now been replayed 101 times and declined 3, against 5 declines in 20 live reviews. Whatever produces the live rate is not in the bundle as this project has been able to reconstruct it, so a facility that captures the bundle more faithfully may simply capture the same non-event more faithfully.
 
 It also does not address the reviewer's nondeterminism itself. Two identical bundles may still receive different decisions; that is a property of the model, and the honest response is a decline rate measured over repeated runs, not a trace.
+
+Everything in this section is a reason to keep T4 through T7 behind a stated question rather than building them because the design is finished.
 
 ## 15. Documentation obligations on implementation
 
@@ -335,4 +387,4 @@ Per [`AGENTS.md`](../../AGENTS.md#documentation-consistency), landing any slice 
 - `docs/specs/0001-hermes-style-experiential-learning-mvp.md` — section 4.1 for the new environment variables, section 10.1 for the fifth state class, and section 10 for the explicit statement that the trace holds no content at any default level;
 - `docs/smoke-test.md` — where a trace lands in `test-runs/` and how to read it.
 
-`docs/specs/0002-pty-wake-harness.md` section 8.3 is updated only when a trace has actually been read against it, and only with what it showed.
+[`docs/specs/0005-reviewer-decline-asymmetry.md`](0005-reviewer-decline-asymmetry.md) is updated only when a trace has actually been read against it, and only with what it showed. Spec-0002 is closed and is not reopened for this.
