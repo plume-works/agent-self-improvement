@@ -1,6 +1,6 @@
 # Spec-0001: Hook-driven experiential learning plugin MVP
 
-- **Status:** Accepted; implemented in slices 1–4. **Evidence observed:** the offline suite passes (500 tests), and nine of the ten packaged smoke checks pass against a real Claude Code session. **Evidence outstanding:** smoke check 2, the asynchronous wake reaching an idle session, has not been observed passing in an automated run; until it is, section 15 is met except for the wake, which rests on [Spec-0002](0002-pty-wake-harness.md) or on the manual procedure.
+- **Status:** Accepted; implemented in slices 1–4. **Evidence observed:** the whole offline suite passes, with no failures and nothing skipped beyond the live markers — observed on 2026-08-02, branch `feat/mvp-continued` (PR #2), commit `ee49df1`. Nine of the ten packaged smoke checks pass against a real Claude Code session; the tenth, smoke check 2, is the asynchronous wake, which the [Spec-0002](0002-pty-wake-harness.md) pseudo-terminal harness observed passing on 2026-08-01 and over ten consecutive `make wake-repeat` runs on 2026-08-02. Section 15 is therefore met in full. **Evidence outstanding:** the smoke and wake runs cost real model calls and were not repeated on the commit above; their result is carried forward from the runs recorded in Spec-0002.
 - **Scope:** Standalone Claude Code CLI on one local user account
 - **Runtime:** Python 3.9+, standard library only
 - **Implementation strategy:** package a narrowed `claude-improve` reviewer as a Claude Code plugin and invoke it selectively through supported lifecycle hooks
