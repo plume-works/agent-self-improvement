@@ -1,6 +1,6 @@
 # Spec-0002: Automated verification of the asynchronous wake
 
-- **Status:** Implemented; **partially verified**. The harness is `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`. Its model-free self-checks and its harness self-checks (`make test-harness`) pass. Both live checks have now been observed passing in one run (`make wake`, 2026-08-01, Claude Code 2.1.220): the wake arrived at an idle session for `cand-12f3c9117d4c`, and the negative control stored `cand-d5552db5fde5` and saw no wake when the `Stop` hook cannot signal. Acceptance criteria 1 and 2 in section 6 are met. Criterion 3 is not: `make wake-repeat` has never been run to completion, and a single green run says nothing about the ten consecutive ones it asks for.
+- **Status:** Implemented; **verified**. The harness is `tests/smoke/pty_harness.py` and `tests/smoke/test_wake_pty.py`, run with `make wake`. Its model-free self-checks and its harness self-checks (`make test-harness`) pass. Both live checks were observed passing together (`make wake`, 2026-08-01, Claude Code 2.1.220): the wake arrived at an idle session for `cand-12f3c9117d4c`, and the negative control stored `cand-d5552db5fde5` and saw no wake when the `Stop` hook cannot signal. `make wake-repeat` then completed ten consecutive runs with no failure (2026-08-02). Every acceptance criterion in section 6 has been observed. What that does *not* say is that every run observes the wake: five of those twenty checks skipped because the reviewer stored no candidate, four of them on the control — see [8.3](#83-the-reviewer-declines-far-more-often-on-the-control).
 - **Scope:** Test tooling only. No change to the plugin, its hooks, or its mutation protocol.
 - **Depends on:** [Spec-0001](0001-hermes-style-experiential-learning-mvp.md), implemented
 
@@ -77,7 +77,7 @@ The harness is worth having only if it is more reliable than the manual check it
 1. detects an arriving wake within a bounded timeout, in ten consecutive runs, with no failures;
 2. fails when the wake genuinely does not arrive, demonstrated by disabling the `asyncRewake` flag;
 3. asserts on plugin-controlled state and one plugin-controlled marker, and on nothing the interface renders;
-4. leaves its scratch workspace under `tmp/` for inspection; and
+4. leaves its scratch workspace where it can be inspected afterwards — one gitignored directory per run under `test-runs/`, so a later run of any target cannot overwrite it; and
 5. runs behind its own target, excluded from `make test`, `make check`, and `make smoke`.
 
 Until it meets those, the interactive step in `make smoke` remains the supported way to verify the wake.
@@ -98,7 +98,7 @@ Two failure modes are separated in the assertions, because they have different c
 
 **A review that stored no candidate skips the check rather than failing it.** Both live checks need a candidate before they can observe anything: one watches for a wake carrying its identifier, the other for the absence of one. With nothing stored there is no identifier and no wake either way, and the run has observed nothing about the mechanism under test.
 
-That is not a rare case. Replaying the scripted exchange's own evidence bundle through the real reviewer 56 times declined 3 of them with `transient_state`, on a bundle the other 53 proposed from — around one review in twenty, and two live reviews run per `make wake`. Failing on a decline therefore made a red run the expected outcome roughly one time in eight, every one of them pointing at a wake that was never in question. A harness that cries wolf at that rate stops being read.
+That is not a rare case. Replaying a reconstruction of the scripted exchange's evidence bundle through the real reviewer 56 times declined 3 of them with `transient_state`, on a bundle the other 53 proposed from. Live, it is far commoner still: the ten-run loop of section 8 declined 5 of 20, and [8.3](#83-the-reviewer-declines-far-more-often-on-the-control) sets out why the offline figure understates it. Failing on a decline would have made a red run the *expected* outcome of `make wake`, every one of them pointing at a wake that was never in question. A harness that cries wolf at that rate stops being read.
 
 So a review that ran and stored nothing skips, carrying its journalled reason, the same way a check whose model call never went through already does. A skip is not a pass: `-rs` prints the reason at the end of every run, and the evidence in section 8 still requires observing these checks pass. What must never skip is a review that never ran, or one that stored nothing and journalled nothing — those are the exchange and the gate failing, which is what these checks exist to catch.
 
@@ -148,7 +148,7 @@ Under the evidence rule in [`AGENTS.md`](../../AGENTS.md#specification-status) t
 
 1. ~~`make wake` completing with both live checks passing~~ — **observed 2026-08-01.** Both checks passed in 120s together, against Claude Code 2.1.220: the wake arrived for `cand-12f3c9117d4c` carrying the lesson under test, and the control stored `cand-d5552db5fde5` and saw no wake;
 2. ~~the negative control failing the run when the wake is suppressed, as its own passing assertion~~ — **observed 2026-07-31.** The control ran the full script against a `Stop` hook that discards its exit code, stored `cand-0785fcbaf540`, and reported no wake; the check passed in 91s, inside its budget;
-3. `make wake-repeat` completing ten consecutive runs without a failure; and
+3. ~~`make wake-repeat` completing ten consecutive runs without a failure~~ — **observed 2026-08-02.** Ten consecutive runs, no failure, each between 2m05s and 3m08s, and each in its own directory under `test-runs/` so all ten remained readable afterwards. Of the twenty checks, fifteen ran to their assertions and five skipped on a reviewer that stored no candidate — see [8.3](#83-the-reviewer-declines-far-more-often-on-the-control) for what those five say and do not say; and
 4. ~~a run in which the budget is *not* consumed~~ — evidence that three minutes is genuinely generous rather than the thing being measured. **Observed 2026-08-01**: the positive check completed and closed its session 32s into a 180s budget, having watched for the wake and found it rather than having waited out a timeout.
 
 Item 4 exists because a check that always finishes at its deadline is not passing, it is timing out somewhere quiet.
@@ -187,3 +187,23 @@ The scripted exchange opens by asking the session to run the test suite. In that
 This is a Spec-0001 gate defect rather than a harness one, and is fixed there: section 6 now ranks the two rate limits against the signals, and a stated directive passes a cooldown. It is recorded here because the harness's own script is what exposed it, and because the script must keep exposing it — an opening prompt that never produces incidental tool activity would make the wake check pass without exercising the ordering that broke it.
 
 The lesson for this specification is narrower and general: a wake that does not arrive has at least four distinct causes — the exchange, the reviewer's judgement, another system reaching the conclusion first, and the gate declining to ask — and the harness alone cannot tell them apart. Each was separated by reading state the run left behind rather than by re-running it, and each fix was cheap only because the previous one had already made its own failure legible.
+
+### 8.3 The reviewer declines far more often on the control
+
+The ten-run loop of item 3 is the first data set large enough to say something about *which* check the reviewer declines on, and it does not look like a fair coin.
+
+| | proposed | declined |
+| --- | --- | --- |
+| the wake check | 9 | 1 |
+| the negative control | 6 | 4 |
+
+Four of the five declines were `transient_state`, the fifth `one_off_instruction`. Adding the three earlier live runs recorded in this specification, the control has now declined seven times and the wake check once, on an exchange that is scripted identically for both.
+
+**No mechanism has been identified, and none is claimed here.** The two checks drive the same two prompts against the same seeded project; the only difference the harness introduces is a copy of the plugin whose `Stop` hook discards its exit code, and that runs *after* the review it would have to influence. What can be said is that the 3-in-56 offline decline rate quoted in section 7 — measured by replaying one *reconstructed* bundle — does not describe what the live control does, so it should not be quoted as if it did.
+
+Two things follow for anyone reading a red or skipped run:
+
+- a decline on the control is the common case rather than the surprising one, and says nothing about the wake, which is why it skips;
+- the offline replay is a poor model of the live bundle, so a prompt change measured that way has not been measured against the case that actually declines.
+
+Finding the difference means capturing the exact bundle each check sends, which the harness does not currently record — the turn file is deleted once review has run, by design, because it holds the prompt. A diagnostic that keeps the bundle's *shape* without its content would be enough to tell these apart, and is the obvious next step if this matters.
