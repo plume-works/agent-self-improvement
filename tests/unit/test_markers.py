@@ -44,7 +44,27 @@ def test_a_standing_directive_is_a_retention_request_whatever_verb_follows(promp
 
 
 @pytest.mark.parametrize("prompt", [
+    "I'd like you to always use uv",
+    "you must never use pip",
+    "you should always run make test first",
+    "the agent shall never touch main",
+    "from here on you will always use uv",
+])
+def test_a_directive_introduced_by_a_modal_is_still_a_directive(prompt):
+    """Politeness is not a reason to stop reviewing a standing rule.
+
+    "you must never use pip" is the same instruction as "never use pip"; only
+    the wind-up differs. A gate that reads the adverb solely at the head of a
+    clause discards the half of plainly stated preferences that arrive with an
+    introduction.
+    """
+    assert markers.RETENTION in markers.detect(prompt)
+
+
+@pytest.mark.parametrize("prompt", [
     "the build always fails on CI",
+    "it seems to always fail here",
+    "that will never work",
     "that never worked",
     "the flag was never set",
     "this is always the case",

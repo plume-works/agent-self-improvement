@@ -96,6 +96,10 @@ def build_environment():
     effort = config.review_effort()
     if effort:
         environment["CLAUDE_CODE_EFFORT_LEVEL"] = effort
+    else:
+        # An empty setting asks for the CLI's own default, so an effort level
+        # inherited from the session that launched us has to go with it.
+        environment.pop("CLAUDE_CODE_EFFORT_LEVEL", None)
     environment.pop("SELF_IMPROVE_STATE_DIR", None)
     environment.pop("CLAUDE_PLUGIN_DATA", None)
     return environment

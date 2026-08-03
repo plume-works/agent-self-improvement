@@ -42,9 +42,13 @@ A third dial is not about cost. `SMOKE_AUTO_MEMORY` is off by default, and every
 driving session is launched with `CLAUDE_CODE_DISABLE_AUTO_MEMORY` set explicitly
 either way, never inherited — see [Auto memory](#auto-memory) below for why.
 
-Setting any of them to empty accepts the CLI's own default — `high` effort, and
-whichever model you normally run — which is what a suspected model- or
-effort-specific failure has to be reproduced against.
+Setting `SMOKE_MODEL`, `SMOKE_EFFORT`, or `SELF_IMPROVE_REVIEW_EFFORT` to empty
+accepts the CLI's own default — `high` effort, and whichever model you normally
+run — which is what a suspected model- or effort-specific failure has to be
+reproduced against. `SELF_IMPROVE_REVIEW_MODEL` is the exception: spec section
+7.3 commits the reviewer to an explicit `--model`, so an empty value falls back
+to `sonnet` rather than to your usual model. Name the model outright to
+reproduce against a different one.
 
 The driving session is pinned rather than inherited. It follows a written
 procedure: run the suite, state a correction, accept a proposal. None of that is

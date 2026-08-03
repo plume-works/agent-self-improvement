@@ -6,7 +6,7 @@
     "\\bfrom now on\\b",
     "\\bgoing forward\\b",
     "\\bin (?:the )?future\\b",
-    "(?:^|[.,;:!?)\\]]\\s*|\\b(?:and|but|so|please|then)\\s+)(?:always|never)\\s+(?!be\\b|been\\b|being\\b|is\\b|are\\b|was\\b|were\\b|has\\b|have\\b|had\\b|the\\b|a\\b|an\\b|this\\b|that\\b|these\\b|those\\b|it\\b|i\\b|you\\b|we\\b|they\\b|seems?\\b|seemed\\b|works?\\b|worked\\b|fails?\\b|failed\\b|happens?\\b|happened\\b)[a-z]",
+    "(?:^|[.,;:!?)\\]]\\s*|\\b(?:and|but|so|please|then|to|must|should|shall|will)\\s+)(?:always|never)\\s+(?!be\\b|been\\b|being\\b|is\\b|are\\b|was\\b|were\\b|has\\b|have\\b|had\\b|the\\b|a\\b|an\\b|this\\b|that\\b|these\\b|those\\b|it\\b|i\\b|you\\b|we\\b|they\\b|seems?\\b|seemed\\b|works?\\b|worked\\b|fails?\\b|failed\\b|happens?\\b|happened\\b)[a-z]",
     "\\badd (?:this|that|it) to (?:your |the )?(?:claude\\.md|memory|instructions|rules)\\b",
     "\\bmake (?:a |an )?(?:note|rule|skill) (?:of|about|for)\\b",
     "\\bkeep (?:this|that) in mind\\b",
