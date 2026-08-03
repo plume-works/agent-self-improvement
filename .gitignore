@@ -37,3 +37,6 @@ locks/
 # ignored until `make clean` clears whatever is still sitting in it.
 /test-runs/
 /tmp/
+
+# Working files of the PR-feedback workflow, not part of the repository.
+/.tmp/
