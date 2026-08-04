@@ -49,6 +49,9 @@ def test_a_standing_directive_is_a_retention_request_whatever_verb_follows(promp
     "you should always run make test first",
     "the agent shall never touch main",
     "from here on you will always use uv",
+    "Could you always use uv?",
+    "Would you never push to main?",
+    "Can you always run make test?",
 ])
 def test_a_directive_introduced_by_a_modal_is_still_a_directive(prompt):
     """Politeness is not a reason to stop reviewing a standing rule.
@@ -70,6 +73,8 @@ def test_a_directive_introduced_by_a_modal_is_still_a_directive(prompt):
     "this is always the case",
     "tests never seem to pass",
     "I have never seen that",
+    "The build will always break on Windows",
+    "This script will always delete the cache",
 ])
 def test_always_and_never_describing_the_world_are_not_directives(prompt):
     """The other half of widening the pattern, and the expensive half to get wrong.
