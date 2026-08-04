@@ -1,0 +1,71 @@
+{
+  "question": "Which parts of the Scrapeshq Claude Code Memory Plan should change the current experiential-learning MVP?",
+  "items": [
+    {
+      "id": "inject-frozen-snapshot",
+      "plan_section": "1. Inject: the frozen snapshot",
+      "disposition": "ADAPT",
+      "reason": "A bounded next-session snapshot is useful, but current Claude Code already loads CLAUDE.md and auto memory. Prefer supported memory surfaces and preserve the frozen-snapshot principle instead of creating a second project-local memory authority by default.",
+      "evidence": [
+        {"path": "source/Claude-Code-Memory-Plan-v.md", "contains": "## 1. Inject: the frozen snapshot"},
+        {"path": "../../plugin/hooks/hooks.json", "contains": "\"SessionStart\""},
+        {"path": "../../README.md", "contains": "Claude-managed auto-memory"}
+      ]
+    },
+    {
+      "id": "agent-curated-writes",
+      "plan_section": "2. Store, part 1: agent-curated writes",
+      "disposition": "ADAPT",
+      "reason": "The add/replace/remove and deduplication model is useful, but direct agent writes would bypass the MVP's exact proposal, explicit authorization, backup, verification, and rollback boundary.",
+      "evidence": [
+        {"path": "source/Claude-Code-Memory-Plan-v.md", "contains": "## 2. Store, part 1: agent-curated writes"},
+        {"path": "../../plugin/selfimprove/proposals.py", "contains": "Staging one exact, immutable proposal"},
+        {"path": "../../plugin/skills/improve/SKILL.md", "contains": "You never edit the destination file"}
+      ]
+    },
+    {
+      "id": "capture-everything",
+      "plan_section": "3. Store, part 2: capture everything",
+      "disposition": "REJECT",
+      "reason": "Durably archiving every raw exchange conflicts with the repository's privacy boundary. Keep bounded, redacted event capture and asynchronous review; do not add raw transcript archives or an exhaustive conversation log.",
+      "evidence": [
+        {"path": "source/Claude-Code-Memory-Plan-v.md", "contains": "Also archive the raw transcript"},
+        {"path": "../../plugin/selfimprove/redact.py", "contains": "forbids persisting raw prompts"},
+        {"path": "../../README.md", "contains": "Do not persist raw transcripts"},
+        {"path": "../../plugin/hooks/hooks.json", "contains": "\"asyncRewake\": true"}
+      ]
+    },
+    {
+      "id": "semantic-search",
+      "plan_section": "4. Recall, part 1: search by meaning",
+      "disposition": "DEFER",
+      "reason": "Hybrid semantic recall may be valuable, but this plan supplies no benchmark, corpus policy, embedding choice, portability model, or threat model. It also adds runtime dependencies to a deliberately standard-library-only plugin. Evaluate it only as a separate opt-in retrieval extension.",
+      "evidence": [
+        {"path": "source/Claude-Code-Memory-Plan-v.md", "contains": "## 4. Recall, part 1: search by meaning"},
+        {"path": "../../pyproject.toml", "contains": "dependencies = []"},
+        {"path": "../../README.md", "contains": "no network access is needed at runtime"}
+      ]
+    },
+    {
+      "id": "source-citations",
+      "plan_section": "5. Recall, part 2: cite the source",
+      "disposition": "ADOPT",
+      "reason": "Source, date, and heading metadata are a strong provenance requirement for any future recall subsystem. They should be retained from ingestion through retrieval and surfaced with a no-result outcome rather than an unsupported paraphrase.",
+      "evidence": [
+        {"path": "source/Claude-Code-Memory-Plan-v.md", "contains": "source file, date, and heading"},
+        {"path": "../../plugin/selfimprove/evidence.py", "contains": "The reviewer sees only what is listed here"}
+      ]
+    },
+    {
+      "id": "historical-import",
+      "plan_section": "6. Bootstrap: don't start from zero",
+      "disposition": "REJECT",
+      "reason": "A default full-history import expands privacy, consent, retention, and cross-project scope before recall quality is proven. If revisited, it must be explicit opt-in with dry-run inventory, redaction, project boundaries, deletion, and re-index controls; a sentinel alone is insufficient.",
+      "evidence": [
+        {"path": "source/Claude-Code-Memory-Plan-v.md", "contains": "## 6. Bootstrap: don't start from zero"},
+        {"path": "../../AGENTS.md", "contains": "Never copy live Claude transcripts"},
+        {"path": "../../plugin/selfimprove/allowlist.py", "contains": "The normative path allowlist"}
+      ]
+    }
+  ]
+}
