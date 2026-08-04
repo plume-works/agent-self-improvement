@@ -11,7 +11,7 @@ Spec-0002 built a pseudo-terminal harness to observe an asynchronous wake arrivi
 
 Neither check is about the reviewer. Both simply need it to stage a candidate first, because the wake carries that candidate's identifier and the identifier is the only thing either check matches on screen. A review that declines leaves nothing to watch for, and such a run is skipped rather than failed.
 
-The declines turned out to cluster on the control. That is visible only because both checks run the same script the same number of times, which no deliberate experiment on this had been set up to do — Spec-0002 was measuring the stability of its own harness, and got this for free. It met every criterion it set and closed; this document exists so that closing it did not mean losing what it happened to observe.
+The declines turned out to cluster on the control. That is visible only because both checks run the same script the same number of times, which no deliberate experiment on this had been set up to do — Spec-0002 was measuring the stability of its own harness, and got this for free. It verified every criterion except section 6.1 and remains open for the tenth wake observation; this document exists so that resolving that remaining criterion does not mean losing what the earlier runs happened to observe.
 
 Nothing in Spec-0002 records any of the below, deliberately: a specification that has answered its own question should not be carrying someone else's.
 
