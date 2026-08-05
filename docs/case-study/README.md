@@ -4,7 +4,7 @@ Case studies examine adjacent implementations and patterns against the architect
 
 | Case study | Upstream snapshot | Verdict |
 | --- | --- | --- |
-| [Hermes Agent](hermes/README.md) | [`NousResearch/hermes-agent@a41d280`](https://github.com/NousResearch/hermes-agent/tree/a41d280f95c69f67380358b305b62345934ecaf3) | Layer durable fact memory, reusable skills, deterministic triggers, and curation rather than treating self-improvement as one prompt |
+| [Hermes Agent](hermes/README.md) | [`NousResearch/hermes-agent@aec3318`](https://github.com/NousResearch/hermes-agent/tree/aec331899e4748739927fddf02a54327e64419a0) | Layer durable fact memory, reusable skills, deterministic triggers, model-visible tool policy, and guarded curation rather than treating self-improvement as one prompt |
 | [Claude Meta](claude-meta/README.md) | [`aviadr1/claude-meta@93bf944`](https://github.com/aviadr1/claude-meta/tree/93bf944ffabc525808f4cd7d5cca09ff9cd0876c) | Adopt the reflection rubric and user trigger; do not adopt direct, single-file self-mutation as the control plane |
 | [Self-improving Claude Code bootstrap seed](bootstrap-seed/README.md) | [Gist revision `860d3f7`](https://gist.github.com/ChristopherA/fd2985551e765a86f4fbb24080263a2f/860d3f71fef949ff5692c86bb251c571caf53790) | Adopt triage, anti-proliferation, pressure-driven structure, and user steering; keep mutation authority outside the prompt |
 | [`TerenceBristol/claude-improve`](claude-improve/README.md) | [`ae7ce8c` (`v3.2.0`)](https://github.com/TerenceBristol/claude-improve/tree/ae7ce8cc61d905ef1032b164d4097a4c4b248716) | Adopt individual review, typed placement, drift auditing, and verify-before-remove; move privacy and mutation authority into a deterministic control plane |
