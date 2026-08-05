@@ -92,22 +92,22 @@ The ordinary response is delivered before background review starts, so learning 
 
 Paths below are relative to the Hermes Agent source checkout unless otherwise noted.
 
-| File | Responsibility |
-|---|---|
-| `agent/prompt_builder.py` | Defines foreground memory and skill guidance injected into the system prompt. |
-| `agent/system_prompt.py` | Assembles identity, tool-aware guidance, project context, memory, and profile information. |
-| `agent/background_review.py` | Contains the detailed post-turn memory and skill review prompts and launches the review fork. |
-| `agent/turn_finalizer.py` | Checks review triggers and starts background review after the normal response. |
-| `agent/agent_init.py` | Loads configured nudge intervals and initializes review counters. |
-| `tools/memory_tool.py` | Defines the memory tool's operational instructions and persistence interface. |
-| `tools/skill_manager_tool.py` | Defines skill mutation instructions and mutation guardrails. |
-| `tools/skill_usage.py` | Tracks ownership, use, views, patches, state, and pinning. |
-| `agent/curator.py` | Implements stale-skill and consolidation lifecycle operations. |
-| `hermes_cli/config_defaults.py` | Defines curator defaults and other configuration defaults. |
-| `$HERMES_HOME/SOUL.md` | Optional local identity and high-level continuity policy. |
-| `$HERMES_HOME/memories/USER.md` | Persisted user profile and preferences. |
-| `$HERMES_HOME/memories/MEMORY.md` | Persisted stable environmental facts and conventions. |
-| `$HERMES_HOME/skills/**/SKILL.md` | Reusable procedural knowledge loaded into future sessions. |
+| File                              | Responsibility                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| `agent/prompt_builder.py`         | Defines foreground memory and skill guidance injected into the system prompt.                 |
+| `agent/system_prompt.py`          | Assembles identity, tool-aware guidance, project context, memory, and profile information.    |
+| `agent/background_review.py`      | Contains the detailed post-turn memory and skill review prompts and launches the review fork. |
+| `agent/turn_finalizer.py`         | Checks review triggers and starts background review after the normal response.                |
+| `agent/agent_init.py`             | Loads configured nudge intervals and initializes review counters.                             |
+| `tools/memory_tool.py`            | Defines the memory tool's operational instructions and persistence interface.                 |
+| `tools/skill_manager_tool.py`     | Defines skill mutation instructions and mutation guardrails.                                  |
+| `tools/skill_usage.py`            | Tracks ownership, use, views, patches, state, and pinning.                                    |
+| `agent/curator.py`                | Implements stale-skill and consolidation lifecycle operations.                                |
+| `hermes_cli/config_defaults.py`   | Defines curator defaults and other configuration defaults.                                    |
+| `$HERMES_HOME/SOUL.md`            | Optional local identity and high-level continuity policy.                                     |
+| `$HERMES_HOME/memories/USER.md`   | Persisted user profile and preferences.                                                       |
+| `$HERMES_HOME/memories/MEMORY.md` | Persisted stable environmental facts and conventions.                                         |
+| `$HERMES_HOME/skills/**/SKILL.md` | Reusable procedural knowledge loaded into future sessions.                                    |
 
 ### Prompt assembly
 
@@ -133,12 +133,12 @@ prefix without hiding any skill from the model.
 
 The prompt material is attached in two parallel forms:
 
-| Layer | Source-faithful Python | Rendered reading copy |
-| --- | --- | --- |
-| Foreground guidance and skill-index envelope | [`prompts/python/foreground.py`](prompts/python/foreground.py) | [`prompts/readable/foreground.md`](prompts/readable/foreground.md) |
+| Layer                                         | Source-faithful Python                                                       | Rendered reading copy                                                            |
+| --------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Foreground guidance and skill-index envelope  | [`prompts/python/foreground.py`](prompts/python/foreground.py)               | [`prompts/readable/foreground.md`](prompts/readable/foreground.md)               |
 | Background memory, skill, and combined review | [`prompts/python/background_review.py`](prompts/python/background_review.py) | [`prompts/readable/background-review.md`](prompts/readable/background-review.md) |
-| Memory and skill-management tool schemas | [`prompts/python/tool_schemas.py`](prompts/python/tool_schemas.py) | [`prompts/readable/tool-schemas.md`](prompts/readable/tool-schemas.md) |
-| Curator live and dry-run prompts | [`prompts/python/curator.py`](prompts/python/curator.py) | [`prompts/readable/curator.md`](prompts/readable/curator.md) |
+| Memory and skill-management tool schemas      | [`prompts/python/tool_schemas.py`](prompts/python/tool_schemas.py)           | [`prompts/readable/tool-schemas.md`](prompts/readable/tool-schemas.md)           |
+| Curator live and dry-run prompts              | [`prompts/python/curator.py`](prompts/python/curator.py)                     | [`prompts/readable/curator.md`](prompts/readable/curator.md)                     |
 
 The Python copy retains interpolation and composition exactly. The reading copy joins
 Python string literals and labels every substitution. It is not presented as a captured
@@ -270,18 +270,18 @@ unscoped standing command later.
 The current wording is the residue of observed failure modes, not one clean-room prompt
 draft:
 
-| Upstream change | Observed problem | Prompt or control response |
-| --- | --- | --- |
-| `a1220977` / `17c72f17`, 2026-04-12 | Models skipped relevant skills under “clearly matches” wording | Lower the threshold to partial relevance, make loading mandatory, and remove the easy escape hatch. |
-| `db60c982`, 2026-04-19 | Imperative memories were re-read as future directives | Require declarative facts and give paired good/bad examples. |
-| `1d4218be`, 2026-04-28 | Review passes defaulted to `Nothing to save.` and lost style corrections | Add the active-update prior, natural-language correction examples, loaded-skill-first routing, support-file types, and class-level name veto. |
-| `fa9383d2`, 2026-04-28 | The curator passively audited or kept distinct siblings | Ask the umbrella-class question, pre-empt the zero-usage and distinct-trigger bailouts, and enumerate three consolidation actions. |
-| `6e5489c9`, 2026-05-09 | Session outcomes crowded durable memory | Name forbidden artifacts and introduce the seven-day staleness heuristic. |
-| `af78449a`, 2026-05-18 | Review could rewrite bundled, hub, or pinned skills | Put protected classes in the review prompt as well as mutation policy. |
-| `38c8a9c1`, 2026-06-18 | A near-full memory store caused multi-call consolidation thrash | Lead the tool schema with one atomic batch and a terminal “do not repeat” result. |
-| `20871c1d`, 2026-06-30 | A reviewer could write from stale or absent skill context | Require the exact target to be viewed during that review turn before mutation. |
+| Upstream change                     | Observed problem                                                                            | Prompt or control response                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `a1220977` / `17c72f17`, 2026-04-12 | Models skipped relevant skills under “clearly matches” wording                              | Lower the threshold to partial relevance, make loading mandatory, and remove the easy escape hatch.                                           |
+| `db60c982`, 2026-04-19              | Imperative memories were re-read as future directives                                       | Require declarative facts and give paired good/bad examples.                                                                                  |
+| `1d4218be`, 2026-04-28              | Review passes defaulted to `Nothing to save.` and lost style corrections                    | Add the active-update prior, natural-language correction examples, loaded-skill-first routing, support-file types, and class-level name veto. |
+| `fa9383d2`, 2026-04-28              | The curator passively audited or kept distinct siblings                                     | Ask the umbrella-class question, pre-empt the zero-usage and distinct-trigger bailouts, and enumerate three consolidation actions.            |
+| `6e5489c9`, 2026-05-09              | Session outcomes crowded durable memory                                                     | Name forbidden artifacts and introduce the seven-day staleness heuristic.                                                                     |
+| `af78449a`, 2026-05-18              | Review could rewrite bundled, hub, or pinned skills                                         | Put protected classes in the review prompt as well as mutation policy.                                                                        |
+| `38c8a9c1`, 2026-06-18              | A near-full memory store caused multi-call consolidation thrash                             | Lead the tool schema with one atomic batch and a terminal “do not repeat” result.                                                             |
+| `20871c1d`, 2026-06-30              | A reviewer could write from stale or absent skill context                                   | Require the exact target to be viewed during that review turn before mutation.                                                                |
 | `243a01d5` / `9b909115`, 2026-07-25 | Missing ownership metadata allowed one background write, then later refused the same action | Make prompt and enforcement agree, require positive curator ownership, and fail closed on missing or unreadable provenance.                   |
-| `2ace68ad`, 2026-07-31 | Failed attempts could be persisted as a “reliable workflow” | Explicitly reject unresolved failures and forbid dressing dead ends up as best practice. |
+| `2ace68ad`, 2026-07-31              | Failed attempts could be persisted as a “reliable workflow”                                 | Explicitly reject unresolved failures and forbid dressing dead ends up as best practice.                                                      |
 
 The curator rewrite has unusually concrete upstream evidence: its commit message records
 three live passes over 346 agent-created skills. The old prompt archived 3 entries; the
@@ -292,16 +292,16 @@ library shape rather than downstream task quality.
 
 ## Quality comes from prompts; reliability comes from the stack
 
-| Desired property | Prompt contribution | Deterministic contribution |
-| --- | --- | --- |
-| Catch terse corrections | Natural-language examples and active prior | Periodic trigger counters decide when review runs. |
-| Avoid stale facts | Seven-day rule and concrete forbidden examples | Memory size bounds and atomic operations limit damage. |
-| Avoid skill sprawl | Loaded-owner ladder, class-level target, name veto | Ownership metadata and current library inventory constrain targets. |
-| Avoid blind overwrite | `skill_view` instruction | Read-before-write guard rejects unseen targets. |
-| Respect human ownership | Protected-skill explanation | Background origin, pin, provenance, and external-path guards fail closed. |
-| Avoid retry thrash | One-call batch instruction | Atomic final-state validation applies all or nothing. |
-| Recover from curation | Archive-only and structured consolidation intent | Pre-run backup, archive state, and rollback preserve recoverability. |
-| Prevent recursive learning | Reviewer wording limits tools | Nudge counters, persistence, external memory, and recursive review are disabled in the fork. |
+| Desired property           | Prompt contribution                                | Deterministic contribution                                                                   |
+| -------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Catch terse corrections    | Natural-language examples and active prior         | Periodic trigger counters decide when review runs.                                           |
+| Avoid stale facts          | Seven-day rule and concrete forbidden examples     | Memory size bounds and atomic operations limit damage.                                       |
+| Avoid skill sprawl         | Loaded-owner ladder, class-level target, name veto | Ownership metadata and current library inventory constrain targets.                          |
+| Avoid blind overwrite      | `skill_view` instruction                           | Read-before-write guard rejects unseen targets.                                              |
+| Respect human ownership    | Protected-skill explanation                        | Background origin, pin, provenance, and external-path guards fail closed.                    |
+| Avoid retry thrash         | One-call batch instruction                         | Atomic final-state validation applies all or nothing.                                        |
+| Recover from curation      | Archive-only and structured consolidation intent   | Pre-run backup, archive state, and rollback preserve recoverability.                         |
+| Prevent recursive learning | Reviewer wording limits tools                      | Nudge counters, persistence, external memory, and recursive review are disabled in the fork. |
 
 This distinction is the main adoption constraint for this repository. Hermes's active
 language can improve recall, but copying its permission to mutate would weaken the MVP.
