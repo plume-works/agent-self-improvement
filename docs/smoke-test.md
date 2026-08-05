@@ -33,10 +33,10 @@ Nothing else. There is no directory to create and no file to seed.
 
 Two sets of dials, and they are not interchangeable:
 
-| | Model | Effort |
-| --- | --- | --- |
-| The session the suite *drives* | `SMOKE_MODEL`, default `sonnet` | `SMOKE_EFFORT`, default `low` |
-| The reviewer *under test* | `SELF_IMPROVE_REVIEW_MODEL`, default `sonnet` | `SELF_IMPROVE_REVIEW_EFFORT`, default `medium` |
+|                                | Model                                         | Effort                                         |
+| ------------------------------ | --------------------------------------------- | ---------------------------------------------- |
+| The session the suite _drives_ | `SMOKE_MODEL`, default `sonnet`               | `SMOKE_EFFORT`, default `low`                  |
+| The reviewer _under test_      | `SELF_IMPROVE_REVIEW_MODEL`, default `sonnet` | `SELF_IMPROVE_REVIEW_EFFORT`, default `medium` |
 
 A third dial is not about cost. `SMOKE_AUTO_MEMORY` is off by default, and every
 driving session is launched with `CLAUDE_CODE_DISABLE_AUTO_MEMORY` set explicitly
@@ -150,18 +150,18 @@ it is not part of `make wake`.
 
 ## The checks
 
-| # | Check | How |
-| --- | --- | --- |
-| 1 | The plugin loads and `Stop` runs after the reply | Headless, asserts on hook events |
-| 2 | **The async review wakes an idle session** | **Interactive; asks you one question** |
-| 3 | A real reviewer returns a schema-valid candidate | Headless, real model |
-| 3b | Staging shows exact bytes; target untouched | Headless |
-| 4 | Routing offers an existing owner first | Headless |
-| 5a | Conversational approval authorizes nothing | Headless, real session |
-| 5b | Typed authorization installs exactly those bytes | Headless |
-| 6 | A fresh session picks up the instruction | Headless, real model |
-| 7 | Rollback restores, and refuses over an edit | Headless |
-| 10 | Nothing sensitive survives in durable state | Headless, real reviewer |
+| #   | Check                                            | How                                    |
+| --- | ------------------------------------------------ | -------------------------------------- |
+| 1   | The plugin loads and `Stop` runs after the reply | Headless, asserts on hook events       |
+| 2   | **The async review wakes an idle session**       | **Interactive; asks you one question** |
+| 3   | A real reviewer returns a schema-valid candidate | Headless, real model                   |
+| 3b  | Staging shows exact bytes; target untouched      | Headless                               |
+| 4   | Routing offers an existing owner first           | Headless                               |
+| 5a  | Conversational approval authorizes nothing       | Headless, real session                 |
+| 5b  | Typed authorization installs exactly those bytes | Headless                               |
+| 6   | A fresh session picks up the instruction         | Headless, real model                   |
+| 7   | Rollback restores, and refuses over an edit      | Headless                               |
+| 10  | Nothing sensitive survives in durable state      | Headless, real reviewer                |
 
 Two are worth understanding rather than just running.
 
@@ -176,8 +176,8 @@ else uses a deterministic fake. If it fails, the prompt has drifted or become
 too conservative; the candidate it produced, or the reason it declined, is in
 that test's `state/` directory.
 
-Every check drives the same one-line correction — *no, always use `make test` in
-this repo, not pytest directly* — with no reason given and no request to
+Every check drives the same one-line correction — _no, always use `make test` in
+this repo, not pytest directly_ — with no reason given and no request to
 remember it, because that is what a real correction looks like. Inferring the
 durable lesson from a few words is the product, so a check that spelled out its
 own rationale would be grading the user rather than the reviewer. Keep it terse
@@ -249,11 +249,11 @@ A `counters.json` with no candidate beside it means the reverse: a review ran an
 ended with nothing. Read `diagnostics.jsonl` for the `review_outcome` record,
 which says which of the three it was —
 
-| `error_class` | `reason` | What happened |
-| --- | --- | --- |
-| `no_lesson` | a discard category | The reviewer read the turn and declined |
-| `no_lesson` | an error class | The reviewer was never reached, or its answer did not parse |
-| `duplicate` | `accepted` or `rejected` | The lesson was already known and was suppressed |
+| `error_class` | `reason`                 | What happened                                               |
+| ------------- | ------------------------ | ----------------------------------------------------------- |
+| `no_lesson`   | a discard category       | The reviewer read the turn and declined                     |
+| `no_lesson`   | an error class           | The reviewer was never reached, or its answer did not parse |
+| `duplicate`   | `accepted` or `rejected` | The lesson was already known and was suppressed             |
 
 Without that record the three are identical on disk, and telling them apart costs
 another live run.

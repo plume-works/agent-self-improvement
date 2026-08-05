@@ -15,12 +15,7 @@
         "name": "Anton Matosov"
       },
       "license": "MIT",
-      "keywords": [
-        "learning",
-        "memory",
-        "self-improvement",
-        "reflection"
-      ]
+      "keywords": ["learning", "memory", "self-improvement", "reflection"]
     }
   ]
 }

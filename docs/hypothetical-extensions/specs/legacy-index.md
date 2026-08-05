@@ -2,13 +2,13 @@
 
 Specifications are normative unless marked otherwise. Later specifications may refine an earlier design only by naming the changed requirement explicitly.
 
-| Spec | Status | Release boundary | Depends on |
-| --- | --- | --- | --- |
-| [Spec-0001: Initial system design](0001-initial-system-design.md) | Proposed | Architecture and invariants | None |
-| [Spec-0002: Phase 1 — Review-only local core](0002-phase-1-review-only.md) | Proposed | `v0.1`–`v0.1.3` incremental gates | Spec-0001 |
-| [Spec-0003: Phase 2 — Existing-artifact patches and trusted automatic updates](0003-phase-2-trusted-automatic-updates.md) | Proposed | `v0.2` / `v0.2.1` | Packaged Phase 1 core |
-| [Spec-0004: Phase 3 — Skill curator](0004-phase-3-skill-curator.md) | Proposed | `v0.3` | Packaged Phase 1 core + Phase 2A mutation/recovery |
-| [Spec-0005: Phase 4 — Additional environments](0005-phase-4-additional-environments.md) | Proposed, intentionally deferred | Independent adapters | Exact core contract consumed by each adapter |
+| Spec                                                                                                                      | Status                           | Release boundary                  | Depends on                                         |
+| ------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | --------------------------------- | -------------------------------------------------- |
+| [Spec-0001: Initial system design](0001-initial-system-design.md)                                                         | Proposed                         | Architecture and invariants       | None                                               |
+| [Spec-0002: Phase 1 — Review-only local core](0002-phase-1-review-only.md)                                                | Proposed                         | `v0.1`–`v0.1.3` incremental gates | Spec-0001                                          |
+| [Spec-0003: Phase 2 — Existing-artifact patches and trusted automatic updates](0003-phase-2-trusted-automatic-updates.md) | Proposed                         | `v0.2` / `v0.2.1`                 | Packaged Phase 1 core                              |
+| [Spec-0004: Phase 3 — Skill curator](0004-phase-3-skill-curator.md)                                                       | Proposed                         | `v0.3`                            | Packaged Phase 1 core + Phase 2A mutation/recovery |
+| [Spec-0005: Phase 4 — Additional environments](0005-phase-4-additional-environments.md)                                   | Proposed, intentionally deferred | Independent adapters              | Exact core contract consumed by each adapter       |
 
 ## Release sequence
 

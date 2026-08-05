@@ -1,4 +1,5 @@
-"""Spec-0002: the asynchronous wake, verified without a person watching.
+"""
+Spec-0002: the asynchronous wake, verified without a person watching.
 
 This is the automated counterpart to check 2 of the packaged smoke test. It
 drives a real interactive Claude Code session on a pseudo-terminal, scripts the
@@ -32,8 +33,8 @@ import shutil
 import sys
 import time
 
-import pytest
 from _pytest.outcomes import Skipped
+import pytest
 
 from tests.smoke.conftest import (
     AUTO_MEMORY_VARIABLE,
@@ -47,12 +48,12 @@ from tests.smoke.conftest import (
     session_args,
 )
 from tests.smoke.pty_harness import (
-    STARTUP_TIMEOUT,
-    TURN_TIMEOUT,
     Deadline,
     Expired,
     PtySession,
+    STARTUP_TIMEOUT,
     Trace,
+    TURN_TIMEOUT,
 )
 
 # Marked per test rather than for the module: the three live checks spend model
@@ -70,13 +71,17 @@ live = pytest.mark.pty
 # message instead of executing something nobody reviewed.
 WAKE_ALLOWED_TOOLS = [
     *INTERACTIVE_ALLOWED_TOOLS,
-    "Bash(python3:*)", "Bash(python:*)", "Bash(uv:*)", "Bash(env:*)",
+    'Bash(python3:*)',
+    'Bash(python:*)',
+    'Bash(uv:*)',
+    'Bash(env:*)',
     # Acting on the wake means invoking the plugin's own skill, so the same
     # rule applies to it: unallowed, the session stops at "Use skill
     # self-improve:improve?" and the wake it is meant to demonstrate looks
     # like it never landed. `Skill(name)` matches a bare invocation and
     # `Skill(name *)` one carrying the candidate id.
-    "Skill(self-improve:improve)", "Skill(self-improve:improve *)",
+    'Skill(self-improve:improve)',
+    'Skill(self-improve:improve *)',
 ]
 
 # The other way the driving session records the lesson before the Stop hook can
@@ -89,7 +94,7 @@ WAKE_ALLOWED_TOOLS = [
 # first. Editing is not otherwise part of the exchange, so denying it costs the
 # check nothing. A denied tool is refused and the turn continues, unlike an
 # unallowed one, which stops for a dialog.
-WAKE_DENIED_TOOLS = ["Edit", "Write", "NotebookEdit"]
+WAKE_DENIED_TOOLS = ['Edit', 'Write', 'NotebookEdit']
 
 # The wake follows a real model review of a completed turn, which is fast; the
 # manual procedure's two-minute wait is a person's patience, not a measurement.
@@ -99,22 +104,23 @@ WAKE_TIMEOUT = 60.0
 CANDIDATE_TIMEOUT = 60.0
 
 
-def report(label, detail=""):
-    sys.stdout.write("\n  [wake] %s%s\n" % (label, (" " + detail) if detail else ""))
+def report(label, detail=''):
+    sys.stdout.write('\n  [wake] %s%s\n' % (label, (' ' + detail) if detail else ''))
     sys.stdout.flush()
 
 
 def candidate_ids(state):
-    directory = os.path.join(str(state), "candidates")
+    directory = os.path.join(str(state), 'candidates')
     if not os.path.isdir(directory):
         return []
-    return sorted(name[: -len(".json")] for name in os.listdir(directory)
-                  if name.endswith(".json"))
+    return sorted(
+        name[: -len('.json')] for name in os.listdir(directory) if name.endswith('.json')
+    )
 
 
 def read_json(path):
     try:
-        with open(str(path), encoding="utf-8") as handle:
+        with open(str(path), encoding='utf-8') as handle:
             return json.load(handle)
     except (OSError, ValueError):
         return None
@@ -122,11 +128,11 @@ def read_json(path):
 
 def read_diagnostics(state):
     """Every journaled record, or nothing if the file was never written."""
-    path = os.path.join(str(state), "diagnostics.jsonl")
+    path = os.path.join(str(state), 'diagnostics.jsonl')
     if not os.path.exists(path):
         return []
     records = []
-    with open(path, encoding="utf-8") as handle:
+    with open(path, encoding='utf-8') as handle:
         for line in handle:
             if line.strip():
                 try:
@@ -138,10 +144,19 @@ def read_diagnostics(state):
 
 def launch(project, plugin_root, deadline, auto_memory=None):
     session = PtySession(
-        ["claude", "--plugin-dir", str(plugin_root), *session_args(),
-         "--allowedTools", *WAKE_ALLOWED_TOOLS,
-         "--disallowedTools", *WAKE_DENIED_TOOLS],
-        cwd=project, env=runner_environment(auto_memory), deadline=deadline,
+        [
+            'claude',
+            '--plugin-dir',
+            str(plugin_root),
+            *session_args(),
+            '--allowedTools',
+            *WAKE_ALLOWED_TOOLS,
+            '--disallowedTools',
+            *WAKE_DENIED_TOOLS,
+        ],
+        cwd=project,
+        env=runner_environment(auto_memory),
+        deadline=deadline,
         # Set here on purpose, so the harness's rule about inherited
         # CLAUDE_CODE* variables does not take it back out again.
         configured=(AUTO_MEMORY_VARIABLE,),
@@ -150,7 +165,8 @@ def launch(project, plugin_root, deadline, auto_memory=None):
 
 
 def drive_the_correcting_exchange(session, deadline):
-    """Two prompts, each its own turn, then silence.
+    """
+    Two prompts, each its own turn, then silence.
 
     Anything typed mid-turn is folded into the turn already running, so the
     correction would never arrive as a prompt of its own and the gate would see
@@ -161,53 +177,55 @@ def drive_the_correcting_exchange(session, deadline):
     correction folded into the previous turn looks, in plugin state, exactly
     like a review that decided against proposing anything.
     """
-    if not session.wait_until_quiet(timeout=STARTUP_TIMEOUT, label="startup"):
-        raise Expired("the session never settled after starting")
-    session.trace.echo("startup", session.screen())
-    deadline.check("after startup")
+    if not session.wait_until_quiet(timeout=STARTUP_TIMEOUT, label='startup'):
+        raise Expired('the session never settled after starting')
+    session.trace.echo('startup', session.screen())
+    deadline.check('after startup')
 
     # A first-run trust dialog would otherwise sit there forever. Enter accepts
     # its default; on a session that has no dialog it submits an empty prompt,
     # which does nothing. This is not a match on the interface — nothing is read
     # to decide it, it is sent unconditionally.
-    session.send_line("")
-    session.wait_until_quiet(quiet=2.0, timeout=STARTUP_TIMEOUT, label="dialog")
-    session.trace.echo("dialog", session.screen())
-    deadline.check("after clearing any startup dialog")
+    session.send_line('')
+    session.wait_until_quiet(quiet=2.0, timeout=STARTUP_TIMEOUT, label='dialog')
+    session.trace.echo('dialog', session.screen())
+    deadline.check('after clearing any startup dialog')
 
     session.send_line(FIRST_TURN)
-    if not session.wait_until_quiet(timeout=TURN_TIMEOUT, label="turn-1"):
-        raise Expired("the first turn never finished")
-    session.trace.echo("turn-1", session.screen())
-    deadline.check("after the first turn")
+    if not session.wait_until_quiet(timeout=TURN_TIMEOUT, label='turn-1'):
+        raise Expired('the first turn never finished')
+    session.trace.echo('turn-1', session.screen())
+    deadline.check('after the first turn')
 
     session.send_line(CORRECTION)
-    if not session.wait_until_quiet(timeout=TURN_TIMEOUT, label="turn-2"):
-        raise Expired("the correcting turn never finished")
-    session.trace.echo("turn-2", session.screen())
-    deadline.check("after the correcting turn")
+    if not session.wait_until_quiet(timeout=TURN_TIMEOUT, label='turn-2'):
+        raise Expired('the correcting turn never finished')
+    session.trace.echo('turn-2', session.screen())
+    deadline.check('after the correcting turn')
 
 
 def await_candidate(session, state, timeout=CANDIDATE_TIMEOUT):
-    """Wait for review to store a candidate, reading the pty meanwhile.
+    """
+    Wait for review to store a candidate, reading the pty meanwhile.
 
     Disk first, screen second, always. Learning the identifier here is what lets
     the single on-screen match be for a string the plugin generated rather than
     for wording someone chose.
     """
-    session.watch(lambda: bool(candidate_ids(state)), timeout=timeout,
-                  label="candidate-on-disk")
+    session.watch(lambda: bool(candidate_ids(state)), timeout=timeout, label='candidate-on-disk')
     return candidate_ids(state)
 
 
 def review_outcomes(state):
-    """The bounded label of every review that ended without a candidate."""
-    return [record for record in read_diagnostics(state)
-            if record.get("stage") == "review_outcome"]
+    """Return the bounded label of each review that produced no candidate."""
+    return [
+        record for record in read_diagnostics(state) if record.get('stage') == 'review_outcome'
+    ]
 
 
 def require_a_candidate(candidates, state, session):
-    """Both live checks need a candidate before they can observe anything.
+    """
+    Both live checks need a candidate before they can observe anything.
 
     Neither check is about the reviewer's judgement. The positive one watches
     for a wake carrying a candidate identifier and the control watches for the
@@ -234,85 +252,88 @@ def require_a_candidate(candidates, state, session):
     if candidates:
         return
 
-    counters = read_json(os.path.join(str(state), "counters.json"))
+    counters = read_json(os.path.join(str(state), 'counters.json'))
     assert counters is not None, (
-        "no review ever started, so nothing here says anything about the wake. "
-        "The usual cause is a turn that never ended — a permission prompt for a "
-        "command outside WAKE_ALLOWED_TOOLS leaves the session waiting, and no "
-        "Stop hook fires for a turn that has not finished. Undiscarded turn "
-        "files below are the signature of that.\n%s"
-        % forensics(state, session))
+        'no review ever started, so nothing here says anything about the wake. '
+        'The usual cause is a turn that never ended — a permission prompt for a '
+        'command outside WAKE_ALLOWED_TOOLS leaves the session waiting, and no '
+        'Stop hook fires for a turn that has not finished. Undiscarded turn '
+        'files below are the signature of that.\n%s' % forensics(state, session)
+    )
 
     outcomes = review_outcomes(state)
     assert outcomes, (
-        "review ran, stored nothing, and recorded no outcome — the one "
-        "combination that cannot be explained from state.\n%s"
-        % forensics(state, session))
+        'review ran, stored nothing, and recorded no outcome — the one '
+        'combination that cannot be explained from state.\n%s' % forensics(state, session)
+    )
 
-    reasons = [record.get("reason") for record in outcomes]
+    reasons = [record.get('reason') for record in outcomes]
     pytest.skip(
-        "the reviewer stored no candidate (%s), so this run observed nothing "
-        "about the wake. A discard category means it read the turn and "
-        "declined, an error class means it was never reached, `duplicate` "
-        "means the lesson was already known. None of them is a wake result."
-        % ", ".join(str(reason) for reason in reasons))
+        'the reviewer stored no candidate (%s), so this run observed nothing '
+        'about the wake. A discard category means it read the turn and '
+        'declined, an error class means it was never reached, `duplicate` '
+        'means the lesson was already known. None of them is a wake result.'
+        % ', '.join(str(reason) for reason in reasons)
+    )
 
 
 def forensics(state, session):
-    lines = ["state root: %s" % state,
-             "raw terminal stream: %s.pty.log, beside the workspace"
-             % session.trace.name]
-    for name in ("candidates", "turns"):
+    lines = [
+        'state root: %s' % state,
+        'raw terminal stream: %s.pty.log, beside the workspace' % session.trace.name,
+    ]
+    for name in ('candidates', 'turns'):
         path = os.path.join(str(state), name)
-        lines.append("%s: %s" % (name, sorted(os.listdir(path))
-                                 if os.path.isdir(path) else "(none)"))
-    for name in ("counters.json", "pending.json", "diagnostics.jsonl"):
+        lines.append(
+            '%s: %s' % (name, sorted(os.listdir(path)) if os.path.isdir(path) else '(none)')
+        )
+    for name in ('counters.json', 'pending.json', 'diagnostics.jsonl'):
         path = os.path.join(str(state), name)
         if os.path.exists(path):
-            with open(path, encoding="utf-8") as handle:
-                lines.append("%s: %s" % (name, handle.read().strip()[-600:]))
+            with open(path, encoding='utf-8') as handle:
+                lines.append('%s: %s' % (name, handle.read().strip()[-600:]))
         else:
-            lines.append("%s: (none)" % name)
-    lines.append("screen tail:\n%s" % session.tail())
-    return "\n".join(lines)
+            lines.append('%s: (none)' % name)
+    lines.append('screen tail:\n%s' % session.tail())
+    return '\n'.join(lines)
 
 
 def no_wake_plugin(workspace):
-    """A copy of the plugin whose Stop hook can never signal a wake.
+    """
+    Provide a plugin copy whose Stop hook can never signal a wake.
 
     Everything else is the packaged plugin: the same capture hooks, the same
     gate, the same reviewer, the same candidate written to the same state root.
     Only the exit code that asks Claude to wake is thrown away.
     """
-    root = pathlib.Path(workspace) / "plugin-no-wake"
+    root = pathlib.Path(workspace) / 'plugin-no-wake'
     if root.exists():
         shutil.rmtree(str(root))
-    shutil.copytree(PLUGIN_ROOT, str(root),
-                    ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(PLUGIN_ROOT, str(root), ignore=shutil.ignore_patterns('__pycache__'))
 
-    silent = root / "scripts" / "si-silent"
+    silent = root / 'scripts' / 'si-silent'
     silent.write_text(
-        "#!/bin/sh\n"
-        "# Negative control (Spec-0002 section 6.2): run review exactly as the\n"
-        "# packaged hook does, then discard its exit code so no wake is ever\n"
-        "# signalled.\n"
+        '#!/bin/sh\n'
+        '# Negative control (Spec-0002 section 6.2): run review exactly as the\n'
+        '# packaged hook does, then discard its exit code so no wake is ever\n'
+        '# signalled.\n'
         '"$(dirname "$0")/si" "$@"\n'
-        "exit 0\n"
+        'exit 0\n'
     )
     silent.chmod(0o755)
 
-    hooks_path = root / "hooks" / "hooks.json"
+    hooks_path = root / 'hooks' / 'hooks.json'
     hooks = json.loads(hooks_path.read_text())
-    for entry in hooks["hooks"]["Stop"]:
-        for hook in entry["hooks"]:
-            hook["command"] = hook["command"].replace("/scripts/si",
-                                                      "/scripts/si-silent")
-    hooks_path.write_text(json.dumps(hooks, indent=2) + "\n")
+    for entry in hooks['hooks']['Stop']:
+        for hook in entry['hooks']:
+            hook['command'] = hook['command'].replace('/scripts/si', '/scripts/si-silent')
+    hooks_path.write_text(json.dumps(hooks, indent=2) + '\n')
     return root
 
 
-def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
-    """The whole scripted run, returning the session and what state it produced.
+def run_exchange(scratch, plugin_root, name='wake', auto_memory=None):
+    """
+    Run the whole script and return the session and resulting state.
 
     Bounded end to end by one budget. A working run takes well under a minute;
     anything that stalls fails here with the screen attached rather than
@@ -324,48 +345,56 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
     it produced.
     """
     require_cli()
-    seed_runnable_project(scratch["project"])
+    seed_runnable_project(scratch['project'])
 
-    trace = Trace(name, directory=scratch["workspace"])
+    trace = Trace(name, directory=scratch['workspace'])
     deadline = Deadline(trace=trace)
-    trace.event("budget", "%.0fs for this check" % deadline.budget)
-    session = launch(scratch["project"], plugin_root, deadline, auto_memory)
+    trace.event('budget', '%.0fs for this check' % deadline.budget)
+    session = launch(scratch['project'], plugin_root, deadline, auto_memory)
     candidates = []
     woke = False
     try:
         drive_the_correcting_exchange(session, deadline)
         waited = time.time()
-        candidates = await_candidate(session, scratch["state"])
+        candidates = await_candidate(session, scratch['state'])
         waited = time.time() - waited
-        trace.event("candidates", str(candidates) or "(none)")
+        trace.event('candidates', str(candidates) or '(none)')
         if candidates:
-            woke = session.watch(lambda: session.contains(candidates[0]),
-                                 timeout=WAKE_TIMEOUT,
-                                 label="wake-on-screen")
-            trace.echo("after-wake-wait", session.screen())
+            woke = session.watch(
+                lambda: session.contains(candidates[0]),
+                timeout=WAKE_TIMEOUT,
+                label='wake-on-screen',
+            )
+            trace.echo('after-wake-wait', session.screen())
         elif waited < CANDIDATE_TIMEOUT - 1:
             # The wait was cut short by the budget rather than by its own limit,
             # so review may simply be late. A late review is a different failure
             # from a missing wake; spend what is left telling them apart.
-            session.watch(lambda: bool(candidate_ids(scratch["state"])),
-                          timeout=WAKE_TIMEOUT, label="late-candidate")
-            candidates = candidate_ids(scratch["state"])
+            session.watch(
+                lambda: bool(candidate_ids(scratch['state'])),
+                timeout=WAKE_TIMEOUT,
+                label='late-candidate',
+            )
+            candidates = candidate_ids(scratch['state'])
         else:
             # Review had its full window and stored nothing. Waiting the same
             # window again cannot change that, and doubling a failing check's
             # runtime is what makes this harness feel like it has hung.
-            trace.event("no candidate",
-                        "review had its full %.0fs window and stored nothing; "
-                        "not waiting again" % CANDIDATE_TIMEOUT)
+            trace.event(
+                'no candidate',
+                'review had its full %.0fs window and stored nothing; not waiting again'
+                % CANDIDATE_TIMEOUT,
+            )
         status = session.close()
     except Expired as expiry:
         status = session.close()
-        pytest.fail("%s after %.0fs.\nA working run finishes in well under a "
-                    "minute, so this is a stalled session rather than a slow "
-                    "one — most often a turn waiting on a permission prompt or "
-                    "a dialog.\nsession exit: %r\n%s"
-                    % (expiry, deadline.elapsed(), status,
-                       forensics(scratch["state"], session)))
+        pytest.fail(
+            '%s after %.0fs.\nA working run finishes in well under a '
+            'minute, so this is a stalled session rather than a slow '
+            'one — most often a turn waiting on a permission prompt or '
+            'a dialog.\nsession exit: %r\n%s'
+            % (expiry, deadline.elapsed(), status, forensics(scratch['state'], session))
+        )
     finally:
         if session.process is not None and session.process.poll() is None:
             session.close()
@@ -374,24 +403,23 @@ def run_exchange(scratch, plugin_root, name="wake", auto_memory=None):
 
 # The wake ------------------------------------------------------------------
 
+
 @live
 def test_the_async_wake_arrives_at_an_idle_session(scratch):
-    """A completed correction wakes the session with nobody typing.
+    """
+    A completed correction wakes the session with nobody typing.
 
     The assertions are ordered so that a failure names what actually went
     wrong: review never ran, review ran and proposed nothing, or the candidate
     exists and the wake never landed.
     """
-    session, candidates, woke, status = run_exchange(scratch, PLUGIN_ROOT,
-                                                     name="wake-arrives")
+    session, candidates, woke, status = run_exchange(scratch, PLUGIN_ROOT, name='wake-arrives')
 
-    require_a_candidate(candidates, scratch["state"], session)
+    require_a_candidate(candidates, scratch['state'], session)
 
     candidate_id = candidates[0]
-    record = read_json(os.path.join(str(scratch["state"]), "candidates",
-                                    candidate_id + ".json"))
-    assert record and record.get("lesson"), \
-        "the candidate record is unusable: %r" % (record,)
+    record = read_json(os.path.join(str(scratch['state']), 'candidates', candidate_id + '.json'))
+    assert record and record.get('lesson'), 'the candidate record is unusable: %r' % (record,)
 
     # Nothing here asserts on the queue. Queueing before the wake is what makes
     # a lost wake recoverable, and it is checked deterministically in
@@ -402,21 +430,24 @@ def test_the_async_wake_arrives_at_an_idle_session(scratch):
     # file when something else fails.
 
     assert woke, (
-        "the candidate %s was staged but its identifier never reached the "
-        "screen: the review completed and the wake did not arrive.\n%s"
-        % (candidate_id, forensics(scratch["state"], session)))
+        'the candidate %s was staged but its identifier never reached the '
+        'screen: the review completed and the wake did not arrive.\n%s'
+        % (candidate_id, forensics(scratch['state'], session))
+    )
 
-    assert status == 0, "the session did not exit cleanly (status %r)" % (status,)
-    report("wake observed for candidate", candidate_id)
-    report("lesson:", record["lesson"])
+    assert status == 0, 'the session did not exit cleanly (status %r)' % (status,)
+    report('wake observed for candidate', candidate_id)
+    report('lesson:', record['lesson'])
 
 
 # Auto memory ---------------------------------------------------------------
 
+
 @live
 @pytest.mark.auto_memory
 def test_the_two_learning_systems_do_not_collide(scratch):
-    """The same exchange with Claude Code's own auto memory left on.
+    """
+    The same exchange with Claude Code's own auto memory left on.
 
     This is not a variant of the wake check; it is the interaction the wake
     check had to be insulated from, given a test of its own so that insulating
@@ -439,72 +470,80 @@ def test_the_two_learning_systems_do_not_collide(scratch):
     systems interfere rather than defer.
     """
     session, candidates, woke, status = run_exchange(
-        scratch, PLUGIN_ROOT, name="wake-auto-memory", auto_memory=True)
+        scratch, PLUGIN_ROOT, name='wake-auto-memory', auto_memory=True
+    )
 
-    counters = read_json(os.path.join(str(scratch["state"]), "counters.json"))
+    counters = read_json(os.path.join(str(scratch['state']), 'counters.json'))
     assert counters is not None, (
-        "no review ran at all, so this says nothing about how the two systems "
-        "interact.\n%s" % forensics(scratch["state"], session))
+        'no review ran at all, so this says nothing about how the two systems '
+        'interact.\n%s' % forensics(scratch['state'], session)
+    )
 
     if candidates:
         assert woke, (
-            "the reviewer proposed alongside auto memory but the wake never "
-            "arrived, which is a wake failure and not an interaction.\n%s"
-            % forensics(scratch["state"], session))
-        report("proposed despite auto memory", candidates[0])
+            'the reviewer proposed alongside auto memory but the wake never '
+            'arrived, which is a wake failure and not an interaction.\n%s'
+            % forensics(scratch['state'], session)
+        )
+        report('proposed despite auto memory', candidates[0])
     else:
-        outcomes = review_outcomes(scratch["state"])
+        outcomes = review_outcomes(scratch['state'])
         assert outcomes, (
-            "review ran, stored nothing, and recorded no outcome — the one "
-            "combination that cannot be explained from state.\n%s"
-            % forensics(scratch["state"], session))
-        reasons = [record.get("reason") for record in outcomes]
-        assert "already_covered" in reasons, (
-            "the reviewer declined for %r rather than because the lesson was "
-            "already owned. With auto memory on, the lesson is recorded during "
-            "the turn, so `already_covered` is the outcome that shows the two "
-            "systems deferring to each other rather than failing "
-            "independently.\n%s" % (reasons, forensics(scratch["state"], session)))
-        report("deferred to auto memory, as expected", reasons[0])
+            'review ran, stored nothing, and recorded no outcome — the one '
+            'combination that cannot be explained from state.\n%s'
+            % forensics(scratch['state'], session)
+        )
+        reasons = [record.get('reason') for record in outcomes]
+        assert 'already_covered' in reasons, (
+            'the reviewer declined for %r rather than because the lesson was '
+            'already owned. With auto memory on, the lesson is recorded during '
+            'the turn, so `already_covered` is the outcome that shows the two '
+            'systems deferring to each other rather than failing '
+            'independently.\n%s' % (reasons, forensics(scratch['state'], session))
+        )
+        report('deferred to auto memory, as expected', reasons[0])
 
-    assert status == 0, "the session did not exit cleanly (status %r)" % (status,)
+    assert status == 0, 'the session did not exit cleanly (status %r)' % (status,)
 
 
 # The control ---------------------------------------------------------------
 
+
 @live
 def test_the_harness_fails_when_the_wake_does_not_arrive(scratch):
-    """The same run against a Stop hook that never signals: no wake, by construction.
+    """
+    The same run against a Stop hook that never signals: no wake, by construction.
 
     Without this, a harness that could not see a wake at all would pass the test
     above only by accident of the wake being there.
     """
-    plugin_root = no_wake_plugin(scratch["workspace"])
-    session, candidates, woke, status = run_exchange(
-        scratch, plugin_root, name="wake-control")
+    plugin_root = no_wake_plugin(scratch['workspace'])
+    session, candidates, woke, status = run_exchange(scratch, plugin_root, name='wake-control')
 
-    require_a_candidate(candidates, scratch["state"], session)
+    require_a_candidate(candidates, scratch['state'], session)
 
     assert not woke, (
-        "candidate %s reached the screen although the Stop hook never signalled "
-        "a wake. Either the harness is matching something other than the wake, "
-        "or the candidate reached Claude by another route.\n%s"
-        % (candidates[0], forensics(scratch["state"], session)))
+        'candidate %s reached the screen although the Stop hook never signalled '
+        'a wake. Either the harness is matching something other than the wake, '
+        'or the candidate reached Claude by another route.\n%s'
+        % (candidates[0], forensics(scratch['state'], session))
+    )
 
-    assert status == 0, "the session did not exit cleanly (status %r)" % (status,)
-    report("no wake, as expected, for staged candidate", candidates[0])
+    assert status == 0, 'the session did not exit cleanly (status %r)' % (status,)
+    report('no wake, as expected, for staged candidate', candidates[0])
 
 
 # Harness self-checks -------------------------------------------------------
 
+
 def _state_with(tmp_path, counters=None, outcomes=()):
-    """A plugin state root holding only what the precondition reads."""
+    """Build a plugin state root containing only precondition inputs."""
     if counters is not None:
-        (tmp_path / "counters.json").write_text(json.dumps(counters))
+        (tmp_path / 'counters.json').write_text(json.dumps(counters))
     if outcomes:
-        (tmp_path / "diagnostics.jsonl").write_text(
-            "".join(json.dumps(dict(record, stage="review_outcome")) + "\n"
-                    for record in outcomes))
+        (tmp_path / 'diagnostics.jsonl').write_text(
+            ''.join(json.dumps(dict(record, stage='review_outcome')) + '\n' for record in outcomes)
+        )
     return tmp_path
 
 
@@ -512,20 +551,21 @@ class _NoSession:
     """Stands in for a session in the forensics a failing precondition prints."""
 
     def tail(self):
-        return "(no session)"
+        return '(no session)'
 
-    trace = type("_T", (), {"name": "self-check"})()
+    trace = type('_T', (), {'name': 'self-check'})()
 
 
 @pytest.mark.harness
 def test_a_stored_candidate_lets_a_live_check_proceed(tmp_path):
     """The ordinary case decides nothing and gets out of the way."""
-    require_a_candidate(["cand-abc123def456"], _state_with(tmp_path), _NoSession())
+    require_a_candidate(['cand-abc123def456'], _state_with(tmp_path), _NoSession())
 
 
 @pytest.mark.harness
 def test_a_reviewer_decline_skips_rather_than_failing_the_run(tmp_path):
-    """A review that ran and declined observed nothing about the wake.
+    """
+    A review that ran and declined observed nothing about the wake.
 
     This is the flake the precondition exists for: the reviewer discards a
     genuine correction a few percent of the time, and with two live reviews per
@@ -533,31 +573,31 @@ def test_a_reviewer_decline_skips_rather_than_failing_the_run(tmp_path):
     mechanism under test. The reason has to survive into the skip, so the run
     still says which outcome it saw.
     """
-    state = _state_with(tmp_path, counters={"count": 1},
-                        outcomes=[{"reason": "transient_state"}])
+    state = _state_with(tmp_path, counters={'count': 1}, outcomes=[{'reason': 'transient_state'}])
     with pytest.raises(Skipped) as skipped:
         require_a_candidate([], state, _NoSession())
-    assert "transient_state" in str(skipped.value)
+    assert 'transient_state' in str(skipped.value)
 
 
 @pytest.mark.harness
 def test_a_review_that_never_ran_still_fails_the_run(tmp_path):
     """No counters means no Stop hook fired, which is a real failure."""
-    with pytest.raises(AssertionError, match="no review ever started"):
+    with pytest.raises(AssertionError, match='no review ever started'):
         require_a_candidate([], _state_with(tmp_path), _NoSession())
 
 
 @pytest.mark.harness
 def test_a_review_that_journalled_nothing_still_fails_the_run(tmp_path):
     """A review with no candidate and no outcome cannot be explained; fail."""
-    state = _state_with(tmp_path, counters={"count": 1})
-    with pytest.raises(AssertionError, match="recorded no outcome"):
+    state = _state_with(tmp_path, counters={'count': 1})
+    with pytest.raises(AssertionError, match='recorded no outcome'):
         require_a_candidate([], state, _NoSession())
 
 
 @pytest.mark.harness
 def test_the_screen_matcher_survives_wrapping_and_styling():
-    """The one on-screen match must not be defeated by the renderer.
+    """
+    The one on-screen match must not be defeated by the renderer.
 
     A candidate identifier that wraps at the margin, or that arrives with color
     around it, is still the same identifier. This is checked without a model,
@@ -565,27 +605,32 @@ def test_the_screen_matcher_survives_wrapping_and_styling():
     """
     from tests.smoke.pty_harness import flatten
 
-    session = PtySession(["true"], cwd=os.getcwd(), env={})
-    session.buffer = "self-improve: candidate cand-\r\n  \x1b[1mabc123def456\x1b[0m\n"
-    assert session.contains("cand-abc123def456")
-    assert not session.contains("cand-000000000000")
-    assert flatten("\x1b[31ma b\nc\x1b[0m") == "abc"
+    session = PtySession(['true'], cwd=os.getcwd(), env={})
+    session.buffer = 'self-improve: candidate cand-\r\n  \x1b[1mabc123def456\x1b[0m\n'
+    assert session.contains('cand-abc123def456')
+    assert not session.contains('cand-000000000000')
+    assert flatten('\x1b[31ma b\nc\x1b[0m') == 'abc'
 
 
 @pytest.mark.harness
 def test_the_budget_bounds_a_session_that_never_stops_talking():
-    """No wait may outlive the check's budget, however chatty the session is.
+    """
+    No wait may outlive the check's budget, however chatty the session is.
 
     The failure this prevents is the one that happened: every individual wait
     was inside its own limit and the check still ran for eighteen minutes.
     """
     deadline = Deadline(budget=3.0)
     session = PtySession(
-        [sys.executable, "-c",
-         "import sys, time\n"
-         "while True:\n"
-         "    sys.stdout.write('.'); sys.stdout.flush(); time.sleep(0.05)\n"],
-        cwd=os.getcwd(), env=dict(os.environ), deadline=deadline).start()
+        [
+            sys.executable,
+            '-c',
+            "import sys, time\nwhile True:\n    sys.stdout.write('.'); sys.stdout.flush(); time.sleep(0.05)\n",
+        ],
+        cwd=os.getcwd(),
+        env=dict(os.environ),
+        deadline=deadline,
+    ).start()
     try:
         started = time.time()
         # Its own timeout is a minute; the budget is three seconds and wins.
@@ -593,7 +638,7 @@ def test_the_budget_bounds_a_session_that_never_stops_talking():
         assert time.time() - started < 15
         assert deadline.expired()
         with pytest.raises(Expired):
-            deadline.check("afterwards")
+            deadline.check('afterwards')
     finally:
         session.close()
 
@@ -601,11 +646,15 @@ def test_the_budget_bounds_a_session_that_never_stops_talking():
 @pytest.mark.harness
 def test_the_harness_reports_a_session_it_had_to_kill():
     """A session that ignores /exit must not be reported as a clean exit."""
-    session = PtySession([sys.executable, "-c",
-                          "import signal, time\n"
-                          "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
-                          "time.sleep(300)\n"],
-                         cwd=os.getcwd(), env=dict(os.environ)).start()
+    session = PtySession(
+        [
+            sys.executable,
+            '-c',
+            'import signal, time\nsignal.signal(signal.SIGTERM, signal.SIG_IGN)\ntime.sleep(300)\n',
+        ],
+        cwd=os.getcwd(),
+        env=dict(os.environ),
+    ).start()
     started = time.time()
     assert session.close(timeout=2) is None
     assert time.time() - started < 60

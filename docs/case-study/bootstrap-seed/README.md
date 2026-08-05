@@ -47,10 +47,10 @@ The comments include one anecdotal assertion that performance improves when `lea
 
 The pinned Gist contains two Markdown files:
 
-| File | Lines | Purpose |
-| --- | ---: | --- |
-| [`README.md`](https://gist.github.com/ChristopherA/fd2985551e765a86f4fbb24080263a2f/860d3f71fef949ff5692c86bb251c571caf53790#file-readme-md) | 107 | Hypothesis, rationale, expected evolution, usage, and limitations |
-| [`self-improving-claude-code.md`](https://gist.github.com/ChristopherA/fd2985551e765a86f4fbb24080263a2f/860d3f71fef949ff5692c86bb251c571caf53790#file-self-improving-claude-code-md) | 103 | The prompt copied into `.claude/CLAUDE.md` |
+| File                                                                                                                                                                                 | Lines | Purpose                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----: | ----------------------------------------------------------------- |
+| [`README.md`](https://gist.github.com/ChristopherA/fd2985551e765a86f4fbb24080263a2f/860d3f71fef949ff5692c86bb251c571caf53790#file-readme-md)                                         |   107 | Hypothesis, rationale, expected evolution, usage, and limitations |
+| [`self-improving-claude-code.md`](https://gist.github.com/ChristopherA/fd2985551e765a86f4fbb24080263a2f/860d3f71fef949ff5692c86bb251c571caf53790#file-self-improving-claude-code-md) |   103 | The prompt copied into `.claude/CLAUDE.md`                        |
 
 There are two revisions:
 
@@ -61,16 +61,16 @@ There is no source code, package, plugin manifest, settings file, hook declarati
 
 ## Hypothesis versus demonstrated behavior
 
-| Claim or expectation | Evidence in the source | Assessment |
-| --- | --- | --- |
-| One prompt can bootstrap meaningful improvement | A 103-line project instruction is provided | Plausible prompt pattern, not demonstrated outcome |
-| The system captures and promotes learning | Instructions describe learning, promotion, and consolidation | Model-mediated convention only |
-| Structure emerges from pressure | Line and entry thresholds request later restructuring | Useful policy; emergence remains subjective and untested |
-| It supports four workspace use cases | Session 1 asks the user to choose one of four modes | Choice is seeded; adaptation quality is not tested |
-| State survives sessions | Claude is told to maintain a project-local state file | Files persist, but discovery, naming, update timing, and staleness are not deterministic |
-| Hooks and skills emerge later | Their affordances are mentioned in three bullets | No creation recipe, trigger, or validated resulting artifact |
-| Each session improves the system | The opening imperative says so | Aspirational; sessions can produce no lesson or a harmful lesson |
-| Complexity remains lean | Budgets and anti-proliferation rules are specified | Helpful heuristics without enforcement or conflict detection |
+| Claim or expectation                            | Evidence in the source                                       | Assessment                                                                               |
+| ----------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| One prompt can bootstrap meaningful improvement | A 103-line project instruction is provided                   | Plausible prompt pattern, not demonstrated outcome                                       |
+| The system captures and promotes learning       | Instructions describe learning, promotion, and consolidation | Model-mediated convention only                                                           |
+| Structure emerges from pressure                 | Line and entry thresholds request later restructuring        | Useful policy; emergence remains subjective and untested                                 |
+| It supports four workspace use cases            | Session 1 asks the user to choose one of four modes          | Choice is seeded; adaptation quality is not tested                                       |
+| State survives sessions                         | Claude is told to maintain a project-local state file        | Files persist, but discovery, naming, update timing, and staleness are not deterministic |
+| Hooks and skills emerge later                   | Their affordances are mentioned in three bullets             | No creation recipe, trigger, or validated resulting artifact                             |
+| Each session improves the system                | The opening imperative says so                               | Aspirational; sessions can produce no lesson or a harmful lesson                         |
+| Complexity remains lean                         | Budgets and anti-proliferation rules are specified           | Helpful heuristics without enforcement or conflict detection                             |
 
 The README's session-number evolution path—first state file around session 3, consolidation around session 8, rule split around session 15, hooks or skills after session 20—is illustrative, not derived from measurements ([lines 63–71](https://gist.github.com/ChristopherA/fd2985551e765a86f4fbb24080263a2f/860d3f71fef949ff5692c86bb251c571caf53790#file-readme-md-L63-L71)).
 
@@ -251,40 +251,40 @@ A 50-line rule can be cohesive; a 10-line rule can contain three conflicting con
 
 ## Relationship to `claude-meta`
 
-| Concern | `claude-meta` | Bootstrap seed |
-| --- | --- | --- |
-| Installation | Starter `CLAUDE.md` template | 103-line `.claude/CLAUDE.md` seed |
-| Trigger | Human invokes one reflection prompt | Implicit after non-trivial work plus explicit phrases |
-| Core reasoning | Reflect, abstract, generalize | Reflect, triage, cascade |
-| Initial store | `CLAUDE.md` | `learnings.md`, `rules/`, and state files |
-| Curation | Summary and anti-bloat prose | Promotion, consolidation, archive, split thresholds |
-| User review | Not required before direct edit | Required for selected structural/promoted changes |
-| Context strategy | One growing broad file | Small root instructions plus conditional rules and archives |
-| Claimed maturity | Full production example supplied | Explicitly untested hypothesis |
-| Main strength | Five-second learning interaction | Pressure-driven evolution policy |
-| Main risk | Unbounded single-file rules | Broad agent-owned project mutation lifecycle |
+| Concern          | `claude-meta`                       | Bootstrap seed                                              |
+| ---------------- | ----------------------------------- | ----------------------------------------------------------- |
+| Installation     | Starter `CLAUDE.md` template        | 103-line `.claude/CLAUDE.md` seed                           |
+| Trigger          | Human invokes one reflection prompt | Implicit after non-trivial work plus explicit phrases       |
+| Core reasoning   | Reflect, abstract, generalize       | Reflect, triage, cascade                                    |
+| Initial store    | `CLAUDE.md`                         | `learnings.md`, `rules/`, and state files                   |
+| Curation         | Summary and anti-bloat prose        | Promotion, consolidation, archive, split thresholds         |
+| User review      | Not required before direct edit     | Required for selected structural/promoted changes           |
+| Context strategy | One growing broad file              | Small root instructions plus conditional rules and archives |
+| Claimed maturity | Full production example supplied    | Explicitly untested hypothesis                              |
+| Main strength    | Five-second learning interaction    | Pressure-driven evolution policy                            |
+| Main risk        | Unbounded single-file rules         | Broad agent-owned project mutation lifecycle                |
 
 The seed is a more mature prompt architecture than `claude-meta`, particularly in triage, progressive disclosure, and anti-proliferation. Both still rely on prompt compliance and direct model writes rather than a trusted mutation boundary.
 
 ## Comparison with Claude Self-Improvement
 
-| Concern | Bootstrap seed | Claude Self-Improvement design |
-| --- | --- | --- |
-| Initial trigger | Implicit or explicit | Explicit `/self-improvement:learn` |
-| Detector | Current Claude conversation | User first; bounded hooks later |
-| Evidence | Free-form current context and dated notes | Bounded typed evidence |
-| Disposition | Apply, capture, dismiss | Typed candidate/proposal lifecycle |
-| Destination | Project-local learnings, rules, state | Memory, instruction, rule, skill, hook proposal, reference, or discard |
-| Authorization | Model, with selective user questions | Deterministic policy plus explicit approval |
-| Mutation | Claude file and Git tools | Journaled `claude-si` engine |
-| Temporary state | Maintained under `.claude/` | Outside durable-learning ownership; discard as knowledge |
-| Promotion | Two behavior changes | Evidence, ownership, duplicate search, review, validation |
-| Curation | Entry/line thresholds and model judgment | Deterministic scheduling plus review-gated curator |
-| Recovery | Git if available and correctly committed | Journal, observed hashes, conflict detection, rollback |
-| Privacy | Undefined | Redaction, credential canaries, minimal evidence |
-| Enforcement | Prompt only | Hooks/settings for deterministic requirements |
-| Evaluation | None | Packaged fresh-session and later quality baselines |
-| Complexity strategy | Emerge from pressure | Narrow tracer bullet, then separately gated increments |
+| Concern             | Bootstrap seed                            | Claude Self-Improvement design                                         |
+| ------------------- | ----------------------------------------- | ---------------------------------------------------------------------- |
+| Initial trigger     | Implicit or explicit                      | Explicit `/self-improvement:learn`                                     |
+| Detector            | Current Claude conversation               | User first; bounded hooks later                                        |
+| Evidence            | Free-form current context and dated notes | Bounded typed evidence                                                 |
+| Disposition         | Apply, capture, dismiss                   | Typed candidate/proposal lifecycle                                     |
+| Destination         | Project-local learnings, rules, state     | Memory, instruction, rule, skill, hook proposal, reference, or discard |
+| Authorization       | Model, with selective user questions      | Deterministic policy plus explicit approval                            |
+| Mutation            | Claude file and Git tools                 | Journaled `claude-si` engine                                           |
+| Temporary state     | Maintained under `.claude/`               | Outside durable-learning ownership; discard as knowledge               |
+| Promotion           | Two behavior changes                      | Evidence, ownership, duplicate search, review, validation              |
+| Curation            | Entry/line thresholds and model judgment  | Deterministic scheduling plus review-gated curator                     |
+| Recovery            | Git if available and correctly committed  | Journal, observed hashes, conflict detection, rollback                 |
+| Privacy             | Undefined                                 | Redaction, credential canaries, minimal evidence                       |
+| Enforcement         | Prompt only                               | Hooks/settings for deterministic requirements                          |
+| Evaluation          | None                                      | Packaged fresh-session and later quality baselines                     |
+| Complexity strategy | Emerge from pressure                      | Narrow tracer bullet, then separately gated increments                 |
 
 ## Adopt, adapt, and reject
 
@@ -373,18 +373,18 @@ Internally, it may classify, route, validate, stage, request approval, journal, 
 
 ## Keep / defer / avoid
 
-| Decision | Item | Reason |
-| --- | --- | --- |
-| Keep now | Explicit learning trigger | High signal and low normal-turn cost |
-| Keep now | Apply/capture/dismiss disposition | Prevents undifferentiated accumulation |
-| Keep now | Search-before-create and context discipline | Controls duplication and startup cost |
-| Keep now | User approval and exact staged files | Supplies the missing authorization boundary |
-| Defer | Automatic implicit capture | Must first prove bounded precision and fail-open behavior |
-| Defer | Existing-file mutation | Requires ownership, conflict, validation, and recovery controls |
-| Defer | Automated consolidation | Thresholds can schedule review before curator mutation exists |
-| Avoid | Raw project-local learning dump | Wrong scope, retention, and privacy behavior |
-| Avoid | Autonomous commits | Conflates agent learning with repository history authority |
-| Avoid | Cascade-by-default mutation | Amplifies weak generalizations |
+| Decision | Item                                        | Reason                                                          |
+| -------- | ------------------------------------------- | --------------------------------------------------------------- |
+| Keep now | Explicit learning trigger                   | High signal and low normal-turn cost                            |
+| Keep now | Apply/capture/dismiss disposition           | Prevents undifferentiated accumulation                          |
+| Keep now | Search-before-create and context discipline | Controls duplication and startup cost                           |
+| Keep now | User approval and exact staged files        | Supplies the missing authorization boundary                     |
+| Defer    | Automatic implicit capture                  | Must first prove bounded precision and fail-open behavior       |
+| Defer    | Existing-file mutation                      | Requires ownership, conflict, validation, and recovery controls |
+| Defer    | Automated consolidation                     | Thresholds can schedule review before curator mutation exists   |
+| Avoid    | Raw project-local learning dump             | Wrong scope, retention, and privacy behavior                    |
+| Avoid    | Autonomous commits                          | Conflates agent learning with repository history authority      |
+| Avoid    | Cascade-by-default mutation                 | Amplifies weak generalizations                                  |
 
 ## Final assessment
 

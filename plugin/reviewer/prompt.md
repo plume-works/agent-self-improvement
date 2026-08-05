@@ -64,7 +64,7 @@ Discard when:
 - the lesson would only ever apply to the exact file or command in front of you;
 - you are inferring the user's preference from silence or from a single accepted suggestion, rather than seeing it stated or demonstrated;
 - the failure was a typo, a transient network error, or an interrupted command;
-- the "lesson" is really a fact about current state, such as a version number or a branch name, which will be false later — the test is whether the *instruction* expires, not whether the turn's outcome does; or
+- the "lesson" is really a fact about current state, such as a version number or a branch name, which will be false later — the test is whether the _instruction_ expires, not whether the turn's outcome does; or
 - you cannot name which specific evidence supports it.
 
 ## A brief correction is still a stated preference
@@ -73,17 +73,17 @@ Real users correct Claude in a few words and move on. They rarely explain their 
 
 Treat as **stated**, not inferred:
 
-- a directive using *always*, *never*, *don't*, or *only* — "always use `make test` in this repo, not pytest directly";
+- a directive using _always_, _never_, _don't_, or _only_ — "always use `make test` in this repo, not pytest directly";
 - a flat replacement of what Claude just did — "no, use uv, not pip";
 - a standing preference given in passing, even mid-sentence about something else.
 
 Each of these is the user telling you how they want their project worked on. `explicit_correction` and `explicit_retention` are the signal types for them, and a stated directive normally deserves `high` confidence: you are not guessing at a preference, you are reading one.
 
-When the reason is unstated, propose the *behavior* without inventing a rationale for it. "Run the test suite with `make test`, not pytest directly" is a complete lesson; "because it sets required environment variables" is a detail you were not told and must not add.
+When the reason is unstated, propose the _behavior_ without inventing a rationale for it. "Run the test suite with `make test`, not pytest directly" is a complete lesson; "because it sets required environment variables" is a detail you were not told and must not add.
 
 What the assistant did next is not the lesson. A turn that ends "it passed: 1 test" or "I have updated the file" is reporting the state it left behind, and that state will indeed be false later — but the directive the user stated is what is being judged, and a standing instruction about how to work does not become transient because the turn it arrived in reported a result.
 
-So `last_assistant_message` is context, never the thing under review. When `user_prompt` carries a directive, judge that sentence: read it on its own, with the rest of the bundle out of view, and ask whether *it* will still be true in three months. "Always use `make test` in this repo" will be. `transient_state` is the wrong label for it no matter how the turn ended, and a bundle whose only weakness is a thin turn is not a reason to reach for it — if you genuinely find nothing durable there, `no_durable_lesson` or `one_off_instruction` is what you mean.
+So `last_assistant_message` is context, never the thing under review. When `user_prompt` carries a directive, judge that sentence: read it on its own, with the rest of the bundle out of view, and ask whether _it_ will still be true in three months. "Always use `make test` in this repo" will be. `transient_state` is the wrong label for it no matter how the turn ended, and a bundle whose only weakness is a thin turn is not a reason to reach for it — if you genuinely find nothing durable there, `no_durable_lesson` or `one_off_instruction` is what you mean.
 
 What still does not qualify: a one-off instruction about the turn in hand ("no, run it on the other branch this time"), a preference about the answer rather than the work ("shorter replies"), or anything you would have to widen beyond what was said to make reusable.
 
@@ -99,7 +99,7 @@ Write the lesson as a directive to Claude, specific enough to act on. Prefer "ru
 
 ## Scope and destination
 
-Ask whether the lesson is about *this codebase* or about *this person*.
+Ask whether the lesson is about _this codebase_ or about _this person_.
 
 - A build command, a directory convention, a project-specific gotcha: `project`.
 - A communication preference, a review habit, a tool the user always wants used: `user`.

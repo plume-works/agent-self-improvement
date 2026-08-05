@@ -56,61 +56,61 @@ Current documentation is a design input, not acceptance evidence. Implementation
 
 The current implementation is not merely “a plugin.” Its Claude dependencies occur at every layer below.
 
-| Integration point | Current artifact | Claude-specific dependency |
-| --- | --- | --- |
-| Package identity | `plugin/.claude-plugin/plugin.json` | Claude manifest name and metadata |
-| Marketplace | `.claude-plugin/marketplace.json` | Claude marketplace schema, install, cache, and refresh flow |
-| Hook registration | `plugin/hooks/hooks.json` | Claude event names, `args`, matchers, `asyncRewake`, and `${CLAUDE_PLUGIN_ROOT}` |
-| Persistent state root | `selfimprove/paths.py` | `CLAUDE_PLUGIN_DATA`, `CLAUDE_CONFIG_DIR`, and `~/.claude` fallback |
-| Turn identity | `selfimprove/capture.py` | Claude `prompt_id`, with a rolling fallback |
-| Prompt capture | `UserPromptSubmit` | Claude prompt event schema |
-| Literal authorization | `UserPromptExpansion` | slash-command expansion, command source, name, and arguments |
-| Failure capture | `PostToolUseFailure` | top-level `error`, `is_interrupt`, tool name, and tool input |
-| Success capture | `PostToolUse` | Claude tool names and successful response semantics |
-| Review trigger | `Stop` | `last_assistant_message`, `stop_hook_active`, background registries, and `asyncRewake` |
-| Pending retrieval | `SessionStart` | startup context injection |
-| Expiry sweep | `SessionEnd` | end-of-session cleanup opportunity |
-| Reviewer | `selfimprove/reviewer.py` | `claude -p`, Claude model aliases, effort environment, tool disabling, hook disabling, and JSON output |
-| Reviewer recursion | `SELF_IMPROVE_REVIEWER` | process environment passed to the nested Claude session |
-| Candidate schema | `reviewer/schema.json` | `destination_kind` names `CLAUDE.md`, `rule`, and `skill` |
-| Owner discovery | `selfimprove/owners.py` | Claude instruction, rule, and skill locations |
-| Mutation allowlist | `selfimprove/allowlist.py` | `~/.claude` and `./.claude` layouts plus root `CLAUDE.md` |
-| Manual workflows | `plugin/skills/*/SKILL.md` | slash-command syntax, `allowed-tools`, and `${CLAUDE_PLUGIN_ROOT}` in model-run Bash |
-| Presentation | `selfimprove/commands.py` | `/self-improve:*` commands and wake-oriented follow-up wording |
-| Smoke harness | `tests/smoke/` | `claude` CLI, Claude stream events, Claude auto-memory controls, and the pty wake |
-| Build validation | `Makefile` | `claude plugin validate` and Claude-only live targets |
+| Integration point     | Current artifact                    | Claude-specific dependency                                                                             |
+| --------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Package identity      | `plugin/.claude-plugin/plugin.json` | Claude manifest name and metadata                                                                      |
+| Marketplace           | `.claude-plugin/marketplace.json`   | Claude marketplace schema, install, cache, and refresh flow                                            |
+| Hook registration     | `plugin/hooks/hooks.json`           | Claude event names, `args`, matchers, `asyncRewake`, and `${CLAUDE_PLUGIN_ROOT}`                       |
+| Persistent state root | `selfimprove/paths.py`              | `CLAUDE_PLUGIN_DATA`, `CLAUDE_CONFIG_DIR`, and `~/.claude` fallback                                    |
+| Turn identity         | `selfimprove/capture.py`            | Claude `prompt_id`, with a rolling fallback                                                            |
+| Prompt capture        | `UserPromptSubmit`                  | Claude prompt event schema                                                                             |
+| Literal authorization | `UserPromptExpansion`               | slash-command expansion, command source, name, and arguments                                           |
+| Failure capture       | `PostToolUseFailure`                | top-level `error`, `is_interrupt`, tool name, and tool input                                           |
+| Success capture       | `PostToolUse`                       | Claude tool names and successful response semantics                                                    |
+| Review trigger        | `Stop`                              | `last_assistant_message`, `stop_hook_active`, background registries, and `asyncRewake`                 |
+| Pending retrieval     | `SessionStart`                      | startup context injection                                                                              |
+| Expiry sweep          | `SessionEnd`                        | end-of-session cleanup opportunity                                                                     |
+| Reviewer              | `selfimprove/reviewer.py`           | `claude -p`, Claude model aliases, effort environment, tool disabling, hook disabling, and JSON output |
+| Reviewer recursion    | `SELF_IMPROVE_REVIEWER`             | process environment passed to the nested Claude session                                                |
+| Candidate schema      | `reviewer/schema.json`              | `destination_kind` names `CLAUDE.md`, `rule`, and `skill`                                              |
+| Owner discovery       | `selfimprove/owners.py`             | Claude instruction, rule, and skill locations                                                          |
+| Mutation allowlist    | `selfimprove/allowlist.py`          | `~/.claude` and `./.claude` layouts plus root `CLAUDE.md`                                              |
+| Manual workflows      | `plugin/skills/*/SKILL.md`          | slash-command syntax, `allowed-tools`, and `${CLAUDE_PLUGIN_ROOT}` in model-run Bash                   |
+| Presentation          | `selfimprove/commands.py`           | `/self-improve:*` commands and wake-oriented follow-up wording                                         |
+| Smoke harness         | `tests/smoke/`                      | `claude` CLI, Claude stream events, Claude auto-memory controls, and the pty wake                      |
+| Build validation      | `Makefile`                          | `claude plugin validate` and Claude-only live targets                                                  |
 
 Every row needs either a Codex adapter or an explicit finding that the shared behavior is already portable. Merely adding `.codex-plugin/plugin.json` is insufficient.
 
 ## 4. Claude-to-Codex mapping
 
-| Claude integration | Codex mapping | Parity | Required decision |
-| --- | --- | --- | --- |
-| `.claude-plugin/plugin.json` | `.codex-plugin/plugin.json` | Direct | Ship both manifests, each pointing at its host-specific hooks and skills. |
-| Claude marketplace | `.agents/plugins/marketplace.json` plus `codex plugin marketplace add` and `codex plugin add` | Adapted | Publish a Codex marketplace entry without replacing the Claude marketplace. |
-| `${CLAUDE_PLUGIN_ROOT}` in hooks | `${PLUGIN_ROOT}` | Direct | Use native names in Codex hooks; compatibility variables are fallback only. |
-| `${CLAUDE_PLUGIN_DATA}` | `${PLUGIN_DATA}` | Direct | Prefer the native Codex variable and keep host-local state by default. |
-| `UserPromptSubmit.prompt_id` | `UserPromptSubmit.turn_id` | Direct after normalization | Normalize both to an internal `turn_id`. |
-| `UserPromptSubmit.prompt` | `UserPromptSubmit.prompt` | Direct | Reuse marker detection after schema normalization. |
-| `UserPromptExpansion` | exact full-prompt grammar in `UserPromptSubmit` | Partial | Authorize only a prompt consisting solely of one explicit `$self-improve:*` invocation and its required arguments. |
-| `PostToolUseFailure` | `PostToolUse` plus tool-specific failure classifier | Partial | Initially certify only observed response shapes; never infer universal failure coverage. |
-| `PostToolUse` | `PostToolUse` | Direct after tool-name normalization | Map `apply_patch` and aliases; omit unsupported hosted tools. |
-| `Stop.last_assistant_message` | same field | Direct | Use the field; do not parse the unstable transcript format. |
-| `Stop.stop_hook_active` | same field | Direct | Preserve the recursion guard. |
-| `Stop.background_tasks` and `session_crons` | no documented Codex fields | Missing | Do not claim background-work-aware gating on Codex. |
-| `asyncRewake` | synchronous `Stop` continuation | Missing latency parity | Run bounded review in the Stop hook only for a meaningful signal, then continue once when a candidate exists. |
-| `SessionStart` context | `SessionStart` developer context | Direct | Surface pending candidates through bounded `additionalContext`. |
-| immediate `SessionEnd` cleanup | advisory Codex `SessionEnd`, possibly delayed | Partial | Delete turn data at review completion; use SessionEnd only for expiry sweeping. |
-| `claude -p` reviewer | `codex exec --ephemeral --output-schema` | Adapted | Use a dedicated restrictive permission profile, clean environment, isolated cwd, hooks off, memories off, and no network. |
-| Claude model alias and effort env | Codex model and `model_reasoning_effort` config | Adapted | Give Codex separate defaults; preserve user overrides. |
-| `CLAUDE.md` | `AGENTS.md` | Direct in purpose | Use only files Codex actually discovers for the relevant fresh session. |
-| `.claude/rules/*.md` | no general equivalent | Missing | Route short standing behavior to a loaded `AGENTS.md`; route procedures to a skill; discard when file-path scoping is essential. |
-| `.claude/skills` | `.agents/skills` | Direct in purpose | Use Codex's documented repository and user locations. |
-| Claude auto-memory | Codex local memories | Direct policy | Treat as generated, read-only state; never target it for mutation. |
-| `/self-improve:skill` | `$self-improve:skill` | Adapted | Provide Codex-specific skill bodies and examples. |
-| `allowed-tools` frontmatter | Codex sandbox, approvals, hooks, and optional `agents/openai.yaml` policy | Not equivalent | Do not claim that Claude frontmatter constrains Codex tools. |
-| Claude fresh-session smoke | fresh Codex CLI process | Direct in intent | Verify the target is loaded in a new process, not merely written. |
-| pty async-wake smoke | synchronous continuation smoke | Different | Test the supported Codex continuation and keep idle wake as an outstanding capability gap. |
+| Claude integration                          | Codex mapping                                                                                 | Parity                               | Required decision                                                                                                                |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `.claude-plugin/plugin.json`                | `.codex-plugin/plugin.json`                                                                   | Direct                               | Ship both manifests, each pointing at its host-specific hooks and skills.                                                        |
+| Claude marketplace                          | `.agents/plugins/marketplace.json` plus `codex plugin marketplace add` and `codex plugin add` | Adapted                              | Publish a Codex marketplace entry without replacing the Claude marketplace.                                                      |
+| `${CLAUDE_PLUGIN_ROOT}` in hooks            | `${PLUGIN_ROOT}`                                                                              | Direct                               | Use native names in Codex hooks; compatibility variables are fallback only.                                                      |
+| `${CLAUDE_PLUGIN_DATA}`                     | `${PLUGIN_DATA}`                                                                              | Direct                               | Prefer the native Codex variable and keep host-local state by default.                                                           |
+| `UserPromptSubmit.prompt_id`                | `UserPromptSubmit.turn_id`                                                                    | Direct after normalization           | Normalize both to an internal `turn_id`.                                                                                         |
+| `UserPromptSubmit.prompt`                   | `UserPromptSubmit.prompt`                                                                     | Direct                               | Reuse marker detection after schema normalization.                                                                               |
+| `UserPromptExpansion`                       | exact full-prompt grammar in `UserPromptSubmit`                                               | Partial                              | Authorize only a prompt consisting solely of one explicit `$self-improve:*` invocation and its required arguments.               |
+| `PostToolUseFailure`                        | `PostToolUse` plus tool-specific failure classifier                                           | Partial                              | Initially certify only observed response shapes; never infer universal failure coverage.                                         |
+| `PostToolUse`                               | `PostToolUse`                                                                                 | Direct after tool-name normalization | Map `apply_patch` and aliases; omit unsupported hosted tools.                                                                    |
+| `Stop.last_assistant_message`               | same field                                                                                    | Direct                               | Use the field; do not parse the unstable transcript format.                                                                      |
+| `Stop.stop_hook_active`                     | same field                                                                                    | Direct                               | Preserve the recursion guard.                                                                                                    |
+| `Stop.background_tasks` and `session_crons` | no documented Codex fields                                                                    | Missing                              | Do not claim background-work-aware gating on Codex.                                                                              |
+| `asyncRewake`                               | synchronous `Stop` continuation                                                               | Missing latency parity               | Run bounded review in the Stop hook only for a meaningful signal, then continue once when a candidate exists.                    |
+| `SessionStart` context                      | `SessionStart` developer context                                                              | Direct                               | Surface pending candidates through bounded `additionalContext`.                                                                  |
+| immediate `SessionEnd` cleanup              | advisory Codex `SessionEnd`, possibly delayed                                                 | Partial                              | Delete turn data at review completion; use SessionEnd only for expiry sweeping.                                                  |
+| `claude -p` reviewer                        | `codex exec --ephemeral --output-schema`                                                      | Adapted                              | Use a dedicated restrictive permission profile, clean environment, isolated cwd, hooks off, memories off, and no network.        |
+| Claude model alias and effort env           | Codex model and `model_reasoning_effort` config                                               | Adapted                              | Give Codex separate defaults; preserve user overrides.                                                                           |
+| `CLAUDE.md`                                 | `AGENTS.md`                                                                                   | Direct in purpose                    | Use only files Codex actually discovers for the relevant fresh session.                                                          |
+| `.claude/rules/*.md`                        | no general equivalent                                                                         | Missing                              | Route short standing behavior to a loaded `AGENTS.md`; route procedures to a skill; discard when file-path scoping is essential. |
+| `.claude/skills`                            | `.agents/skills`                                                                              | Direct in purpose                    | Use Codex's documented repository and user locations.                                                                            |
+| Claude auto-memory                          | Codex local memories                                                                          | Direct policy                        | Treat as generated, read-only state; never target it for mutation.                                                               |
+| `/self-improve:skill`                       | `$self-improve:skill`                                                                         | Adapted                              | Provide Codex-specific skill bodies and examples.                                                                                |
+| `allowed-tools` frontmatter                 | Codex sandbox, approvals, hooks, and optional `agents/openai.yaml` policy                     | Not equivalent                       | Do not claim that Claude frontmatter constrains Codex tools.                                                                     |
+| Claude fresh-session smoke                  | fresh Codex CLI process                                                                       | Direct in intent                     | Verify the target is loaded in a new process, not merely written.                                                                |
+| pty async-wake smoke                        | synchronous continuation smoke                                                                | Different                            | Test the supported Codex continuation and keep idle wake as an outstanding capability gap.                                       |
 
 ## 5. Package and adapter architecture
 
@@ -266,11 +266,16 @@ Codex ignores matchers for this event, so selection occurs in the script.
 Register a narrow matcher for certified tool paths. The adapter converts the host payload into one of:
 
 ```json
-{"outcome":"failure","tool":"Bash","signature":"...","error_class":"nonzero_exit"}
+{
+  "outcome": "failure",
+  "tool": "Bash",
+  "signature": "...",
+  "error_class": "nonzero_exit"
+}
 ```
 
 ```json
-{"outcome":"success","tool":"Bash","signature":"..."}
+{ "outcome": "success", "tool": "Bash", "signature": "..." }
 ```
 
 Only normalized records reach the shared capture module. Raw `tool_input` and `tool_response` are not persisted.
@@ -343,14 +348,14 @@ The host adapter translates that intent to a concrete, allowlisted artifact. Dur
 
 The Codex mutator may target only the shapes below.
 
-| Scope | Allowed target | Creation policy |
-| --- | --- | --- |
-| User instruction | `$CODEX_HOME/AGENTS.md` | May create after exact review and approval |
-| Project instruction | `<project-root>/AGENTS.md` | May create after exact review and approval |
+| Scope                       | Allowed target                                  | Creation policy                                                       |
+| --------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
+| User instruction            | `$CODEX_HOME/AGENTS.md`                         | May create after exact review and approval                            |
+| Project instruction         | `<project-root>/AGENTS.md`                      | May create after exact review and approval                            |
 | Existing loaded instruction | an `AGENTS.md` on the current root-to-cwd chain | Patch only; do not create a nested file merely to simulate path rules |
-| Existing loaded override | an `AGENTS.override.md` on that same chain | Patch only when it is already the owner; never create automatically |
-| User skill | `$HOME/.agents/skills/<name>/SKILL.md` | May create only when no existing owner fits |
-| Project skill | `<repo-root>/.agents/skills/<name>/SKILL.md` | May create only when no existing owner fits |
+| Existing loaded override    | an `AGENTS.override.md` on that same chain      | Patch only when it is already the owner; never create automatically   |
+| User skill                  | `$HOME/.agents/skills/<name>/SKILL.md`          | May create only when no existing owner fits                           |
+| Project skill               | `<repo-root>/.agents/skills/<name>/SKILL.md`    | May create only when no existing owner fits                           |
 
 The path resolver must compute `$CODEX_HOME`, home, project root, cwd, and the active instruction chain separately. It must not derive Codex paths from `~/.claude`, or assume that a custom `CODEX_HOME` also relocates `$HOME/.agents/skills`.
 
@@ -404,24 +409,24 @@ The plugin may inspect allowlisted `AGENTS.md` and `SKILL.md` owners. It must no
 
 ## 12. Required implementation changes
 
-| Area | Required change |
-| --- | --- |
-| Manifests | add `.codex-plugin/plugin.json`; make both manifests select host-specific hooks and skills |
-| Marketplace | add `.agents/plugins/marketplace.json` without changing the Claude listing |
-| Hooks | split Claude and Codex registrations; remove unsupported Codex events and fields |
-| Host detection | add explicit provider/host adapter; prefer `PLUGIN_*` on Codex |
-| Capture | normalize `prompt_id`/`turn_id`; add result classifiers for Codex `PostToolUse` |
-| Authorization | add exact full-prompt parser for Codex `UserPromptSubmit` |
-| Orchestration | add Codex synchronous continuation path; retain Claude `asyncRewake` path |
-| Reviewer | add `codex exec` transport, schema-output parsing, restrictive profile, and probes |
-| Schema | version and generalize destination kinds |
-| Owners/allowlist | add AGENTS chain and `.agents/skills`; keep Claude roots separate |
-| Skills | add Codex invocation text, path resolution, and implicit-invocation metadata |
-| Presentation | emit host-native `$self-improve:*` commands |
-| Self-test | report host, manifest, hook capability, reviewer CLI/version, state root, and unsupported parity features |
-| Fixtures | add redacted Codex payloads observed from the target CLI version |
-| Smoke tests | add independent Codex package, continuation, authorization, fresh-session, and rollback checks |
-| Documentation | describe supported hosts and their non-equivalent latency and event coverage |
+| Area             | Required change                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| Manifests        | add `.codex-plugin/plugin.json`; make both manifests select host-specific hooks and skills                |
+| Marketplace      | add `.agents/plugins/marketplace.json` without changing the Claude listing                                |
+| Hooks            | split Claude and Codex registrations; remove unsupported Codex events and fields                          |
+| Host detection   | add explicit provider/host adapter; prefer `PLUGIN_*` on Codex                                            |
+| Capture          | normalize `prompt_id`/`turn_id`; add result classifiers for Codex `PostToolUse`                           |
+| Authorization    | add exact full-prompt parser for Codex `UserPromptSubmit`                                                 |
+| Orchestration    | add Codex synchronous continuation path; retain Claude `asyncRewake` path                                 |
+| Reviewer         | add `codex exec` transport, schema-output parsing, restrictive profile, and probes                        |
+| Schema           | version and generalize destination kinds                                                                  |
+| Owners/allowlist | add AGENTS chain and `.agents/skills`; keep Claude roots separate                                         |
+| Skills           | add Codex invocation text, path resolution, and implicit-invocation metadata                              |
+| Presentation     | emit host-native `$self-improve:*` commands                                                               |
+| Self-test        | report host, manifest, hook capability, reviewer CLI/version, state root, and unsupported parity features |
+| Fixtures         | add redacted Codex payloads observed from the target CLI version                                          |
+| Smoke tests      | add independent Codex package, continuation, authorization, fresh-session, and rollback checks            |
+| Documentation    | describe supported hosts and their non-equivalent latency and event coverage                              |
 
 ## 13. Test requirements
 

@@ -1,4 +1,5 @@
-"""The Stop-hook orchestration (spec section 5.5).
+"""
+The Stop-hook orchestration (spec section 5.5).
 
 Runs in the background under ``asyncRewake``, so the user's response is never
 delayed by it. The exit code is the whole interface: 0 means stay silent, 2
@@ -26,11 +27,12 @@ from . import (
     store,
 )
 
-PENDING = "pending.json"
+PENDING = 'pending.json'
 
 
 def run(event, forced=False, focus=None):
-    """Review one completed turn. Returns a result mapping describing what happened.
+    """
+    Review one completed turn. Returns a result mapping describing what happened.
 
     The caller translates this into an exit code. Keeping the decision separate
     from the exit makes the whole path testable without spawning a process.
@@ -42,7 +44,7 @@ def run(event, forced=False, focus=None):
         # Section 3.1: no signal means delete the ephemeral turn data and stay
         # silent. The turn taught nothing; there is no reason to keep it.
         capture.discard_turn(event, turn)
-        return {"outcome": "no_signal"}
+        return {'outcome': 'no_signal'}
 
     gate.note_review()
 
@@ -50,14 +52,14 @@ def run(event, forced=False, focus=None):
         turn,
         signal,
         owners=_owner_summaries(event),
-        last_assistant_message=event.get("last_assistant_message"),
+        last_assistant_message=event.get('last_assistant_message'),
         fingerprints=_known_fingerprints(),
-        focus=signal.get("focus"),
+        focus=signal.get('focus'),
     )
 
     result = reviewer.review(bundle)
-    if result.get("decision") != schema.PROPOSE:
-        reason = result.get("discard_reason", "reviewer_discarded")
+    if result.get('decision') != schema.PROPOSE:
+        reason = result.get('discard_reason', 'reviewer_discarded')
         # A clean decline used to leave no trace anywhere: the turn was deleted,
         # nothing was journaled, and the only evidence a review had happened at
         # all was the counter it incremented. That makes "the reviewer declined"
@@ -77,52 +79,51 @@ def run(event, forced=False, focus=None):
         # decline reads completely differently depending on which turn was
         # reviewed, and without this the journal cannot say. It is one of the
         # gate's own bounded labels, never anything the user or the model wrote.
-        journal.diagnostic("review_outcome", "no_lesson", reason=reason,
-                           signal=signal.get("type"))
+        journal.diagnostic('review_outcome', 'no_lesson', reason=reason, signal=signal.get('type'))
         capture.discard_turn(event, turn)
-        return {"outcome": "no_lesson", "reason": reason}
+        return {'outcome': 'no_lesson', 'reason': reason}
 
-    fingerprint = proposals.fingerprint(result["lesson"],
-                                        result["destination_scope"],
-                                        result["destination_kind"])
+    fingerprint = proposals.fingerprint(
+        result['lesson'], result['destination_scope'], result['destination_kind']
+    )
     status = journal.fingerprint_status(fingerprint)
     if status is not None:
         # Section 11: a duplicate candidate is suppressed, whether the user
         # accepted this lesson before or declined it. Silent from the outside
         # and identical in state to a decline, so it is journaled for the same
         # reason.
-        journal.diagnostic("review_outcome", "duplicate", reason=status)
+        journal.diagnostic('review_outcome', 'duplicate', reason=status)
         capture.discard_turn(event, turn)
-        return {"outcome": "duplicate", "status": status}
+        return {'outcome': 'duplicate', 'status': status}
 
     candidate = _store_candidate(event, signal, result, fingerprint)
     capture.discard_turn(event, turn)
-    gate.note_awaiting_presentation(event.get("session_id"),
-                                    candidate["candidate_id"])
-    return {"outcome": "candidate", "candidate": candidate,
-            "message": wake_message(candidate)}
+    gate.note_awaiting_presentation(event.get('session_id'), candidate['candidate_id'])
+    return {'outcome': 'candidate', 'candidate': candidate, 'message': wake_message(candidate)}
 
 
 def _store_candidate(event, signal, result, fingerprint):
-    candidate_id = "cand-%s" % uuid.uuid4().hex[:12]
+    candidate_id = 'cand-%s' % uuid.uuid4().hex[:12]
     record = dict(result)
-    record.update({
-        "candidate_id": candidate_id,
-        "fingerprint": fingerprint,
-        "session_id": event.get("session_id"),
-        "cwd": event.get("cwd"),
-        "signal": signal.get("type"),
-        "detected_at": int(time.time()),
-    })
-    record.pop("decision", None)
-    store.write_record(store.CANDIDATES, candidate_id, record,
-                       ttl=config.CANDIDATE_TTL)
+    record.update(
+        {
+            'candidate_id': candidate_id,
+            'fingerprint': fingerprint,
+            'session_id': event.get('session_id'),
+            'cwd': event.get('cwd'),
+            'signal': signal.get('type'),
+            'detected_at': int(time.time()),
+        }
+    )
+    record.pop('decision', None)
+    store.write_record(store.CANDIDATES, candidate_id, record, ttl=config.CANDIDATE_TTL)
     _add_pending(record)
     return record
 
 
 def _add_pending(record):
-    """Queue the candidate before waking, not after.
+    """
+    Queue the candidate before waking, not after.
 
     A wake that never lands — the session exited, the message was lost — must
     still leave something for the next SessionStart to surface. Writing this
@@ -130,17 +131,19 @@ def _add_pending(record):
     """
     path = paths.state_path(PENDING)
     existing = store.read_path(path, allow_expired=True) or {}
-    entries = existing.get("candidates", [])
-    entries = [entry for entry in entries
-               if entry.get("candidate_id") != record["candidate_id"]]
-    entries.append({
-        "candidate_id": record["candidate_id"],
-        "cwd": record.get("cwd"),
-        "lesson": record.get("lesson"),
-        "expires_at": int(time.time()) + config.CANDIDATE_TTL,
-    })
-    paths.atomic_write(path, json.dumps({"candidates": entries[-25:]},
-                                        sort_keys=True, indent=2) + "\n")
+    entries = existing.get('candidates', [])
+    entries = [entry for entry in entries if entry.get('candidate_id') != record['candidate_id']]
+    entries.append(
+        {
+            'candidate_id': record['candidate_id'],
+            'cwd': record.get('cwd'),
+            'lesson': record.get('lesson'),
+            'expires_at': int(time.time()) + config.CANDIDATE_TTL,
+        }
+    )
+    paths.atomic_write(
+        path, json.dumps({'candidates': entries[-25:]}, sort_keys=True, indent=2) + '\n'
+    )
     return path
 
 
@@ -149,12 +152,12 @@ def pending_candidates(cwd=None, now=None):
     now = now if now is not None else time.time()
     record = store.read_path(paths.state_path(PENDING), allow_expired=True) or {}
     entries = []
-    for entry in record.get("candidates", []):
-        if entry.get("expires_at", 0) <= now:
+    for entry in record.get('candidates', []):
+        if entry.get('expires_at', 0) <= now:
             continue
-        if store.read_record(store.CANDIDATES, entry["candidate_id"]) is None:
+        if store.read_record(store.CANDIDATES, entry['candidate_id']) is None:
             continue
-        if cwd and entry.get("cwd") and entry["cwd"] != cwd:
+        if cwd and entry.get('cwd') and entry['cwd'] != cwd:
             continue
         entries.append(entry)
     return entries
@@ -163,15 +166,17 @@ def pending_candidates(cwd=None, now=None):
 def drop_pending(candidate_id):
     path = paths.state_path(PENDING)
     record = store.read_path(path, allow_expired=True) or {}
-    entries = [entry for entry in record.get("candidates", [])
-               if entry.get("candidate_id") != candidate_id]
-    paths.atomic_write(path, json.dumps({"candidates": entries},
-                                        sort_keys=True, indent=2) + "\n")
+    entries = [
+        entry
+        for entry in record.get('candidates', [])
+        if entry.get('candidate_id') != candidate_id
+    ]
+    paths.atomic_write(path, json.dumps({'candidates': entries}, sort_keys=True, indent=2) + '\n')
 
 
 def _owner_summaries(event):
     try:
-        return owners.search("", project_dir=event.get("cwd"))
+        return owners.search('', project_dir=event.get('cwd'))
     except OSError:
         return []
 
@@ -181,20 +186,25 @@ def _known_fingerprints():
 
 
 def wake_message(candidate):
-    """What Claude sees when the session is woken.
+    """
+    Build the message Claude sees when the session is woken.
 
     Written as an instruction rather than a finding: the foreground turn has to
     route the lesson and stage a proposal, and must not edit anything itself.
     """
     return (
-        "self-improve: this turn may have produced a reusable lesson.\n"
-        "Candidate %s (signal: %s, confidence: %s).\n"
-        "Lesson under consideration: %s\n\n"
-        "Run the self-improve improve skill with this candidate id to find the "
-        "artifact that should own it and stage one exact proposal for the user "
-        "to approve. Present the staged proposal verbatim. Do not edit any file "
-        "yourself, and do not apply anything: only a command the user types can "
-        "authorize a change."
-        % (candidate["candidate_id"], candidate.get("signal"),
-           candidate.get("confidence"), candidate.get("lesson"))
+        'self-improve: this turn may have produced a reusable lesson.\n'
+        'Candidate %s (signal: %s, confidence: %s).\n'
+        'Lesson under consideration: %s\n\n'
+        'Run the self-improve improve skill with this candidate id to find the '
+        'artifact that should own it and stage one exact proposal for the user '
+        'to approve. Present the staged proposal verbatim. Do not edit any file '
+        'yourself, and do not apply anything: only a command the user types can '
+        'authorize a change.'
+        % (
+            candidate['candidate_id'],
+            candidate.get('signal'),
+            candidate.get('confidence'),
+            candidate.get('lesson'),
+        )
     )

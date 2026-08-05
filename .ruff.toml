@@ -1,0 +1,80 @@
+line-length = 99
+indent-width = 4
+
+# Assume Python 3.12
+target-version = "py312"
+
+[format]
+# Use single quotes for strings
+quote-style = "single"
+
+# Indent with 4 spaces
+indent-style = "space"
+
+[lint]
+# Enable:
+# - pycodestyle (E, W)
+# - Pyflakes (F)
+# - flake8-blind-except (BLE)
+# - pydocstyle (D)
+# - pycodestyle warnings (W)
+# - D200: One-line docstring should fit on one line with quotes
+# - D213: Multi-line docstring summary should start at the second line
+# - D202: No blank lines allowed after function docstring's "Args"
+# - D205: 1 blank line required between summary line and description
+# - D400: First line should end with a period
+# - A001: variable is shadowing a python builtin
+# - A002: argument is shadowing a python builtin
+# "I" (isort) is selected so a single `ruff check --fix` also sorts imports.
+# Super-Linter runs exactly `ruff check --config ruff.toml [--fix]`, so there is
+# no separate import-sorting pass to keep in sync.
+select = ["E", "W", "F", "BLE", "I",
+  "D200", # One-line docstring should fit on one line with quotes
+  "D202", # No blank lines allowed after function docstring's "Args"
+  "D205", # 1 blank line required between summary line and description
+  "D213", # Multi-line docstring summary should start at the second line
+  "D400", # First line should end with a period
+  "D401", # First line should be in imperative mood
+  "D403", # First word of the docstring should be properly capitalized
+  "D413", # Missing blank line after last section ('Parameters')
+  "D417", # Missing argument descriptions in the docstring argument(s)
+  "A001", # variable is shadowing a python builtin
+  "A002", # argument is shadowing a python builtin
+  "C408", # Unnecessary dict call - rewrite as a literal
+  "E501", # Line too long
+]
+
+ignore = [
+  "E501", # Never enforce `E501` (line length violations) - handled by formatter
+  "D212", # Ignore D212 in favor of D213
+]
+
+[lint.isort]
+# Import sorting configuration
+force-single-line = false
+force-sort-within-sections = true # sort all imports within section no matter the style
+combine-as-imports = true
+# `mock_catalog` is the shared test-fixture module, first-party like the package
+# it exercises, so it must not be sorted in with third-party imports.
+known-first-party = ["validate_agent_files", "mock_catalog"]
+known-third-party = ["pytest", "yaml"]
+case-sensitive = false
+order-by-type = false # ignore type, use alphabetical order
+
+
+[lint.pep8-naming]
+# Allow Pydantic's `cls` parameter to be lowercase
+classmethod-decorators = [
+    "classmethod",
+    "pydantic.validator",
+    "pydantic.root_validator",
+]
+
+[lint.per-file-ignores]
+# Ignore unused imports in __init__.py files
+# Ignoring F403 is not an option as codeql will complain about
+# polluting imports and there seems to be no way to turn it off
+"__init__.py" = ["F401"]
+
+[lint.pydocstyle]
+convention = "google"

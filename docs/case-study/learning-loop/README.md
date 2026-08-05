@@ -55,18 +55,18 @@ No upstream prompt, skill, hook, installer, binary, daemon, local model, MCP ser
 
 The pinned repository contains:
 
-| Surface | Observed count or form |
-| --- | ---: |
-| Tracked files | 731 |
-| Commits reachable from `HEAD` | 1,101 |
-| Tags | 126 |
-| Skills | 24 |
-| Agents | 20 |
-| JavaScript test files | 165 |
-| Top-level executable hook handlers | 9 |
-| Top-level plugin scripts | 45 |
-| GitHub Actions workflows | 4 |
-| Rust workspace | `ll-core` and `ll-search` crates |
+| Surface                            |           Observed count or form |
+| ---------------------------------- | -------------------------------: |
+| Tracked files                      |                              731 |
+| Commits reachable from `HEAD`      |                            1,101 |
+| Tags                               |                              126 |
+| Skills                             |                               24 |
+| Agents                             |                               20 |
+| JavaScript test files              |                              165 |
+| Top-level executable hook handlers |                                9 |
+| Top-level plugin scripts           |                               45 |
+| GitHub Actions workflows           |                                4 |
+| Rust workspace                     | `ll-core` and `ll-search` crates |
 
 The latest release was `v1.39.1`; pinned `main` was seven commits ahead with unreleased CI and lockfile fixes. The pinned plugin manifest still declares `1.39.1`; current Claude plugin documentation says explicit versions are cache keys, so pushing those commits without a version bump does not update an installed cached plugin. The repository had one open issue, three pull requests total, and two merged pull requests at inspection time. This means the changelog and commit history, not a large external issue corpus, are the principal evidence of defects and design evolution.
 
@@ -203,18 +203,18 @@ Limitations remain:
 
 ## Approval, ownership, recovery, and rollback
 
-| Concern | Observed implementation | Implication for this project |
-| --- | --- | --- |
-| Invocation | Some consequential skills use `disable-model-invocation`; others remain model-invocable | Require explicit Phase 1 invocation for learning and mutation |
-| Approval | Selected delete, merge, archive, federation, harvest, doctor, and uninstall steps ask | Bind approval to exact patches and all side effects, not action categories alone |
-| Automatic mutation | Promotion, rewriting, links, edges, indexes, telemetry, and some memory changes are automatic | Keep automatic writes limited to explicitly agent-owned destinations |
-| Provenance | Rich JSONL events and source fields | Adopt, with event schemas and retention/privacy policy |
-| Concurrency | File locks, stale lock recovery, stale-read hashes, atomic DB writes | Adopt primitives, then test crash recovery end to end |
-| Backup | Snapshots exist for dream evaluation; archives exist for several content workflows | Require preimage backup for every production mutation, not only evaluations |
-| Journal | Multiple logs and markers exist, but no universal write-ahead mutation journal | Keep the normative journal and recovery state machine |
-| Rollback | Some migration-specific rollback and archive paths exist | Require one verified rollback contract across all supported mutations |
-| Validation | Extensive validators and tests | Add packaged fresh-session discovery and behavior validation |
-| Ownership | Vault, Claude memory, plugin data, and federated state have workflow-specific rules | Preserve explicit human/platform/agent ownership classes |
+| Concern            | Observed implementation                                                                       | Implication for this project                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Invocation         | Some consequential skills use `disable-model-invocation`; others remain model-invocable       | Require explicit Phase 1 invocation for learning and mutation                    |
+| Approval           | Selected delete, merge, archive, federation, harvest, doctor, and uninstall steps ask         | Bind approval to exact patches and all side effects, not action categories alone |
+| Automatic mutation | Promotion, rewriting, links, edges, indexes, telemetry, and some memory changes are automatic | Keep automatic writes limited to explicitly agent-owned destinations             |
+| Provenance         | Rich JSONL events and source fields                                                           | Adopt, with event schemas and retention/privacy policy                           |
+| Concurrency        | File locks, stale lock recovery, stale-read hashes, atomic DB writes                          | Adopt primitives, then test crash recovery end to end                            |
+| Backup             | Snapshots exist for dream evaluation; archives exist for several content workflows            | Require preimage backup for every production mutation, not only evaluations      |
+| Journal            | Multiple logs and markers exist, but no universal write-ahead mutation journal                | Keep the normative journal and recovery state machine                            |
+| Rollback           | Some migration-specific rollback and archive paths exist                                      | Require one verified rollback contract across all supported mutations            |
+| Validation         | Extensive validators and tests                                                                | Add packaged fresh-session discovery and behavior validation                     |
+| Ownership          | Vault, Claude memory, plugin data, and federated state have workflow-specific rules           | Preserve explicit human/platform/agent ownership classes                         |
 
 ## Privacy and federation
 
@@ -284,14 +284,14 @@ An end user should prefer the Claude marketplace flow, inspect the pinned plugin
 
 ### Local checks on the pinned commit
 
-| Check | Result |
-| --- | --- |
-| `npm ci --ignore-scripts` | Passed; lifecycle scripts disabled |
-| `npm run lint` | Passed |
-| `npm test` in isolated `learning-loop-source` checkout | Failed: 1,347 passed, 1 failed, 4 skipped |
-| `npm test` in disposable canonical `learning-loop` worktree | Passed: 1,378 passed, 0 failed, 4 skipped |
-| Rust workspace tests | Not run locally; Cargo unavailable on the audit host |
-| Source checkout after checks | Clean |
+| Check                                                       | Result                                               |
+| ----------------------------------------------------------- | ---------------------------------------------------- |
+| `npm ci --ignore-scripts`                                   | Passed; lifecycle scripts disabled                   |
+| `npm run lint`                                              | Passed                                               |
+| `npm test` in isolated `learning-loop-source` checkout      | Failed: 1,347 passed, 1 failed, 4 skipped            |
+| `npm test` in disposable canonical `learning-loop` worktree | Passed: 1,378 passed, 0 failed, 4 skipped            |
+| Rust workspace tests                                        | Not run locally; Cargo unavailable on the audit host |
+| Source checkout after checks                                | Clean                                                |
 
 The first local JS failure is a test-harness portability defect, not an observed plugin-runtime failure. `tests/lib-plugin-meta.test.mjs` assumes the checkout directory itself is named `learning-loop`; the isolated audit checkout is intentionally `learning-loop-source`. The test requires a discovered path to end in `learning-loop/plugin` and rejects the otherwise valid `learning-loop-source/plugin` path. A disposable worktree at the same pinned commit, named exactly `learning-loop`, then completed with 1,378 passed, zero failed, and four skipped; it was removed after the run.
 

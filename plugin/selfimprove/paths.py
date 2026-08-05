@@ -1,4 +1,5 @@
-"""State root resolution and filesystem primitives.
+"""
+State root resolution and filesystem primitives.
 
 Every durable write in the plugin goes through :func:`atomic_write`, and every
 directory is created private to the user. See spec sections 4.1 and 10.1.
@@ -14,7 +15,8 @@ FILE_MODE = 0o600
 
 
 def state_root():
-    """Resolve the runtime state root.
+    """
+    Resolve the runtime state root.
 
     Order is fixed by spec section 4.1: an explicit override, then the plugin
     data directory Claude Code provides, then a directory under the Claude home.
@@ -24,28 +26,29 @@ def state_root():
     the surrounding environment held, so a root that lost to it would be ignored
     by precisely the hooks that produce state.
     """
-    for key in ("SELF_IMPROVE_STATE_DIR", "CLAUDE_PLUGIN_DATA"):
+    for key in ('SELF_IMPROVE_STATE_DIR', 'CLAUDE_PLUGIN_DATA'):
         value = os.environ.get(key)
         if value:
             return os.path.abspath(os.path.expanduser(value))
-    return os.path.join(claude_home(), "self-improvement")
+    return os.path.join(claude_home(), 'self-improvement')
 
 
 def claude_home():
-    """The user's Claude configuration directory."""
-    override = os.environ.get("CLAUDE_CONFIG_DIR")
+    """Return the user's Claude configuration directory."""
+    override = os.environ.get('CLAUDE_CONFIG_DIR')
     if override:
         return os.path.abspath(os.path.expanduser(override))
-    return os.path.join(os.path.expanduser("~"), ".claude")
+    return os.path.join(os.path.expanduser('~'), '.claude')
 
 
 def plugin_root():
-    """The installed plugin directory.
+    """
+    Return the installed plugin directory.
 
     ``CLAUDE_PLUGIN_ROOT`` is set by Claude Code when it runs a hook. Falling
     back to the package location keeps direct invocation and tests working.
     """
-    value = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    value = os.environ.get('CLAUDE_PLUGIN_ROOT')
     if value:
         return os.path.abspath(os.path.expanduser(value))
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -89,7 +92,8 @@ def fsync_dir(path):
 
 
 def atomic_write(path, data, mode=FILE_MODE):
-    """Install ``data`` at ``path`` atomically.
+    """
+    Install ``data`` at ``path`` atomically.
 
     The temporary file is created in the destination directory so the rename
     stays within one filesystem, and both the file and its directory are synced
@@ -97,12 +101,12 @@ def atomic_write(path, data, mode=FILE_MODE):
     complete new contents, never a partial write.
     """
     if isinstance(data, str):
-        data = data.encode("utf-8")
+        data = data.encode('utf-8')
     directory = os.path.dirname(os.path.abspath(path))
     ensure_dir(directory)
-    fd, temp = tempfile.mkstemp(dir=directory, prefix=".si-tmp-")
+    fd, temp = tempfile.mkstemp(dir=directory, prefix='.si-tmp-')
     try:
-        with os.fdopen(fd, "wb") as handle:
+        with os.fdopen(fd, 'wb') as handle:
             handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())

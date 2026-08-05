@@ -7,5 +7,7 @@
       }
     }
   },
-  "enabledPlugins": { "agentdev@agent-devcontainer": true }
+  "enabledPlugins": {
+    "agentdev@agent-devcontainer": true
+  }
 }
