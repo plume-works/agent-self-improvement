@@ -36,7 +36,7 @@ class PathRejected(Exception):
 
 
 def roots(project_dir=None):
-    """The two permitted roots, resolved through any symlinks."""
+    """Return the two permitted roots, resolved through any symlinks."""
     project = os.path.realpath(project_dir or os.getcwd())
     return {
         USER: os.path.realpath(paths.claude_home()),
@@ -46,7 +46,7 @@ def roots(project_dir=None):
 
 def candidate_paths(scope, kind, name=None, project_dir=None):
     """
-    The paths a proposal of this shape is permitted to target.
+    Return the paths a proposal of this shape is permitted to target.
 
     Returned in preference order, so a caller creating a new artifact takes the
     first entry and a caller looking for an existing owner tries each.
@@ -142,7 +142,7 @@ def _reject_symlinks_below_root(real, root):
 
 
 def _scope_of(real, expanded, project_dir):
-    """The allowed root containing ``real``, or a reason it is out of bounds."""
+    """Return the allowed root containing ``real``, or why it is out of bounds."""
     resolved = roots(project_dir)
     for scope in (USER, PROJECT):
         if _within(real, resolved[scope]):

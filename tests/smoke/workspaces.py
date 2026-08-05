@@ -54,7 +54,7 @@ def run_label():
 
 def run_stamp(now=None):
     """
-    A sortable local timestamp, to the nanosecond.
+    Return a sortable local timestamp to the nanosecond.
 
     Seconds would be the readable choice and the wrong one. Two runs starting
     inside the same second is not hypothetical — `make wake-repeat` starts a
@@ -70,7 +70,7 @@ def run_stamp(now=None):
 
 def run_root():
     """
-    This process's directory, created on first use.
+    Return this process's directory, creating it on first use.
 
     Deliberately not computed at import. ``make test`` imports the smoke
     ``conftest.py`` during collection even though it deselects every test in it,
@@ -88,7 +88,7 @@ def run_root():
 
 def run_family(label):
     """
-    The label with a run number taken off it.
+    Return the label with its run number removed.
 
     ``make wake-repeat`` numbers its ten iterations so they sort in the order
     they ran, which makes every label unique — and a ``latest-<label>`` link per
@@ -120,7 +120,7 @@ def refresh_latest(root, label=None):
 
 def mangle_path(path):
     """
-    The CLI's directory key for a working directory.
+    Return the CLI's directory key for a working directory.
 
     Every character outside ``[A-Za-z0-9-]`` becomes a dash, so
     ``/repo/test-runs/wake_x/project`` keys as

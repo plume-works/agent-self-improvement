@@ -22,7 +22,7 @@ FRONTMATTER_FIELD = re.compile(r'^(name|description)\s*:\s*(.+?)\s*$')
 
 def read_frontmatter(path):
     """
-    The ``name`` and ``description`` of a skill, without a YAML parser.
+    Read a skill's ``name`` and ``description`` without a YAML parser.
 
     Only two scalar fields are ever needed, and depending on PyYAML would put a
     third-party import in a hook path. Anthropic's own security-guidance plugin
@@ -71,7 +71,7 @@ def headings(path):
 
 
 def describe(path, scope, kind):
-    """A bounded summary of one candidate owner."""
+    """Return a bounded summary of one candidate owner."""
     try:
         size = os.path.getsize(path)
     except OSError:

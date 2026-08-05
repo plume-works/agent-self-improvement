@@ -59,7 +59,7 @@ def main(argv=None):
         return handler(argv[1:]) or 0
     except SystemExit:
         raise
-    except BaseException as exc:
+    except BaseException as exc:  # noqa: BLE001 - the hook must record all failures
         # Deliberate catch-all: recording why is worth more than propagating.
         with contextlib.suppress(Exception):
             journal.diagnostic(

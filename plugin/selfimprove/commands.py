@@ -68,7 +68,7 @@ def capture_tool_success(argv):
 
 def review_turn(argv):
     """
-    The Stop hook (spec section 5.5).
+    Run the Stop hook (spec section 5.5).
 
     Runs in the background under ``asyncRewake``, so the user's response is
     never delayed. Exit 0 stays silent; exit 2 wakes the session with the
@@ -462,7 +462,7 @@ def _format_version(version):
 
 def cli_version():
     """
-    The installed Claude Code version as a tuple, or ``None``.
+    Return the installed Claude Code version as a tuple, or ``None``.
 
     ``None`` when the CLI is absent or does not answer, which is normal in
     tests and during offline development.

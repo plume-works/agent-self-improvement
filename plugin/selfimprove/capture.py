@@ -39,7 +39,7 @@ def session_id(event):
 
 def load_turn(event):
     """
-    The turn this event belongs to, or the session's most recent one.
+    Load the turn this event belongs to, or the session's most recent one.
 
     Callers that were not handed a ``prompt_id`` fall back to the newest turn
     recorded for the session. The manual review path is the case that matters:

@@ -55,7 +55,7 @@ def _summarize_event(event):
 
 def transitions(events):
     """
-    Verified failure-to-success transitions, as section 7.2 requires.
+    Return verified failure-to-success transitions, as section 7.2 requires.
 
     Reported as a signature plus the error class that preceded the success, so
     the reviewer learns that a retry worked without seeing either command.

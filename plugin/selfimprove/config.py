@@ -60,7 +60,7 @@ def review_timeout():
 
 def reviewer_command():
     """
-    The binary used for the isolated review call.
+    Return the binary used for the isolated review call.
 
     Tests override this to substitute a deterministic fake reviewer.
     """
@@ -69,7 +69,7 @@ def reviewer_command():
 
 def in_reviewer_session():
     """
-    True inside a session the reviewer itself originated.
+    Check whether the reviewer originated the current session.
 
     This is the recursion guard required by spec section 5.5 step 4.
     """

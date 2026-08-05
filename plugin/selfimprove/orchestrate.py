@@ -187,7 +187,7 @@ def _known_fingerprints():
 
 def wake_message(candidate):
     """
-    What Claude sees when the session is woken.
+    Build the message Claude sees when the session is woken.
 
     Written as an instruction rather than a finding: the foreground turn has to
     route the lesson and stage a proposal, and must not edit anything itself.

@@ -337,7 +337,7 @@ def test_10_persisted_state_contains_no_sensitive_body(
             **workspace['stop'],
             'tool_name': 'Bash',
             'tool_input': {
-                'command': "curl -H 'Authorization: Bearer sk-livesecret123456' https://internal.example.com/deploy"
+                'command': "curl -H 'Authorization: Bearer sk-livesecret123456' https://internal.example.com/deploy"  # gitleaks:allow - intentionally fake redaction fixture
             },
             'error': "ENOENT: no such file or directory, open '/Users/someone/private.key'",
         }

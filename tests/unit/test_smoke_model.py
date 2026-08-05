@@ -40,8 +40,10 @@ def test_overrides_are_honored(monkeypatch):
 
 def test_an_empty_override_restores_the_cli_default(monkeypatch):
     """
-    A model- or effort-specific failure has to be reproducible against the
-    real default, so passing no flag at all must remain reachable."""
+    Verify that an empty override restores the real CLI default.
+
+    A model- or effort-specific failure has to remain reproducible with no flag.
+    """
     monkeypatch.setenv('SMOKE_MODEL', '')
     monkeypatch.setenv('SMOKE_EFFORT', '')
     assert conftest.smoke_model() is None

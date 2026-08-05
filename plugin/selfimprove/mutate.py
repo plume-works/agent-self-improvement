@@ -103,7 +103,7 @@ def _mutation_record(marker, reconciled=False):
 
 def _backup(target, mutation_id):
     """
-    A mode-preserving copy of the current contents, synced before we proceed.
+    Create a mode-preserving copy of the current contents and sync it.
 
     Returns ``None`` for a proposal that creates a new file: there is nothing to
     preserve, and rollback deletes rather than restores.

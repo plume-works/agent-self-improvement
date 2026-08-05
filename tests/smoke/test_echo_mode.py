@@ -41,7 +41,7 @@ ECHO_COMMAND = [sys.executable, '-u', '-m', 'tests.smoke.echo_terminal']
 
 def echo_session(deadline, extra=()):
     """
-    The fake terminal, driven by exactly the harness the live checks use.
+    Run a fake terminal through the harness used by the live checks.
 
     ``-u`` because a buffered fake would go quiet while it still had output to
     write, and the turn boundary here is quiescence.

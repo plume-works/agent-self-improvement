@@ -217,7 +217,7 @@ def await_candidate(session, state, timeout=CANDIDATE_TIMEOUT):
 
 
 def review_outcomes(state):
-    """The bounded label of every review that ended without a candidate."""
+    """Return the bounded label of each review that produced no candidate."""
     return [
         record for record in read_diagnostics(state) if record.get('stage') == 'review_outcome'
     ]
@@ -300,7 +300,7 @@ def forensics(state, session):
 
 def no_wake_plugin(workspace):
     """
-    A copy of the plugin whose Stop hook can never signal a wake.
+    Provide a plugin copy whose Stop hook can never signal a wake.
 
     Everything else is the packaged plugin: the same capture hooks, the same
     gate, the same reviewer, the same candidate written to the same state root.
@@ -333,7 +333,7 @@ def no_wake_plugin(workspace):
 
 def run_exchange(scratch, plugin_root, name='wake', auto_memory=None):
     """
-    The whole scripted run, returning the session and what state it produced.
+    Run the whole script and return the session and resulting state.
 
     Bounded end to end by one budget. A working run takes well under a minute;
     anything that stalls fails here with the screen attached rather than
@@ -537,7 +537,7 @@ def test_the_harness_fails_when_the_wake_does_not_arrive(scratch):
 
 
 def _state_with(tmp_path, counters=None, outcomes=()):
-    """A plugin state root holding only what the precondition reads."""
+    """Build a plugin state root containing only precondition inputs."""
     if counters is not None:
         (tmp_path / 'counters.json').write_text(json.dumps(counters))
     if outcomes:

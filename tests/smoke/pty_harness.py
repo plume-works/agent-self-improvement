@@ -132,7 +132,7 @@ class Trace:
 
     def echo(self, label, text, characters=ECHO_CHARACTERS):
         """
-        What the terminal is showing, with everything the renderer owns gone.
+        Return the terminal display with renderer-owned content removed.
 
         This is the echo of captured input: the harness types blind — it never
         reads the screen to decide anything — so this is the only place a person
@@ -197,7 +197,7 @@ class Deadline:
         return self.remaining() <= 0.0
 
     def bound(self, timeout):
-        """The smaller of a step's own timeout and what is left overall."""
+        """Return the smaller of the step timeout and remaining overall time."""
         return min(timeout, self.remaining())
 
     def check(self, what):
@@ -211,7 +211,7 @@ class Deadline:
 
 
 def flatten(text):
-    """The screen with everything the renderer owns taken out of it."""
+    """Return the screen with renderer-owned content removed."""
     return WHITESPACE.sub('', ANSI.sub('', text))
 
 
@@ -285,7 +285,7 @@ class PtySession:
 
     def _bound(self, timeout):
         """
-        A step's timeout, never exceeding what is left of the check's budget.
+        Bound a step's timeout by the check's remaining budget.
 
         Exit is deliberately not bounded this way: shutting the session down is
         what runs *after* the budget is gone, and it has its own short limit.

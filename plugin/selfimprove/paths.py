@@ -34,7 +34,7 @@ def state_root():
 
 
 def claude_home():
-    """The user's Claude configuration directory."""
+    """Return the user's Claude configuration directory."""
     override = os.environ.get('CLAUDE_CONFIG_DIR')
     if override:
         return os.path.abspath(os.path.expanduser(override))
@@ -43,7 +43,7 @@ def claude_home():
 
 def plugin_root():
     """
-    The installed plugin directory.
+    Return the installed plugin directory.
 
     ``CLAUDE_PLUGIN_ROOT`` is set by Claude Code when it runs a hook. Falling
     back to the package location keeps direct invocation and tests working.

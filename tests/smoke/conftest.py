@@ -191,7 +191,7 @@ def with_auto_memory(environment, enabled=None):
 
 def runner_environment(auto_memory=None):
     """
-    The environment for a session that is expected to run ``pytest``.
+    Build the environment for a session expected to run ``pytest``.
 
     The scratch project has no interpreter of its own, and the plugin has no
     dependencies to install one. What it does have is this suite's own runner:
@@ -260,7 +260,7 @@ DEFAULT_SMOKE_MODEL = 'sonnet'
 
 def smoke_model():
     """
-    The driving session's model, or None to accept the CLI default.
+    Return the driving session's model, or None to accept the CLI default.
 
     ``SMOKE_MODEL=`` (empty) is the way back to the CLI default, which a
     model-specific failure has to be reproducible against.
@@ -276,7 +276,7 @@ DEFAULT_SMOKE_EFFORT = 'low'
 
 
 def smoke_effort():
-    """The driving session's effort level, or None to accept the CLI default."""
+    """Return the driving session's effort, or None for the CLI default."""
     return os.environ.get('SMOKE_EFFORT', DEFAULT_SMOKE_EFFORT).strip() or None
 
 
@@ -308,7 +308,7 @@ def session_args():
 @pytest.fixture
 def scratch(request, monkeypatch, cli_version):
     """
-    A throwaway git repository with isolated plugin state.
+    Provide a throwaway git repository with isolated plugin state.
 
     Lives under this process's own directory in the repository's gitignored
     ``test-runs/`` rather than the system temporary directory, so that after a
@@ -570,7 +570,7 @@ def si(scratch, *args, stdin=None):
 
 
 def expansion(operation, args, session_id='smoke-session'):
-    """The hook payload Claude Code emits when the user types a plugin command."""
+    """Build the hook payload emitted for a plugin command."""
     return json.dumps(
         {
             'hook_event_name': 'UserPromptExpansion',

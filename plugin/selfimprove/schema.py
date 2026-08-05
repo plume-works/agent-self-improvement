@@ -87,7 +87,7 @@ def _strip_code_fence(text):
 
 
 def _first_balanced_object(text):
-    """The first brace-balanced object in the text, ignoring braces in strings."""
+    """Return the first brace-balanced object, ignoring braces in strings."""
     start = text.find('{')
     if start == -1:
         return None

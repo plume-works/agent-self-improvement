@@ -25,7 +25,7 @@ def _forget_the_memoized_root(monkeypatch):
 
 @pytest.fixture
 def runs_root(tmp_path, monkeypatch):
-    """A runs root of our own, so nothing here writes to the repository's."""
+    """Provide an isolated runs root outside the repository's own root."""
     root = tmp_path / 'test-runs'
     monkeypatch.setattr(workspaces, 'RUNS_ROOT', str(root))
     return root
@@ -164,14 +164,14 @@ def test_a_filesystem_without_symlinks_costs_a_shortcut_not_a_run(runs_root, mon
 
 
 def _project_entry(config_dir, path):
-    """A Claude project directory as the CLI would key it for ``path``."""
+    """Create a Claude project directory keyed as the CLI keys ``path``."""
     entry = os.path.join(config_dir, 'projects', workspaces.mangle_path(path))
     os.makedirs(entry)
     return entry
 
 
 def _run_dir(runs_root, label='wake', stamp='2026-08-02_03-00-00.123456789'):
-    """A run directory named the way ``run_root()`` names one."""
+    """Return a run directory named the way ``run_root()`` names one."""
     return runs_root / ('%s_%s' % (label, stamp))
 
 

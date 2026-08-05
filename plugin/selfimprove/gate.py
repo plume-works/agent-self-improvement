@@ -206,7 +206,7 @@ def _has_tool_activity(events):
 
 def _looks_like_a_completed_procedure(event, events):
     """
-    The weakest signal in section 6, so held to the highest bar.
+    Detect the weakest signal in section 6 under the highest bar.
 
     Requires both a substantial amount of tool activity and a final message
     that reports a verified outcome. Ordinary task completion is the common

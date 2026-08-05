@@ -496,7 +496,7 @@ WAKE_QUESTION = (
 
 def _forensics(scratch):
     """
-    What the state says about a wake that did not arrive.
+    Report what state reveals about a wake that did not arrive.
 
     Each of these distinguishes a different failure, which is the point: the
     answer to "no wake" is almost never "the wake is broken".

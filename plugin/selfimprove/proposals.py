@@ -35,7 +35,7 @@ def sha256_bytes(data):
 
 def sha256_file(path):
     """
-    The digest of a file's current contents, or ``NEW_FILE`` if absent.
+    Return the digest of a file's current contents, or ``NEW_FILE`` if absent.
 
     The sentinel is deliberate: "this file does not exist" has to be as
     verifiable as any other precondition, or a proposal to create a file could
@@ -49,7 +49,7 @@ def sha256_file(path):
 
 def fingerprint(lesson, scope, kind):
     """
-    A stable identity for a lesson, used to suppress duplicates.
+    Build a stable identity for a lesson to suppress duplicates.
 
     Normalized so that trivial rewording still collides: the same advice
     proposed twice should be recognized the second time.
@@ -62,7 +62,7 @@ def fingerprint(lesson, scope, kind):
 
 def content_hash(target, preimage_sha, new_bytes):
     """
-    The digest the user authorizes against.
+    Return the digest the user authorizes against.
 
     Binds the destination and the expected prior state as well as the content,
     so an authorization for one proposal cannot apply another's bytes, and the
@@ -155,7 +155,7 @@ def _encode(data):
 
 
 def decode_bytes(record):
-    """The staged bytes, verified against the digest recorded alongside them."""
+    """Return staged bytes verified against their recorded digest."""
     data = base64.b64decode(record['new_bytes_b64'].encode('ascii'))
     if sha256_bytes(data) != record['post_sha']:
         raise ProposalError('staged_content_corrupt')
@@ -192,7 +192,7 @@ def invalidate(proposal_id):
 
 def summary(record):
     """
-    The presentation block a skill shows the user, in one place.
+    Build the presentation block a skill shows the user.
 
     Kept here rather than in the skill's markdown so the identifiers, hash
     prefix, and destination shown to the user are always the staged ones.

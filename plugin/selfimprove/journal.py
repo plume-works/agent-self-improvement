@@ -90,7 +90,7 @@ def known_fingerprints():
 
 
 def fingerprint_status(fingerprint):
-    """``"accepted"``, ``"rejected"``, or ``None`` if unseen."""
+    """Return ``"accepted"``, ``"rejected"``, or ``None`` if unseen."""
     entry = _read_fingerprints().get(fingerprint)
     return entry.get('status') if isinstance(entry, dict) else None
 

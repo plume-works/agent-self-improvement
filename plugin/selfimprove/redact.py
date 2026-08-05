@@ -202,7 +202,7 @@ def normalize_path(path, cwd=None):
 
 def tool_signature(tool_name, tool_input, cwd=None):
     """
-    A bounded, comparable signature for one tool operation.
+    Return a bounded, comparable signature for one tool operation.
 
     This is what failure-to-success pairing compares, so it must be stable
     across a failed attempt and the later successful one while carrying no

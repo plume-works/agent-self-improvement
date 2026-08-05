@@ -66,7 +66,7 @@ def _envelope(text):
 
 def _api_error(status, text):
     """
-    The shape the CLI prints when the call inside it failed.
+    Return the shape the CLI prints when its inner call fails.
 
     Real envelopes also carry durations and token counts; the numbers are kept
     here because a classifier that reads bare digits would trip over them.

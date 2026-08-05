@@ -21,7 +21,7 @@ sys.path.insert(0, PLUGIN_ROOT)
 
 @pytest.fixture
 def claude_home(tmp_path, monkeypatch):
-    """An isolated Claude configuration directory."""
+    """Provide an isolated Claude configuration directory."""
     home = tmp_path / 'claude-home'
     home.mkdir()
     monkeypatch.setenv('CLAUDE_CONFIG_DIR', str(home))
@@ -30,7 +30,7 @@ def claude_home(tmp_path, monkeypatch):
 
 @pytest.fixture
 def state_root(tmp_path, monkeypatch, claude_home):
-    """An isolated state root, with the plugin-data variable cleared."""
+    """Provide an isolated state root with the plugin-data variable cleared."""
     root = tmp_path / 'state'
     monkeypatch.delenv('CLAUDE_PLUGIN_DATA', raising=False)
     monkeypatch.setenv('SELF_IMPROVE_STATE_DIR', str(root))
@@ -42,7 +42,7 @@ def state_root(tmp_path, monkeypatch, claude_home):
 
 @pytest.fixture
 def project(tmp_path, monkeypatch):
-    """An isolated working directory standing in for the user's project."""
+    """Provide an isolated working directory in place of the user's project."""
     directory = tmp_path / 'project'
     (directory / '.claude').mkdir(parents=True)
     monkeypatch.chdir(directory)

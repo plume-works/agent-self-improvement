@@ -61,7 +61,7 @@ class ReviewUnavailable(Exception):
 
 def build_command(prompt_path, model=None):
     """
-    The exact argument vector committed in spec section 7.3.
+    Build the exact argument vector committed in spec section 7.3.
 
     ``--tools ""`` removes every built-in tool and ``--disallowedTools "*"``
     removes MCP tools, so the reviewer holds no capability to act. Hooks are
@@ -90,7 +90,7 @@ def build_command(prompt_path, model=None):
 
 def build_environment():
     """
-    The reviewer's environment.
+    Build the reviewer's environment.
 
     ``SELF_IMPROVE_REVIEWER`` marks the child so that any session it originates
     suppresses reflection, which is the recursion guard of section 5.5. The
@@ -165,7 +165,7 @@ def _failure_class(result):
 
 
 def _phrase_class(text):
-    """The failure class implied by ``text``, or None if nothing matches."""
+    """Return the failure class implied by ``text``, or None if unmatched."""
     for name, pattern in _PHRASE_CLASSES:
         if pattern.search(text or ''):
             return name
@@ -173,7 +173,7 @@ def _phrase_class(text):
 
 
 def _api_error_status(stdout):
-    """The CLI's ``api_error_status``, when the envelope carries one."""
+    """Return the CLI's ``api_error_status`` when present in the envelope."""
     try:
         envelope = json.loads(stdout or '')
     except ValueError:

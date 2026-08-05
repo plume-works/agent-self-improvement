@@ -32,7 +32,7 @@ def test_normalize_command_keeps_only_program_and_subcommand(command, expected):
 def test_normalize_command_drops_argument_values():
     """The specific thing section 10 forbids: arguments surviving into state."""
     signature = redact.normalize_command(
-        "curl -H 'Authorization: Bearer sk-secretvalue123456' https://api.example.com/v1"
+        "curl -H 'Authorization: Bearer sk-secretvalue123456' https://api.example.com/v1"  # gitleaks:allow - intentionally fake redaction fixture
     )
     assert signature == 'curl'
     assert 'sk-' not in signature

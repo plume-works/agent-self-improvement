@@ -28,7 +28,7 @@ STOP = {
 
 @pytest.fixture
 def corrected_turn(state_root, project):
-    """A turn carrying a correction, which is a supported signal."""
+    """Provide a turn carrying a correction, which is a supported signal."""
     event = dict(STOP, cwd=str(project))
     capture.record_prompt({**event, 'prompt': 'no, use make test instead'})
     return event
@@ -291,8 +291,7 @@ def test_a_declined_review_says_so_in_the_journal(
     run_si, corrected_turn, fake_reviewer, state_root
 ):
     """
-    A decline must leave a trace, or it cannot be told from a review that
-    never ran.
+    Verify that a decline leaves a trace distinct from a review that never ran.
 
     Both look identical in durable state otherwise: no candidate, no
     fingerprint, an incremented counter and a deleted turn. Diagnosing that
