@@ -1,4 +1,5 @@
-"""Where a live run puts everything it produces.
+"""
+Where a live run puts everything it produces.
 
 Every check that drives a real session leaves a scratch repository, isolated
 plugin state, and a raw terminal stream behind, and all of it has to still be
@@ -16,22 +17,22 @@ program rather than as a fixture.
 
 import contextlib
 import os
-import shutil
 import re
+import shutil
 import sys
 import time
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-RUNS_ROOT = os.path.join(REPO_ROOT, "test-runs")
+RUNS_ROOT = os.path.join(REPO_ROOT, 'test-runs')
 
 # Where runs were written before this module existed. Only the sweep reads these:
 # a workspace left by the old layout still has a Claude project directory
 # outside the repository, and `make clean-claude` should still be able to find
 # it. Nothing writes here any more.
-LEGACY_ROOTS = (os.path.join(REPO_ROOT, "tmp", "smoke"),)
+LEGACY_ROOTS = (os.path.join(REPO_ROOT, 'tmp', 'smoke'),)
 
-DEFAULT_LABEL = "pytest"
+DEFAULT_LABEL = 'pytest'
 
 # One value per process, filled in on first use. This is the whole mechanism by
 # which a run stays together: both live checks of one `make wake` ask for the
@@ -41,17 +42,19 @@ _run_root = None
 
 
 def run_label():
-    """Which target is running, for the directory name.
+    """
+    Which target is running, for the directory name.
 
     Set by the Makefile per target so a `make wake` directory can never be
     mistaken for a `make smoke` one. A developer running pytest directly gets
     the default rather than an error: the label decides a name, not a behaviour.
     """
-    return os.environ.get("TEST_RUN_LABEL", "").strip() or DEFAULT_LABEL
+    return os.environ.get('TEST_RUN_LABEL', '').strip() or DEFAULT_LABEL
 
 
 def run_stamp(now=None):
-    """A sortable local timestamp, to the nanosecond.
+    """
+    A sortable local timestamp, to the nanosecond.
 
     Seconds would be the readable choice and the wrong one. Two runs starting
     inside the same second is not hypothetical — `make wake-repeat` starts a
@@ -62,11 +65,12 @@ def run_stamp(now=None):
     """
     now = time.time_ns() if now is None else now
     seconds, nanoseconds = divmod(now, 1_000_000_000)
-    return "%s.%09d" % (time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(seconds)), nanoseconds)
+    return '%s.%09d' % (time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(seconds)), nanoseconds)
 
 
 def run_root():
-    """This process's directory, created on first use.
+    """
+    This process's directory, created on first use.
 
     Deliberately not computed at import. ``make test`` imports the smoke
     ``conftest.py`` during collection even though it deselects every test in it,
@@ -75,7 +79,7 @@ def run_root():
     """
     global _run_root
     if _run_root is None:
-        root = os.path.join(RUNS_ROOT, "%s_%s" % (run_label(), run_stamp()))
+        root = os.path.join(RUNS_ROOT, '%s_%s' % (run_label(), run_stamp()))
         os.makedirs(root, exist_ok=True)
         refresh_latest(root)
         _run_root = root
@@ -83,7 +87,8 @@ def run_root():
 
 
 def run_family(label):
-    """The label with a run number taken off it.
+    """
+    The label with a run number taken off it.
 
     ``make wake-repeat`` numbers its ten iterations so they sort in the order
     they ran, which makes every label unique — and a ``latest-<label>`` link per
@@ -92,18 +97,19 @@ def run_family(label):
     what the shortcut is for: ``latest-wake-repeat`` is the newest iteration,
     whichever number it carried.
     """
-    return re.sub(r"-\d+$", "", label)
+    return re.sub(r'-\d+$', '', label)
 
 
 def refresh_latest(root, label=None):
-    """Point ``latest`` and ``latest-<family>`` at ``root``.
+    """
+    Point ``latest`` and ``latest-<family>`` at ``root``.
 
     A convenience for finding the run you just did without reading timestamps.
     Every failure is suppressed: a filesystem that cannot do symlinks should
     cost a shortcut, not a run.
     """
     label = run_label() if label is None else label
-    for name in ("latest", "latest-%s" % run_family(label)):
+    for name in ('latest', 'latest-%s' % run_family(label)):
         link = os.path.join(RUNS_ROOT, name)
         with contextlib.suppress(OSError):
             if os.path.islink(link) or os.path.exists(link):
@@ -113,14 +119,15 @@ def refresh_latest(root, label=None):
 
 
 def mangle_path(path):
-    """The CLI's directory key for a working directory.
+    """
+    The CLI's directory key for a working directory.
 
     Every character outside ``[A-Za-z0-9-]`` becomes a dash, so
     ``/repo/test-runs/wake_x/project`` keys as
     ``-repo-test-runs-wake-x-project``. Underscores and dots are included: they
     are converted, not kept.
     """
-    return re.sub(r"[^A-Za-z0-9-]", "-", str(path))
+    return re.sub(r'[^A-Za-z0-9-]', '-', str(path))
 
 
 # What the mangled key of a run's working directory looks like after the runs
@@ -133,27 +140,28 @@ def mangle_path(path):
 # nanoseconds in the position a run directory carries them — short of a
 # neighbour that reproduces a run directory's own name, which nothing can tell
 # apart from a run once the separators are gone.
-RUN_KEY_TAIL = r"-.+-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{9}(?:-.*)?"
+RUN_KEY_TAIL = r'-.+-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}-\d{9}(?:-.*)?'
 
 # The old layout had no stamp to match on: it named a workspace after the test
 # that claimed it, and Claude ran in that workspace's `project/`. Both ends are
 # required, so the neighbour that could still be mistaken for one of these would
 # have to be a Claude working directory named `project`, inside a sibling of the
 # repository's own gitignored `tmp/smoke`, under a directory beginning `test`.
-LEGACY_KEY_TAIL = r"-test-.+-project"
+LEGACY_KEY_TAIL = r'-test-.+-project'
 
 
 def claude_config_dir():
-    return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    return os.environ.get('CLAUDE_CONFIG_DIR') or os.path.join(os.path.expanduser('~'), '.claude')
 
 
 def claude_session_dir(project):
     """Where Claude Code keeps its own transcripts and memories for a directory."""
-    return os.path.join(claude_config_dir(), "projects", mangle_path(project))
+    return os.path.join(claude_config_dir(), 'projects', mangle_path(project))
 
 
 def scratch_project_dirs(config_dir=None):
-    """Claude project directories belonging to a test run, newest name last.
+    """
+    Claude project directories belonging to a test run, newest name last.
 
     A key qualifies only if it is one of the roots' keys *followed by the shape
     a run writes underneath it* — the stamp for the current layout, a test's
@@ -161,12 +169,13 @@ def scratch_project_dirs(config_dir=None):
     incapable of naming anything outside ``test-runs/``, including the
     neighbours of ``test-runs/`` that a prefix rule cannot tell apart from it.
     """
-    projects = os.path.join(config_dir or claude_config_dir(), "projects")
+    projects = os.path.join(config_dir or claude_config_dir(), 'projects')
     if not os.path.isdir(projects):
         return []
     patterns = [
-        re.compile(re.escape(mangle_path(root)) + tail + r"\Z")
-        for root, tail in [(RUNS_ROOT, RUN_KEY_TAIL)] + [(legacy, LEGACY_KEY_TAIL) for legacy in LEGACY_ROOTS]
+        re.compile(re.escape(mangle_path(root)) + tail + r'\Z')
+        for root, tail in [(RUNS_ROOT, RUN_KEY_TAIL)]
+        + [(legacy, LEGACY_KEY_TAIL) for legacy in LEGACY_ROOTS]
     ]
     return sorted(
         os.path.join(projects, entry)
@@ -176,7 +185,8 @@ def scratch_project_dirs(config_dir=None):
 
 
 def sweep_claude_projects(config_dir=None, stream=None):
-    """Delete the Claude project directories that test runs left in ``~/.claude``.
+    """
+    Delete the Claude project directories that test runs left in ``~/.claude``.
 
     Each run now works in a directory nothing else has used, so Claude Code
     opens a fresh ``projects/<mangled-path>/`` for it and no run inherits the
@@ -191,12 +201,15 @@ def sweep_claude_projects(config_dir=None, stream=None):
     stream = sys.stdout if stream is None else stream
     removed = []
     for path in scratch_project_dirs(config_dir):
-        stream.write("removing %s\n" % path)
+        stream.write('removing %s\n' % path)
         shutil.rmtree(path, ignore_errors=True)
         removed.append(path)
-    stream.write("removed %d test-run project director%s\n" % (len(removed), "y" if len(removed) == 1 else "ies"))
+    stream.write(
+        'removed %d test-run project director%s\n'
+        % (len(removed), 'y' if len(removed) == 1 else 'ies')
+    )
     return removed
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sweep_claude_projects()

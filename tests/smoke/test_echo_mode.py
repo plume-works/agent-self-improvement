@@ -1,4 +1,5 @@
-"""A self-check of the pty harness, driving a program that only echoes its input.
+"""
+A self-check of the pty harness, driving a program that only echoes its input.
 
 These test the harness, not the plugin: nothing here touches ``claude``, the
 gate, or the reviewer. That is why they are marked ``harness`` rather than named
@@ -35,82 +36,96 @@ from tests.smoke.pty_harness import Deadline, PtySession, Trace
 pytestmark = pytest.mark.harness
 
 
-ECHO_COMMAND = [sys.executable, "-u", "-m", "tests.smoke.echo_terminal"]
+ECHO_COMMAND = [sys.executable, '-u', '-m', 'tests.smoke.echo_terminal']
 
 
 def echo_session(deadline, extra=()):
-    """The fake terminal, driven by exactly the harness the live checks use.
+    """
+    The fake terminal, driven by exactly the harness the live checks use.
 
     ``-u`` because a buffered fake would go quiet while it still had output to
     write, and the turn boundary here is quiescence.
     """
     environment = dict(os.environ)
-    environment["PYTHONPATH"] = os.pathsep.join(
+    environment['PYTHONPATH'] = os.pathsep.join(
         [
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            environment.get("PYTHONPATH", ""),
+            environment.get('PYTHONPATH', ''),
         ]
     )
-    return PtySession([*ECHO_COMMAND, *extra], cwd=os.getcwd(), env=environment, deadline=deadline).start()
+    return PtySession(
+        [*ECHO_COMMAND, *extra], cwd=os.getcwd(), env=environment, deadline=deadline
+    ).start()
 
 
 def test_echo_mode_shows_every_captured_prompt(tmp_path):
-    """Each line the harness types arrives as its own line, in order.
+    """
+    Each line the harness types arrives as its own line, in order.
 
     This is the failure that is invisible in a live run: a prompt that never
     reached the session, or that was folded into the turn already running, and
     plugin state that looks the same either way.
     """
-    trace = Trace("echo-capture", directory=tmp_path)
+    trace = Trace('echo-capture', directory=tmp_path)
     deadline = Deadline(budget=60.0, trace=trace)
     session = echo_session(deadline)
     try:
-        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="startup")
+        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label='startup')
         for index, text in enumerate([FIRST_TURN, CORRECTION], start=1):
             session.send_line(text)
-            assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="turn-%d" % index), (
-                "the echo terminal never went quiet after turn %d" % index
+            assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label='turn-%d' % index), (
+                'the echo terminal never went quiet after turn %d' % index
             )
-            trace.echo("turn-%d" % index, session.screen())
-            assert session.contains("captured[%d]: %s" % (index, text)), (
-                "turn %d was not captured as its own line:\n%s" % (index, session.tail())
+            trace.echo('turn-%d' % index, session.screen())
+            assert session.contains('captured[%d]: %s' % (index, text)), (
+                'turn %d was not captured as its own line:\n%s' % (index, session.tail())
             )
         status = session.close()
     finally:
         if session.process is not None and session.process.poll() is None:
             session.close()
-    assert status == 0, "the echo terminal did not exit cleanly (%r)" % (status,)
-    assert (tmp_path / "echo-capture.pty.log").read_text(), "the raw terminal stream was not recorded"
+    assert status == 0, 'the echo terminal did not exit cleanly (%r)' % (status,)
+    assert (tmp_path / 'echo-capture.pty.log').read_text(), (
+        'the raw terminal stream was not recorded'
+    )
 
 
 def test_echo_mode_sees_a_marker_that_arrives_with_nothing_typed(tmp_path):
-    """An unprompted marker is detected: the shape of the wake, without a model.
+    """
+    An unprompted marker is detected: the shape of the wake, without a model.
 
     ``watch`` keeps reading while typing nothing, which is exactly what the live
     check does after its last turn. If this fails, a missing wake in the live
     check says nothing about the plugin.
     """
-    marker = "cand-echo0123456789"
-    trace = Trace("echo-wake", directory=tmp_path)
+    marker = 'cand-echo0123456789'
+    trace = Trace('echo-wake', directory=tmp_path)
     deadline = Deadline(budget=60.0, trace=trace)
-    session = echo_session(deadline, extra=["--wake-after", "3", "--wake-text", "self-improve: candidate " + marker])
+    session = echo_session(
+        deadline, extra=['--wake-after', '3', '--wake-text', 'self-improve: candidate ' + marker]
+    )
     try:
-        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="startup")
+        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label='startup')
         session.send_line(FIRST_TURN)
-        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="turn-1")
-        assert not session.contains(marker), "the marker arrived during the turn, so its arrival proves nothing"
-        woke = session.watch(lambda: session.contains(marker), timeout=20.0, label="wake-on-screen")
-        trace.echo("after-wake", session.screen())
+        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label='turn-1')
+        assert not session.contains(marker), (
+            'the marker arrived during the turn, so its arrival proves nothing'
+        )
+        woke = session.watch(
+            lambda: session.contains(marker), timeout=20.0, label='wake-on-screen'
+        )
+        trace.echo('after-wake', session.screen())
         status = session.close()
     finally:
         if session.process is not None and session.process.poll() is None:
             session.close()
-    assert woke, "an unprompted marker was never seen:\n%s" % session.tail()
-    assert status == 0, "the echo terminal did not exit cleanly (%r)" % (status,)
+    assert woke, 'an unprompted marker was never seen:\n%s' % session.tail()
+    assert status == 0, 'the echo terminal did not exit cleanly (%r)' % (status,)
 
 
 def test_echo_mode_does_not_invent_a_marker_that_never_arrives():
-    """The negative half: with nothing sending a marker, none is seen.
+    """
+    The negative half: with nothing sending a marker, none is seen.
 
     A ``contains`` that answered yes regardless would make the live wake check
     pass without a wake, and the live control is expensive enough that this
@@ -119,10 +134,12 @@ def test_echo_mode_does_not_invent_a_marker_that_never_arrives():
     deadline = Deadline(budget=30.0)
     session = echo_session(deadline)
     try:
-        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="startup")
+        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label='startup')
         session.send_line(FIRST_TURN)
-        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="turn-1")
-        assert not session.watch(lambda: session.contains("cand-neverarrives"), timeout=3.0, label="wake-on-screen")
+        assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label='turn-1')
+        assert not session.watch(
+            lambda: session.contains('cand-neverarrives'), timeout=3.0, label='wake-on-screen'
+        )
         status = session.close()
     finally:
         if session.process is not None and session.process.poll() is None:

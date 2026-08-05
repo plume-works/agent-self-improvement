@@ -21,7 +21,7 @@ jobs:
       # The runtime floor is Python 3.9 (pyproject requires-python), so the
       # suite runs against the oldest supported interpreter rather than
       # whichever one the runner image happens to ship. uv downloads it.
-      UV_PYTHON: "3.9"
+      UV_PYTHON: '3.9'
     steps:
       - uses: actions/checkout@v4
         with:

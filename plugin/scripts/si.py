@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Dispatcher for every hook and skill invocation.
+"""
+Dispatcher for every hook and skill invocation.
 
 One entry point means one place that parses hook input and one place that
 enforces the fail-open rule of spec section 11: a capture or gating failure must
@@ -19,23 +20,23 @@ from selfimprove import commands, config, journal, redact
 # Subcommands whose failure must never surface to the user. Everything here runs
 # from a lifecycle hook during, or immediately after, the user's real work.
 FAIL_OPEN = {
-    "capture-prompt",
-    "capture-expansion",
-    "capture-tool-failure",
-    "capture-tool-success",
-    "review-turn",
-    "session-start",
-    "session-end",
+    'capture-prompt',
+    'capture-expansion',
+    'capture-tool-failure',
+    'capture-tool-success',
+    'review-turn',
+    'session-start',
+    'session-end',
 }
 
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="si",
-        description="Self-improve plugin dispatcher.",
+        prog='si',
+        description='Self-improve plugin dispatcher.',
     )
-    parser.add_argument("subcommand", choices=sorted(commands.HANDLERS))
-    parser.add_argument("args", nargs=argparse.REMAINDER)
+    parser.add_argument('subcommand', choices=sorted(commands.HANDLERS))
+    parser.add_argument('args', nargs=argparse.REMAINDER)
     return parser
 
 
@@ -61,12 +62,14 @@ def main(argv=None):
     except BaseException as exc:
         # Deliberate catch-all: recording why is worth more than propagating.
         with contextlib.suppress(Exception):
-            journal.diagnostic(subcommand, redact.error_class(str(exc)), exception=type(exc).__name__)
+            journal.diagnostic(
+                subcommand, redact.error_class(str(exc)), exception=type(exc).__name__
+            )
         if subcommand in FAIL_OPEN:
             return 0
-        sys.stderr.write("self-improve: %s failed (%s)\n" % (subcommand, type(exc).__name__))
+        sys.stderr.write('self-improve: %s failed (%s)\n' % (subcommand, type(exc).__name__))
         return 1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())

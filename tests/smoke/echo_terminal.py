@@ -1,4 +1,5 @@
-"""A fake interactive session, for debugging the harness rather than the plugin.
+"""
+A fake interactive session, for debugging the harness rather than the plugin.
 
 The pty harness types blind: it never reads the screen to decide anything, so
 when a live check stalls there are two very different explanations and no way to
@@ -28,8 +29,8 @@ import sys
 import threading
 import time
 
-BANNER = "echo-terminal ready"
-PROMPT = "> "
+BANNER = 'echo-terminal ready'
+PROMPT = '> '
 
 # Long enough for the harness's quiescence detector to see output arriving and
 # then stopping, short enough that a scripted exchange stays quick. A turn that
@@ -47,29 +48,31 @@ def emit(text):
 def redraw(index):
     """Imitate a terminal program working: repeated output, then silence."""
     finish = time.time() + REDRAW_SECONDS
-    frames = "|/-\\"
+    frames = '|/-\\'
     step = 0
     while time.time() < finish:
-        emit("\r\x1b[2K%s working on turn %d " % (frames[step % 4], index))
+        emit('\r\x1b[2K%s working on turn %d ' % (frames[step % 4], index))
         step += 1
         time.sleep(REDRAW_INTERVAL)
-    emit("\r\x1b[2K")
+    emit('\r\x1b[2K')
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--wake-after",
+        '--wake-after',
         type=float,
         default=None,
-        help="seconds after the first turn to emit --wake-text with nothing typed, imitating an async wake",
+        help='seconds after the first turn to emit --wake-text with nothing typed, imitating an async wake',
     )
     parser.add_argument(
-        "--wake-text", default="self-improve: candidate cand-echo", help="what the imitated wake writes to the terminal"
+        '--wake-text',
+        default='self-improve: candidate cand-echo',
+        help='what the imitated wake writes to the terminal',
     )
     options = parser.parse_args(argv)
 
-    emit(BANNER + "\r\n" + PROMPT)
+    emit(BANNER + '\r\n' + PROMPT)
     turn = 0
     woken = threading.Event()
 
@@ -80,30 +83,32 @@ def main(argv=None):
         line = sys.stdin.readline()
         if not line:
             return 0
-        captured = line.rstrip("\r\n")
+        captured = line.rstrip('\r\n')
         turn += 1
         # The echo is the point: it is proof the bytes the harness wrote were
         # received as one line, at the moment they were received.
-        emit("captured[%d]: %s\r\n" % (turn, captured))
-        if captured.strip() in ("/exit", "/quit"):
-            emit("bye\r\n")
+        emit('captured[%d]: %s\r\n' % (turn, captured))
+        if captured.strip() in ('/exit', '/quit'):
+            emit('bye\r\n')
             return 0
         redraw(turn)
-        emit("done[%d]\r\n%s" % (turn, PROMPT))
+        emit('done[%d]\r\n%s' % (turn, PROMPT))
 
         if options.wake_after is not None and not woken.is_set():
             woken.set()
             # A daemon thread, so an exit while the wake is pending is still an
             # exit — the harness asserts on the status and must not be made to
             # wait for this.
-            waking = threading.Thread(target=_wake_later, args=(options.wake_after, options.wake_text), daemon=True)
+            waking = threading.Thread(
+                target=_wake_later, args=(options.wake_after, options.wake_text), daemon=True
+            )
             waking.start()
 
 
 def _wake_later(delay, text):
     time.sleep(delay)
-    emit("\r\n%s\r\n%s" % (text, PROMPT))
+    emit('\r\n%s\r\n%s' % (text, PROMPT))
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())
