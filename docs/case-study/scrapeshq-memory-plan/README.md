@@ -1,16 +1,22 @@
-# Spike 001: evaluate the Scrapeshq Claude Code Memory Plan
+# Case study: Scrapeshq Claude Code Memory Plan
 
-## Question
+## Status and scope
 
-**Given** the implemented Hermes-style experiential-learning MVP and current official Claude Code behavior, **when** the six-part external memory plan is evaluated against the repository's privacy, mutation, portability, and evidence boundaries, **then** each part has a source-grounded `ADOPT`, `ADAPT`, `DEFER`, or `REJECT` disposition and the evidence can be checked mechanically.
+This document evaluates the public Scrapeshq article and downloadable implementation plan [I Gave Claude Code Hermes's Best Feature (Steal This)](https://scrapeshq.notion.site/i-gave-claude-code-hermes-s-best-feature-steal-this). The rendered page, original Markdown attachment, and original PDF were captured on 2026-08-04 under [`source/`](source/README.md).
 
-Risk: **high**. The plan proposes durable capture of conversations and direct mutation of memory artifacts. A superficially convenient implementation could weaken the MVP's strongest boundaries.
+This is descriptive evidence, not a normative requirement. Requirements for this repository remain under [`../../specs/`](../../specs/README.md).
+
+## Executive summary
+
+The plan's store/inject/recall framing is useful, but the plan is only partially compatible with the implemented MVP. Source citations should be adopted; bounded snapshot injection and curated writes should be adapted to supported Claude surfaces and the existing proposal boundary; exhaustive capture and default history import should be rejected; semantic search should wait for a separate retrieval benchmark.
+
+The plan proposes durable capture of conversations and direct mutation of memory artifacts. Implementing it as a sequence of pasted prompts could weaken the MVP's privacy and authorization boundaries.
 
 ## Inputs
 
 - Preserved source capture: [`source/`](source/README.md)
 - Machine-readable matrix: [`evaluation.json`](evaluation.json)
-- Current normative target: [`../../docs/specs/0001-hermes-style-experiential-learning-mvp.md`](../../docs/specs/0001-hermes-style-experiential-learning-mvp.md)
+- Current normative target: [`../../specs/0001-hermes-style-experiential-learning-mvp.md`](../../specs/0001-hermes-style-experiential-learning-mvp.md)
 - Official Claude Code documentation checked on 2026-08-04:
   - [Memory](https://code.claude.com/docs/en/memory)
   - [Hooks](https://code.claude.com/docs/en/hooks)
@@ -26,14 +32,14 @@ The upstream Markdown and PDF are research inputs, not normative requirements.
 4. Require every disposition to carry repository evidence anchors.
 5. Run `evaluate.py`; fail if an evidence file or anchor has drifted.
 
-This is an architecture/evidence spike, not an implementation of the external plan. No Claude settings, memory, transcript, hook, or skill state is mutated.
+This is an architecture/evidence case study, not an implementation of the external plan. No Claude settings, memory, transcript, hook, or skill state is mutated.
 
 ## Run
 
 From the repository root:
 
 ```bash
-python3 spikes/001-scrapeshq-memory-plan-evaluation/evaluate.py
+python3 docs/case-study/scrapeshq-memory-plan/evaluate.py
 ```
 
 Expected summary:
@@ -90,7 +96,9 @@ Use the plan to create two bounded follow-ups only:
 
 If explicit “remember/forget” UX is added, it should call the existing review/proposal lifecycle rather than write memory directly.
 
-## Verdict: PARTIAL
+## Verdict
+
+**PARTIAL.**
 
 ### What worked
 

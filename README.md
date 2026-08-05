@@ -109,6 +109,7 @@ Prompt optimization, automatic skill evaluation, unattended mutation, curator au
 See [`docs/case-study/README.md`](docs/case-study/README.md):
 
 - [Hermes Agent](docs/case-study/hermes/README.md) — the closest model for experiential reflection, artifact routing, ownership-aware persistence, and recoverable curation
+- [Scrapeshq Claude Code Memory Plan](docs/case-study/scrapeshq-memory-plan/README.md) — useful store/inject/recall framing with privacy, mutation, and evaluation gaps that prevent direct adoption
 - [`aviadr1/claude-meta`](docs/case-study/claude-meta/README.md) — a minimal explicit reflection baseline
 - [Self-improving Claude Code bootstrap seed](docs/case-study/bootstrap-seed/README.md) — triage and pressure-driven structure without a trusted mutation boundary
 - [`TerenceBristol/claude-improve`](docs/case-study/claude-improve/README.md) — useful manual reflection and placement UX with overly broad model-mediated mutation
