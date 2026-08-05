@@ -41,8 +41,7 @@ def review_model():
 
 def review_effort():
     """Effort level for the review call, or None to accept the CLI default."""
-    return os.environ.get(
-        "SELF_IMPROVE_REVIEW_EFFORT", DEFAULT_REVIEW_EFFORT).strip() or None
+    return os.environ.get("SELF_IMPROVE_REVIEW_EFFORT", DEFAULT_REVIEW_EFFORT).strip() or None
 
 
 def review_timeout():

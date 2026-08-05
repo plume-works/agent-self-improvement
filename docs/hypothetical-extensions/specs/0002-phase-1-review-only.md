@@ -11,11 +11,11 @@ Phase 1 is delivered as four independently gated increments. The first release p
 
 ### Release sequence
 
-| Release | Increment | New release proof |
-| --- | --- | --- |
-| `v0.1` | Explicit CLI tracer bullet | One new system-owned personal skill, approved, installed, loaded, and rolled back |
-| `v0.1.1` | Automatic candidate capture | Real packaged hooks capture bounded evidence without transcript dependence |
-| `v0.1.2` | VS Code Local certification | The packaged user-scope plugin and engine pass the same core flow in VS Code |
+| Release  | Increment                        | New release proof                                                                  |
+| -------- | -------------------------------- | ---------------------------------------------------------------------------------- |
+| `v0.1`   | Explicit CLI tracer bullet       | One new system-owned personal skill, approved, installed, loaded, and rolled back  |
+| `v0.1.1` | Automatic candidate capture      | Real packaged hooks capture bounded evidence without transcript dependence         |
+| `v0.1.2` | VS Code Local certification      | The packaged user-scope plugin and engine pass the same core flow in VS Code       |
 | `v0.1.3` | Desktop Code Local certification | The packaged user-scope plugin and engine pass the same core flow in Desktop Local |
 
 No later increment can redefine an earlier release as incomplete.

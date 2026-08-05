@@ -22,6 +22,7 @@ _cache = {}
 
 def _load():
     from . import paths
+
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "markers.json")
     if not os.path.exists(path):
         path = os.path.join(paths.plugin_root(), "selfimprove", "markers.json")
@@ -30,8 +31,7 @@ def _load():
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
         _cache[key] = {
-            kind: [re.compile(pattern, re.IGNORECASE | re.MULTILINE)
-                   for pattern in data.get(kind, [])]
+            kind: [re.compile(pattern, re.IGNORECASE | re.MULTILINE) for pattern in data.get(kind, [])]
             for kind in KINDS
         }
     return _cache[key]
@@ -47,8 +47,7 @@ def detect(prompt):
     if not prompt or not isinstance(prompt, str):
         return []
     patterns = _load()
-    return sorted(kind for kind in KINDS
-                  if any(pattern.search(prompt) for pattern in patterns[kind]))
+    return sorted(kind for kind in KINDS if any(pattern.search(prompt) for pattern in patterns[kind]))
 
 
 def has_correction(markers):

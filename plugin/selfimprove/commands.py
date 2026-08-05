@@ -40,8 +40,7 @@ def _emit(payload):
 
 
 def _fail(reason, detail=None):
-    sys.stderr.write("self-improve: %s%s\n"
-                     % (reason, " (%s)" % detail if detail else ""))
+    sys.stderr.write("self-improve: %s%s\n" % (reason, " (%s)" % detail if detail else ""))
     return 1
 
 
@@ -97,8 +96,7 @@ def improve(argv):
 
     result = orchestrate.run(event, forced=True, focus=options.focus or None)
     if result["outcome"] == "candidate":
-        return _emit({"outcome": "candidate",
-                      "candidate": result["candidate"]})
+        return _emit({"outcome": "candidate", "candidate": result["candidate"]})
     return _emit(result)
 
 
@@ -108,12 +106,16 @@ def session_start(argv):
     waiting = orchestrate.pending_candidates(cwd=event.get("cwd"))
     if not waiting:
         return 0
-    lines = ["self-improve: %d retained learning candidate%s from an earlier "
-             "session." % (len(waiting), "" if len(waiting) == 1 else "s")]
+    lines = [
+        "self-improve: %d retained learning candidate%s from an earlier "
+        "session." % (len(waiting), "" if len(waiting) == 1 else "s")
+    ]
     for entry in waiting[:5]:
         lines.append("  %s: %s" % (entry["candidate_id"], entry.get("lesson", "")))
-    lines.append("Mention them only if the user asks; running the self-improve "
-                 "improve skill with a candidate id will route and stage one.")
+    lines.append(
+        "Mention them only if the user asks; running the self-improve "
+        "improve skill with a candidate id will route and stage one."
+    )
     hookio.additional_context("SessionStart", "\n".join(lines))
     return 0
 
@@ -151,17 +153,20 @@ def capture_expansion(argv):
         "self-improve: the user authorized %s for %s by typing the command. "
         "Run `${CLAUDE_PLUGIN_ROOT}/scripts/si %s-%s %s` and report its result "
         "verbatim. Do not edit the target file yourself."
-        % (operation, identifier, operation,
-           "proposal" if operation != authz.ROLLBACK else "mutation",
-           _argument_string(operation, arguments)),
+        % (
+            operation,
+            identifier,
+            operation,
+            "proposal" if operation != authz.ROLLBACK else "mutation",
+            _argument_string(operation, arguments),
+        ),
     )
     return 0
 
 
 def _argument_string(operation, arguments):
     if operation == authz.APPLY:
-        return "--id %s --hash-prefix %s" % (arguments["proposal_id"],
-                                             arguments["hash_prefix"])
+        return "--id %s --hash-prefix %s" % (arguments["proposal_id"], arguments["hash_prefix"])
     if operation == authz.REJECT:
         return "--id %s" % arguments["proposal_id"]
     return "--id %s" % arguments["mutation_id"]
@@ -173,7 +178,7 @@ def find_owners(argv):
     parser.add_argument("--query", default="")
     parser.add_argument("--limit", type=int, default=25)
     options = parser.parse_args(argv)
-    ranked = owners.search(options.query)[:options.limit]
+    ranked = owners.search(options.query)[: options.limit]
     return _emit({"allowlist": allowlist.describe(), "owners": ranked})
 
 
@@ -202,15 +207,13 @@ def stage_proposal(argv):
         candidate = store.read_record(store.CANDIDATES, options.candidate) or {}
         candidate["candidate_id"] = options.candidate
 
-    fingerprint = proposals.fingerprint(
-        candidate.get("lesson", ""), *_scope_and_kind(options.target))
+    fingerprint = proposals.fingerprint(candidate.get("lesson", ""), *_scope_and_kind(options.target))
     status = journal.fingerprint_status(fingerprint)
     if status == "rejected":
         return _fail("duplicate_of_rejected_proposal")
 
     try:
-        record = proposals.stage(options.target, data, candidate=candidate,
-                                 reason=options.reason)
+        record = proposals.stage(options.target, data, candidate=candidate, reason=options.reason)
     except proposals.ProposalError as exc:
         return _fail(exc.reason, exc.detail)
 
@@ -247,14 +250,13 @@ def apply_proposal(argv):
     options = parser.parse_args(argv)
 
     try:
-        authz.consume(authz.APPLY, session_id=options.session_id,
-                      proposal_id=options.id,
-                      hash_prefix=options.hash_prefix.lower())
+        authz.consume(
+            authz.APPLY, session_id=options.session_id, proposal_id=options.id, hash_prefix=options.hash_prefix.lower()
+        )
     except authz.AuthorizationError as exc:
         return _fail(
-            exc.reason,
-            "a proposal is applied only after the user types "
-            "/self-improve:apply <id> <hash-prefix>")
+            exc.reason, "a proposal is applied only after the user types /self-improve:apply <id> <hash-prefix>"
+        )
 
     try:
         record = mutate.apply_proposal(options.id, options.hash_prefix)
@@ -263,9 +265,8 @@ def apply_proposal(argv):
 
     sys.stdout.write(
         "Applied %s to %s.\nMutation %s. Roll back with "
-        "/self-improve:rollback %s\n"
-        % (options.id, record["target"], record["mutation_id"],
-           record["mutation_id"]))
+        "/self-improve:rollback %s\n" % (options.id, record["target"], record["mutation_id"], record["mutation_id"])
+    )
     return 0
 
 
@@ -278,8 +279,7 @@ def reject_proposal(argv):
     options = parser.parse_args(argv)
 
     try:
-        authz.consume(authz.REJECT, session_id=options.session_id,
-                      proposal_id=options.id)
+        authz.consume(authz.REJECT, session_id=options.session_id, proposal_id=options.id)
     except authz.AuthorizationError as exc:
         return _fail(exc.reason)
 
@@ -288,11 +288,9 @@ def reject_proposal(argv):
     except proposals.ProposalError as exc:
         return _fail(exc.reason)
 
-    journal.record_fingerprint(record["fingerprint"], "rejected",
-                               reason_category=options.reason_category)
+    journal.record_fingerprint(record["fingerprint"], "rejected", reason_category=options.reason_category)
     proposals.invalidate(options.id)
-    sys.stdout.write("Rejected %s. %s is unchanged.\n"
-                     % (options.id, record["target"]))
+    sys.stdout.write("Rejected %s. %s is unchanged.\n" % (options.id, record["target"]))
     return 0
 
 
@@ -304,8 +302,7 @@ def rollback_mutation(argv):
     options = parser.parse_args(argv)
 
     try:
-        authz.consume(authz.ROLLBACK, session_id=options.session_id,
-                      mutation_id=options.id)
+        authz.consume(authz.ROLLBACK, session_id=options.session_id, mutation_id=options.id)
     except authz.AuthorizationError as exc:
         return _fail(exc.reason)
 
@@ -314,8 +311,7 @@ def rollback_mutation(argv):
     except mutate.MutationError as exc:
         return _fail(exc.reason, exc.detail)
 
-    sys.stdout.write("Rolled back %s. %s restored to its previous contents.\n"
-                     % (options.id, record["target"]))
+    sys.stdout.write("Rolled back %s. %s restored to its previous contents.\n" % (options.id, record["target"]))
     return 0
 
 
@@ -376,8 +372,7 @@ def self_test(argv):
     # shim that guarantees a 3.9+ interpreter. Worth reporting rather than
     # failing with an obscure syntax or attribute error further along.
     if sys.version_info < (3, 9):  # noqa: UP036
-        failures.append("interpreter is %s; 3.9 or later is required"
-                        % platform.python_version())
+        failures.append("interpreter is %s; 3.9 or later is required" % platform.python_version())
 
     root = paths.state_root()
     try:
@@ -387,8 +382,7 @@ def self_test(argv):
     else:
         mode = os.stat(root).st_mode & 0o777
         if mode != paths.DIR_MODE:
-            failures.append("state root %s has mode %o, expected %o"
-                            % (root, mode, paths.DIR_MODE))
+            failures.append("state root %s has mode %o, expected %o" % (root, mode, paths.DIR_MODE))
         probe = os.path.join(root, ".self-test")
         try:
             paths.atomic_write(probe, b"ok")
@@ -420,8 +414,7 @@ def self_test(argv):
         sys.stderr.write("self-test: warning: %s\n" % line)
     if failures:
         return 1
-    sys.stdout.write("self-test: ok (python %s, state root %s)\n"
-                     % (platform.python_version(), root))
+    sys.stdout.write("self-test: ok (python %s, state root %s)\n" % (platform.python_version(), root))
     return 0
 
 
@@ -454,8 +447,7 @@ def cli_version():
     if not executable:
         return None
     try:
-        result = subprocess.run([executable, "--version"], capture_output=True,
-                                text=True, timeout=15)
+        result = subprocess.run([executable, "--version"], capture_output=True, text=True, timeout=15)
     except (OSError, subprocess.SubprocessError):
         return None
     match = re.search(r"(\d+)\.(\d+)\.(\d+)", result.stdout or "")
@@ -475,8 +467,7 @@ def cli_capability_warnings():
     return [
         "Claude Code %s is older than %s. Without an upgrade, %s are "
         "unavailable, so proposals cannot be authorized or applied."
-        % (_format_version(version), _format_version(MINIMUM_CLI_VERSION),
-           CLI_FEATURES_AT_FLOOR)
+        % (_format_version(version), _format_version(MINIMUM_CLI_VERSION), CLI_FEATURES_AT_FLOOR)
     ]
 
 

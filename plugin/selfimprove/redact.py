@@ -41,25 +41,39 @@ _LONG_OPAQUE = re.compile(r"\b[A-Za-z0-9+/_-]{40,}={0,2}\b")
 _ERROR_CLASSES = [
     ("interrupted", re.compile(r"(?i)interrupt|cancell?ed|sigint|sigterm")),
     ("timeout", re.compile(r"(?i)timed?\s*out|etimedout|deadline exceeded")),
-    ("command_not_found", re.compile(
-        r"(?i)command not found|no such command|executable file not found|"
-        r"is not recognized as an internal")),
-    ("file_not_found", re.compile(
-        r"(?i)no such file or directory|enoent|cannot find the (file|path)|"
-        r"file (does not exist|not found)")),
-    ("permission_denied", re.compile(
-        r"(?i)permission denied|eacces|eperm|operation not permitted|"
-        r"access is denied")),
-    ("network", re.compile(
-        r"(?i)econnrefused|enotfound|network is unreachable|could not resolve|"
-        r"connection reset|ssl|certificate")),
+    (
+        "command_not_found",
+        re.compile(
+            r"(?i)command not found|no such command|executable file not found|"
+            r"is not recognized as an internal"
+        ),
+    ),
+    (
+        "file_not_found",
+        re.compile(
+            r"(?i)no such file or directory|enoent|cannot find the (file|path)|"
+            r"file (does not exist|not found)"
+        ),
+    ),
+    (
+        "permission_denied",
+        re.compile(
+            r"(?i)permission denied|eacces|eperm|operation not permitted|"
+            r"access is denied"
+        ),
+    ),
+    (
+        "network",
+        re.compile(
+            r"(?i)econnrefused|enotfound|network is unreachable|could not resolve|"
+            r"connection reset|ssl|certificate"
+        ),
+    ),
     ("not_found_remote", re.compile(r"(?i)\b404\b|not found on remote")),
     ("unauthorized", re.compile(r"(?i)\b401\b|\b403\b|unauthorized|forbidden")),
-    ("syntax_error", re.compile(
-        r"(?i)syntaxerror|parse error|unexpected token|invalid syntax")),
+    ("syntax_error", re.compile(r"(?i)syntaxerror|parse error|unexpected token|invalid syntax")),
     ("type_error", re.compile(r"(?i)typeerror|type mismatch|cannot read propert")),
-    ("assertion_failed", re.compile(
-        r"(?i)assertionerror|assertion failed|test(s)? failed|\bfailed\b.*\btest")),
+    ("assertion_failed", re.compile(r"(?i)assertionerror|assertion failed|test(s)? failed|\bfailed\b.*\btest")),
     ("conflict", re.compile(r"(?i)merge conflict|already exists|conflict")),
     ("nonzero_exit", re.compile(r"(?i)exit(ed)? (code|status)|non-?zero")),
 ]
@@ -148,7 +162,7 @@ def normalize_command(command):
     if not program:
         return "unknown"
 
-    for token in tokens[index + 1:]:
+    for token in tokens[index + 1 :]:
         if token.startswith("-"):
             continue
         if _SUBCOMMAND.match(token):

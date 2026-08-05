@@ -13,13 +13,13 @@ The local `v0.1`–`v0.3` release remains useful if every Phase 4 adapter is abs
 
 ## Environment matrix
 
-| Environment | Agent runtime | Knowledge source | Main gap |
-| --- | --- | --- | --- |
-| Desktop Code, Local | Mac | Mac `~/.claude` and project files | Covered before Phase 4 |
-| VS Code devcontainer | Container extension host/runtime | Container home and mounted project | Personal store/plugin not inherently present |
-| Desktop Code over SSH | Remote host | Remote `~/.claude` | Mac store is not remote store |
-| Desktop Chat | Anthropic app runtime plus connectors | Account/app configuration | No Claude Code lifecycle hooks |
-| Cowork/cloud | Anthropic-hosted or isolated runtime | Account-synced skills and cloned project | Does not read Mac `~/.claude/skills` |
+| Environment           | Agent runtime                         | Knowledge source                         | Main gap                                     |
+| --------------------- | ------------------------------------- | ---------------------------------------- | -------------------------------------------- |
+| Desktop Code, Local   | Mac                                   | Mac `~/.claude` and project files        | Covered before Phase 4                       |
+| VS Code devcontainer  | Container extension host/runtime      | Container home and mounted project       | Personal store/plugin not inherently present |
+| Desktop Code over SSH | Remote host                           | Remote `~/.claude`                       | Mac store is not remote store                |
+| Desktop Chat          | Anthropic app runtime plus connectors | Account/app configuration                | No Claude Code lifecycle hooks               |
+| Cowork/cloud          | Anthropic-hosted or isolated runtime  | Account-synced skills and cloned project | Does not read Mac `~/.claude/skills`         |
 
 ## Track A: VS Code devcontainers
 

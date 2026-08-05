@@ -58,9 +58,8 @@ def fake_reviewer(tmp_path, monkeypatch):
     """
     launcher = tmp_path / "fake-claude"
     launcher.write_text(
-        "#!/bin/sh\nexec %s %s \"$@\"\n"
-        % (sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                        "fake_reviewer.py"))
+        '#!/bin/sh\nexec %s %s "$@"\n'
+        % (sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_reviewer.py"))
     )
     launcher.chmod(0o755)
     argv_path = tmp_path / "reviewer-argv.json"

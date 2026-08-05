@@ -113,20 +113,17 @@ def test_normalize_path_marks_paths_outside_the_project(tmp_path):
 
 def test_tool_signature_is_stable_across_failure_and_retry(tmp_path):
     """Pairing depends on a failed attempt and its retry sharing a signature."""
-    failed = redact.tool_signature("Bash", {"command": "pytest tests/unit -x"},
-                                   cwd=str(tmp_path))
-    succeeded = redact.tool_signature("Bash", {"command": "pytest tests/unit"},
-                                      cwd=str(tmp_path))
+    failed = redact.tool_signature("Bash", {"command": "pytest tests/unit -x"}, cwd=str(tmp_path))
+    succeeded = redact.tool_signature("Bash", {"command": "pytest tests/unit"}, cwd=str(tmp_path))
     assert failed == succeeded == "Bash:pytest"
 
 
 def test_tool_signature_distinguishes_different_programs(tmp_path):
-    assert redact.tool_signature("Bash", {"command": "npm test"}, cwd=str(tmp_path)) != \
-        redact.tool_signature("Bash", {"command": "npm build"}, cwd=str(tmp_path))
+    assert redact.tool_signature("Bash", {"command": "npm test"}, cwd=str(tmp_path)) != redact.tool_signature(
+        "Bash", {"command": "npm build"}, cwd=str(tmp_path)
+    )
 
 
 def test_tool_signature_for_file_tools_uses_relative_path(tmp_path):
-    signature = redact.tool_signature(
-        "Edit", {"file_path": str(tmp_path / "src" / "a.py")}, cwd=str(tmp_path)
-    )
+    signature = redact.tool_signature("Edit", {"file_path": str(tmp_path / "src" / "a.py")}, cwd=str(tmp_path))
     assert signature == "Edit:src/a.py"

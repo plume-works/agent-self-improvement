@@ -75,9 +75,7 @@ def test_session_end_sweeps_expired_state(run_si, state_root, monkeypatch):
     result = run_si("session-end", stdin=event)
 
     assert result.returncode == 0, result.stderr
-    assert not os.path.exists(
-        os.path.join(paths.state_root(), store.TURNS, "s1", "t1.json")
-    )
+    assert not os.path.exists(os.path.join(paths.state_root(), store.TURNS, "s1", "t1.json"))
     assert store.read_record(store.CANDIDATES, "c1") is not None
 
 
@@ -127,6 +125,5 @@ def test_runtime_imports_under_the_oldest_supported_interpreter():
         "selfimprove.hookio, selfimprove.config;"
         "print(sys.version_info[:2])" % PLUGIN_ROOT
     )
-    result = subprocess.run([system_python, "-c", probe],
-                            capture_output=True, text=True, timeout=60)
+    result = subprocess.run([system_python, "-c", probe], capture_output=True, text=True, timeout=60)
     assert result.returncode == 0, result.stderr

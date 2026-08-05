@@ -10,7 +10,7 @@ The offline suite passes, and nine of the ten smoke checks pass. The tenth — a
 
 Codex is not currently supported. [Spec-0003](docs/specs/0003-codex-integration.md) maps every Claude-specific integration point to Codex and proposes a dual-host package. It records the current parity gaps explicitly: no documented asynchronous idle-session wake, command-expansion event, generic tool-failure event, no-tools reviewer switch, or behavioral equivalent of Claude's path-scoped Markdown rules.
 
-A live run currently records its failures and almost nothing about the path that worked, so questions of the form *why did this run behave differently from that one* can only be answered by running it again. [Spec-0004](docs/specs/0004-plugin-execution-tracing.md) proposes an opt-in trace inside the plugin — what each hook decided and why, what the review cost, and the evidence bundle as a keyed *shape* rather than its content, so two runs can be diffed. It is not implemented, it is off by default, and content never enters it outside a separately gated mode the harness does not use.
+A live run currently records its failures and almost nothing about the path that worked, so questions of the form _why did this run behave differently from that one_ can only be answered by running it again. [Spec-0004](docs/specs/0004-plugin-execution-tracing.md) proposes an opt-in trace inside the plugin — what each hook decided and why, what the review cost, and the evidence bundle as a keyed _shape_ rather than its content, so two runs can be diffed. It is not implemented, it is off by default, and content never enters it outside a separately gated mode the harness does not use.
 
 The plugin runs on Python 3.9 or later using the standard library only. Nothing is installed, no virtual environment is built, and no network access is needed at runtime — the hook scripts that must fail open have no bootstrap step to fail in. Development tooling is managed with `uv` and is not a runtime dependency.
 
@@ -60,12 +60,12 @@ Check the install invariants at any time:
 
 Most of the time there is nothing to do. After a turn that produced a real correction, a verified workaround, or repeated friction, the session wakes on its own with one candidate and Claude presents an exact proposal.
 
-| Command | Effect |
-| --- | --- |
-| `/self-improve:improve` | Force a review of the current turn when automatic detection missed something |
-| `/self-improve:apply <proposal-id> <hash-prefix>` | Install exactly the displayed bytes |
-| `/self-improve:reject <proposal-id>` | Discard the proposal; the target is untouched |
-| `/self-improve:rollback <mutation-id>` | Restore the verified backup |
+| Command                                           | Effect                                                                       |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `/self-improve:improve`                           | Force a review of the current turn when automatic detection missed something |
+| `/self-improve:apply <proposal-id> <hash-prefix>` | Install exactly the displayed bytes                                          |
+| `/self-improve:reject <proposal-id>`              | Discard the proposal; the target is untouched                                |
+| `/self-improve:rollback <mutation-id>`            | Restore the verified backup                                                  |
 
 Only a command **you type** authorizes a change. Claude invoking the same skill, or you saying "looks good", produces no authorization and the mutation refuses.
 
@@ -88,9 +88,9 @@ make wake-repeat # ten consecutive wake runs, to measure its stability
 
 The sessions `make smoke` and `make wake` drive run on `sonnet` at `low` effort, overridable with `SMOKE_MODEL` and `SMOKE_EFFORT`; setting either to empty restores your CLI's own default, which is what a suspected model- or effort-specific failure has to be reproduced against. They only follow a written procedure, so neither dial changes what the checks observe, and an unconfigured run should not bill Opus at the default `high` effort to find that out.
 
-Every driving session also runs with Claude Code's own auto memory disabled, and `CLAUDE_CODE_DISABLE_AUTO_MEMORY` is set explicitly rather than inherited. Auto memory records the lesson these checks drive *during the turn that teaches it*, before this plugin's `Stop` hook runs, so the reviewer finds it already owned and correctly declines — right behavior that reads as a broken wake. `SMOKE_AUTO_MEMORY=1` turns it back on, and `make wake-memory` is the check that deliberately does so: it asserts the two systems defer to each other rather than interfere. See [docs/smoke-test.md](docs/smoke-test.md#auto-memory).
+Every driving session also runs with Claude Code's own auto memory disabled, and `CLAUDE_CODE_DISABLE_AUTO_MEMORY` is set explicitly rather than inherited. Auto memory records the lesson these checks drive _during the turn that teaches it_, before this plugin's `Stop` hook runs, so the reviewer finds it already owned and correctly declines — right behavior that reads as a broken wake. `SMOKE_AUTO_MEMORY=1` turns it back on, and `make wake-memory` is the check that deliberately does so: it asserts the two systems defer to each other rather than interfere. See [docs/smoke-test.md](docs/smoke-test.md#auto-memory).
 
-The reviewer *under test* has its own dials — `SELF_IMPROVE_REVIEW_MODEL` (`sonnet`) and `SELF_IMPROVE_REVIEW_EFFORT` (`medium`) — and the harness deliberately leaves them alone. Its prompt meeting the configuration that ships is the point of the exercise.
+The reviewer _under test_ has its own dials — `SELF_IMPROVE_REVIEW_MODEL` (`sonnet`) and `SELF_IMPROVE_REVIEW_EFFORT` (`medium`) — and the harness deliberately leaves them alone. Its prompt meeting the configuration that ships is the point of the exercise.
 
 Every live run gets a directory of its own — `test-runs/<target>_<timestamp>/` — holding one scratch workspace per check, its isolated plugin state, and the raw terminal stream of each pty session. Nothing is ever overwritten: `make smoke` and `make wake` cannot land in each other's directory, and the ten runs of `make wake-repeat` are ten readable results rather than one, which matters when the loop stops at the third. `test-runs/latest` and `test-runs/latest-<target>` point at the newest of each. `make clean` removes them all, and `make clean-claude` removes what they leave in `~/.claude/projects/`, outside where `clean` can reach.
 
@@ -123,9 +123,9 @@ The reviewer is a separate `claude -p` call with a reviewer-only system prompt, 
 
 ### What a proposal may touch
 
-| Scope | Allowed targets |
-| --- | --- |
-| User | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md` |
+| Scope   | Allowed targets                                                                                  |
+| ------- | ------------------------------------------------------------------------------------------------ |
+| User    | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md`                |
 | Project | `./CLAUDE.md`, `./.claude/CLAUDE.md`, `./.claude/rules/*.md`, `./.claude/skills/<name>/SKILL.md` |
 
 Nothing else. Settings, hook configuration, Claude-managed auto-memory, and source files are rejected before any I/O, as are symlinks and paths that resolve outside an allowed root.

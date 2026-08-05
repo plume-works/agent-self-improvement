@@ -46,10 +46,12 @@ def echo_session(deadline, extra=()):
     """
     environment = dict(os.environ)
     environment["PYTHONPATH"] = os.pathsep.join(
-        [os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-         environment.get("PYTHONPATH", "")])
-    return PtySession([*ECHO_COMMAND, *extra], cwd=os.getcwd(),
-                      env=environment, deadline=deadline).start()
+        [
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            environment.get("PYTHONPATH", ""),
+        ]
+    )
+    return PtySession([*ECHO_COMMAND, *extra], cwd=os.getcwd(), env=environment, deadline=deadline).start()
 
 
 def test_echo_mode_shows_every_captured_prompt(tmp_path):
@@ -66,20 +68,19 @@ def test_echo_mode_shows_every_captured_prompt(tmp_path):
         assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="startup")
         for index, text in enumerate([FIRST_TURN, CORRECTION], start=1):
             session.send_line(text)
-            assert session.wait_until_quiet(quiet=1.0, timeout=15.0,
-                                            label="turn-%d" % index), \
+            assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="turn-%d" % index), (
                 "the echo terminal never went quiet after turn %d" % index
+            )
             trace.echo("turn-%d" % index, session.screen())
-            assert session.contains("captured[%d]: %s" % (index, text)), \
-                "turn %d was not captured as its own line:\n%s" % (index,
-                                                                   session.tail())
+            assert session.contains("captured[%d]: %s" % (index, text)), (
+                "turn %d was not captured as its own line:\n%s" % (index, session.tail())
+            )
         status = session.close()
     finally:
         if session.process is not None and session.process.poll() is None:
             session.close()
     assert status == 0, "the echo terminal did not exit cleanly (%r)" % (status,)
-    assert (tmp_path / "echo-capture.pty.log").read_text(), \
-        "the raw terminal stream was not recorded"
+    assert (tmp_path / "echo-capture.pty.log").read_text(), "the raw terminal stream was not recorded"
 
 
 def test_echo_mode_sees_a_marker_that_arrives_with_nothing_typed(tmp_path):
@@ -92,17 +93,13 @@ def test_echo_mode_sees_a_marker_that_arrives_with_nothing_typed(tmp_path):
     marker = "cand-echo0123456789"
     trace = Trace("echo-wake", directory=tmp_path)
     deadline = Deadline(budget=60.0, trace=trace)
-    session = echo_session(deadline, extra=["--wake-after", "3",
-                                            "--wake-text",
-                                            "self-improve: candidate " + marker])
+    session = echo_session(deadline, extra=["--wake-after", "3", "--wake-text", "self-improve: candidate " + marker])
     try:
         assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="startup")
         session.send_line(FIRST_TURN)
         assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="turn-1")
-        assert not session.contains(marker), \
-            "the marker arrived during the turn, so its arrival proves nothing"
-        woke = session.watch(lambda: session.contains(marker), timeout=20.0,
-                             label="wake-on-screen")
+        assert not session.contains(marker), "the marker arrived during the turn, so its arrival proves nothing"
+        woke = session.watch(lambda: session.contains(marker), timeout=20.0, label="wake-on-screen")
         trace.echo("after-wake", session.screen())
         status = session.close()
     finally:
@@ -125,8 +122,7 @@ def test_echo_mode_does_not_invent_a_marker_that_never_arrives():
         assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="startup")
         session.send_line(FIRST_TURN)
         assert session.wait_until_quiet(quiet=1.0, timeout=15.0, label="turn-1")
-        assert not session.watch(lambda: session.contains("cand-neverarrives"),
-                                 timeout=3.0, label="wake-on-screen")
+        assert not session.watch(lambda: session.contains("cand-neverarrives"), timeout=3.0, label="wake-on-screen")
         status = session.close()
     finally:
         if session.process is not None and session.process.poll() is None:

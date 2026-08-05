@@ -44,18 +44,18 @@ This is the `v0.1` release boundary. Automatic hooks, existing-file edits, proje
 
 The following seams are documented by Anthropic as of the specification date. Implementation must pin and retest them against the minimum supported Claude Code version.
 
-| Seam | Classification | Design use |
-| --- | --- | --- |
-| User plugins, skills, agents, and hooks | Verified public | Package the extension at user scope |
-| Plugin hooks in `hooks/hooks.json` | Verified public | Capture lifecycle signals |
-| `Stop`, `PostToolUse`, `PostToolUseFailure`, `PreCompact`, `SessionStart`, and related events | Verified public | Candidate evidence and reliability tests |
-| Personal and project skills | Verified public | Durable procedures |
-| `CLAUDE.md` and `.claude/rules/` loading | Verified public | Durable facts and scoped instructions |
-| Claude-managed auto-memory | Verified public as a Claude feature; external mutation contract not verified | Read-only duplicate discovery in Phase 1; no direct engine writes |
-| Shared Claude Code settings between CLI and VS Code | Verified public | One user-scope local install |
-| Shared local settings/plugins between CLI and Desktop Code Local | Verified public | Third supported surface |
-| Cowork/cloud skills sourced from account/project rather than Mac personal skills | Verified public limitation | Exclude from local first release |
-| Devcontainer extension-host filesystem and home resolution | Must be verified per supported topology | Defer to Phase 4 |
+| Seam                                                                                          | Classification                                                               | Design use                                                        |
+| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| User plugins, skills, agents, and hooks                                                       | Verified public                                                              | Package the extension at user scope                               |
+| Plugin hooks in `hooks/hooks.json`                                                            | Verified public                                                              | Capture lifecycle signals                                         |
+| `Stop`, `PostToolUse`, `PostToolUseFailure`, `PreCompact`, `SessionStart`, and related events | Verified public                                                              | Candidate evidence and reliability tests                          |
+| Personal and project skills                                                                   | Verified public                                                              | Durable procedures                                                |
+| `CLAUDE.md` and `.claude/rules/` loading                                                      | Verified public                                                              | Durable facts and scoped instructions                             |
+| Claude-managed auto-memory                                                                    | Verified public as a Claude feature; external mutation contract not verified | Read-only duplicate discovery in Phase 1; no direct engine writes |
+| Shared Claude Code settings between CLI and VS Code                                           | Verified public                                                              | One user-scope local install                                      |
+| Shared local settings/plugins between CLI and Desktop Code Local                              | Verified public                                                              | Third supported surface                                           |
+| Cowork/cloud skills sourced from account/project rather than Mac personal skills              | Verified public limitation                                                   | Exclude from local first release                                  |
+| Devcontainer extension-host filesystem and home resolution                                    | Must be verified per supported topology                                      | Defer to Phase 4                                                  |
 
 Authoritative references:
 
@@ -151,18 +151,18 @@ An LLM may propose a classification or patch. Code decides whether the target, s
 
 ## Knowledge taxonomy
 
-| Class | Examples | Destination | Initial authorization |
-| --- | --- | --- | --- |
-| User fact | shell preference, stable tool choice | user memory or user `CLAUDE.md` | Review |
-| Project fact | build command, repository layout | project memory | Review |
-| Project instruction | test gate, naming convention | project `CLAUDE.md` or rule | Review |
-| Procedure | migration/debugging workflow | personal or project skill | Review |
-| Enforcement | block secret reads, run formatter | hook | Proposal only in Phase 1 |
-| Supporting detail | API reference, long troubleshooting notes | skill `references/` | Review |
-| Temporary state | current TODO, one completed operation | none | Discard |
-| Volatile identifier | commit SHA, PR number, run ID | none | Discard |
-| Unverified inference | guessed cause or preference | candidate only | Never auto-persist |
-| Sensitive content | credentials, tokens, private transcript | none | Redact and reject |
+| Class                | Examples                                  | Destination                     | Initial authorization    |
+| -------------------- | ----------------------------------------- | ------------------------------- | ------------------------ |
+| User fact            | shell preference, stable tool choice      | user memory or user `CLAUDE.md` | Review                   |
+| Project fact         | build command, repository layout          | project memory                  | Review                   |
+| Project instruction  | test gate, naming convention              | project `CLAUDE.md` or rule     | Review                   |
+| Procedure            | migration/debugging workflow              | personal or project skill       | Review                   |
+| Enforcement          | block secret reads, run formatter         | hook                            | Proposal only in Phase 1 |
+| Supporting detail    | API reference, long troubleshooting notes | skill `references/`             | Review                   |
+| Temporary state      | current TODO, one completed operation     | none                            | Discard                  |
+| Volatile identifier  | commit SHA, PR number, run ID             | none                            | Discard                  |
+| Unverified inference | guessed cause or preference               | candidate only                  | Never auto-persist       |
+| Sensitive content    | credentials, tokens, private transcript   | none                            | Redact and reject        |
 
 ## Lean architecture
 
@@ -289,11 +289,11 @@ It must return a typed proposal:
   "target": "~/.claude/skills/generated-unique-name/",
   "action": "create_personal_skill",
   "lesson": "...",
-  "evidence": [{"kind": "verified_success", "ref": "..."}],
+  "evidence": [{ "kind": "verified_success", "ref": "..." }],
   "confidence": 0.0,
   "risk_flags": [],
   "ownership": "human-owned-after-creation",
-  "files": {"SKILL.md": "..."}
+  "files": { "SKILL.md": "..." }
 }
 ```
 
@@ -465,20 +465,20 @@ Claude-generated prose is not parsed to determine whether an operation succeeded
 
 ## Failure model
 
-| Failure | Required behavior |
-| --- | --- |
-| Hook timeout or crash (`v0.1.1+`) | Do not block Claude; record local diagnostic |
-| Store unavailable | Disable capture/mutation; preserve Claude operation |
-| Reviewer unavailable | Keep candidate queued |
-| Invalid proposal | Reject with reasons; no write |
-| Stale target | Return to review; no force apply |
-| Recovery preparation failure | Abort before filesystem installation |
-| Write interruption | Leave a reconcilable journal state; never infer success from SQLite alone |
-| Installed hash matches intent but journal is nonterminal | Validate and complete the journal during recovery |
-| Installed path has unexpected bytes | Mark conflict; do not overwrite or auto-restore |
-| Post-write validation failure | Journal failure and perform a separate recovery mutation where safe |
-| Rollback collision | Require review; rollback is a new mutation and never overwrites current content |
-| Unknown Claude version/schema | Fail closed for capture or mutation feature, not Claude itself |
+| Failure                                                  | Required behavior                                                               |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Hook timeout or crash (`v0.1.1+`)                        | Do not block Claude; record local diagnostic                                    |
+| Store unavailable                                        | Disable capture/mutation; preserve Claude operation                             |
+| Reviewer unavailable                                     | Keep candidate queued                                                           |
+| Invalid proposal                                         | Reject with reasons; no write                                                   |
+| Stale target                                             | Return to review; no force apply                                                |
+| Recovery preparation failure                             | Abort before filesystem installation                                            |
+| Write interruption                                       | Leave a reconcilable journal state; never infer success from SQLite alone       |
+| Installed hash matches intent but journal is nonterminal | Validate and complete the journal during recovery                               |
+| Installed path has unexpected bytes                      | Mark conflict; do not overwrite or auto-restore                                 |
+| Post-write validation failure                            | Journal failure and perform a separate recovery mutation where safe             |
+| Rollback collision                                       | Require review; rollback is a new mutation and never overwrites current content |
+| Unknown Claude version/schema                            | Fail closed for capture or mutation feature, not Claude itself                  |
 
 ## Version compatibility
 
@@ -508,16 +508,16 @@ A private Claude plugin marketplace may be added after local package installatio
 
 ## Phase boundaries
 
-| Concern | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
-| --- | --- | --- | --- | --- |
-| Candidate detection | Explicit in `v0.1`; hooks in `v0.1.1` | Harden | Engine-owned events only | Adapt per environment |
-| Proposed change | One new skill in `v0.1` | Existing-artifact patches | Consolidation proposals | Contract-specific |
-| User approval | Every mutation | Every Phase 2A mutation; risk/ownership dependent in 2B | Semantic curation | Environment dependent |
-| Automatic writes | None | Phase 2B narrow agent-owned patches | Metadata only | No broader by default |
-| Archive | No | No | Reversible | Synchronization-aware |
-| Local surfaces | CLI `v0.1`; VS Code `v0.1.2`; Desktop `v0.1.3` | Previously certified surfaces | Previously certified surfaces | Adapter-specific |
-| Devcontainer/SSH | No | No | No | Independent adapters |
-| Desktop Chat/Cowork | No | No | No | Public-seam-dependent |
+| Concern             | Phase 1                                        | Phase 2                                                 | Phase 3                       | Phase 4               |
+| ------------------- | ---------------------------------------------- | ------------------------------------------------------- | ----------------------------- | --------------------- |
+| Candidate detection | Explicit in `v0.1`; hooks in `v0.1.1`          | Harden                                                  | Engine-owned events only      | Adapt per environment |
+| Proposed change     | One new skill in `v0.1`                        | Existing-artifact patches                               | Consolidation proposals       | Contract-specific     |
+| User approval       | Every mutation                                 | Every Phase 2A mutation; risk/ownership dependent in 2B | Semantic curation             | Environment dependent |
+| Automatic writes    | None                                           | Phase 2B narrow agent-owned patches                     | Metadata only                 | No broader by default |
+| Archive             | No                                             | No                                                      | Reversible                    | Synchronization-aware |
+| Local surfaces      | CLI `v0.1`; VS Code `v0.1.2`; Desktop `v0.1.3` | Previously certified surfaces                           | Previously certified surfaces | Adapter-specific      |
+| Devcontainer/SSH    | No                                             | No                                                      | No                            | Independent adapters  |
+| Desktop Chat/Cowork | No                                             | No                                                      | No                            | Public-seam-dependent |
 
 ## Architecture risks
 

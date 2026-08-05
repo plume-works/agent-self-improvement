@@ -10,8 +10,7 @@ import os
 
 import pytest
 
-from selfimprove import (capture, gate, journal, orchestrate, proposals, schema,
-                         store)
+from selfimprove import capture, gate, journal, orchestrate, proposals, schema, store
 from tests.fake_reviewer import PROPOSAL
 
 STOP = {
@@ -47,16 +46,14 @@ def test_a_valid_candidate_wakes_the_session(run_si, corrected_turn, fake_review
     assert "cand-" in result.stderr
 
 
-def test_the_wake_message_forbids_editing_and_applying(run_si, corrected_turn,
-                                                       fake_reviewer):
+def test_the_wake_message_forbids_editing_and_applying(run_si, corrected_turn, fake_reviewer):
     fake_reviewer.mode("propose")
     result = run_stop(run_si, corrected_turn)
     assert "Do not edit any file yourself" in result.stderr
     assert "only a command the user types can authorize" in result.stderr
 
 
-def test_a_turn_with_no_signal_stays_silent(run_si, state_root, project,
-                                            fake_reviewer):
+def test_a_turn_with_no_signal_stays_silent(run_si, state_root, project, fake_reviewer):
     """The common case: nothing happened worth reflecting on."""
     fake_reviewer.mode("propose")
     event = dict(STOP, cwd=str(project))
@@ -66,8 +63,7 @@ def test_a_turn_with_no_signal_stays_silent(run_si, state_root, project,
     assert result.stderr == ""
 
 
-def test_no_signal_means_the_reviewer_is_never_invoked(run_si, state_root, project,
-                                                       fake_reviewer):
+def test_no_signal_means_the_reviewer_is_never_invoked(run_si, state_root, project, fake_reviewer):
     """The gate exists to avoid paying for a review."""
     fake_reviewer.mode("propose")
     event = dict(STOP, cwd=str(project))
@@ -76,22 +72,27 @@ def test_no_signal_means_the_reviewer_is_never_invoked(run_si, state_root, proje
     assert not os.path.exists(fake_reviewer.argv_file)
 
 
-def test_no_signal_deletes_the_ephemeral_turn_data(run_si, state_root, project,
-                                                   fake_reviewer):
+def test_no_signal_deletes_the_ephemeral_turn_data(run_si, state_root, project, fake_reviewer):
     fake_reviewer.mode("discard")
     event = dict(STOP, cwd=str(project))
     capture.record_prompt({**event, "prompt": "add a test"})
     run_stop(run_si, event)
-    assert store.read_record(store.TURNS, "prompt-1", subdir="session-1",
-                             allow_expired=True) is None
+    assert store.read_record(store.TURNS, "prompt-1", subdir="session-1", allow_expired=True) is None
 
 
-@pytest.mark.parametrize("mode", [
-    "discard", "malformed", "low_confidence", "unknown_field", "crash",
-    "unauthorized", "empty",
-])
-def test_no_reviewer_outcome_but_a_proposal_wakes_the_session(run_si, corrected_turn,
-                                                              fake_reviewer, mode):
+@pytest.mark.parametrize(
+    "mode",
+    [
+        "discard",
+        "malformed",
+        "low_confidence",
+        "unknown_field",
+        "crash",
+        "unauthorized",
+        "empty",
+    ],
+)
+def test_no_reviewer_outcome_but_a_proposal_wakes_the_session(run_si, corrected_turn, fake_reviewer, mode):
     """Every reviewer failure mode is silence, not an error the user sees."""
     fake_reviewer.mode(mode)
     result = run_stop(run_si, corrected_turn)
@@ -101,26 +102,26 @@ def test_no_reviewer_outcome_but_a_proposal_wakes_the_session(run_si, corrected_
 def test_a_reviewer_timeout_stays_silent(run_si, corrected_turn, fake_reviewer):
     """Section 11: a timeout is silence plus a recorded error class."""
     fake_reviewer.mode("timeout")
-    result = run_si("review-turn", stdin=json.dumps(corrected_turn),
-                    env={"SELF_IMPROVE_REVIEW_TIMEOUT": "1"})
+    result = run_si("review-turn", stdin=json.dumps(corrected_turn), env={"SELF_IMPROVE_REVIEW_TIMEOUT": "1"})
     assert result.returncode == 0
     assert result.stderr == ""
 
 
-@pytest.mark.parametrize("suppressor", [
-    {"stop_hook_active": True},
-    {"background_tasks": [{"id": "x", "type": "shell", "status": "running"}]},
-    {"session_crons": [{"id": "x", "schedule": "* * * * *"}]},
-])
-def test_suppressors_prevent_the_wake(run_si, corrected_turn, fake_reviewer,
-                                      suppressor):
+@pytest.mark.parametrize(
+    "suppressor",
+    [
+        {"stop_hook_active": True},
+        {"background_tasks": [{"id": "x", "type": "shell", "status": "running"}]},
+        {"session_crons": [{"id": "x", "schedule": "* * * * *"}]},
+    ],
+)
+def test_suppressors_prevent_the_wake(run_si, corrected_turn, fake_reviewer, suppressor):
     fake_reviewer.mode("propose")
     result = run_stop(run_si, dict(corrected_turn, **suppressor))
     assert result.returncode == 0
 
 
-def test_a_reviewer_originated_session_never_reviews(run_si, corrected_turn,
-                                                     fake_reviewer):
+def test_a_reviewer_originated_session_never_reviews(run_si, corrected_turn, fake_reviewer):
     """Without this, a review could trigger a review."""
     fake_reviewer.mode("propose")
     result = run_stop(run_si, corrected_turn, {"SELF_IMPROVE_REVIEWER": "1"})
@@ -140,60 +141,46 @@ def test_a_second_stop_does_not_wake_again(run_si, corrected_turn, fake_reviewer
     assert run_stop(run_si, corrected_turn).returncode == 0
 
 
-def test_presenting_the_candidate_lifts_the_guard(run_si, corrected_turn,
-                                                  fake_reviewer):
+def test_presenting_the_candidate_lifts_the_guard(run_si, corrected_turn, fake_reviewer):
     fake_reviewer.mode("propose")
     result = run_stop(run_si, corrected_turn)
-    candidate_id = next(word.strip(".") for word in result.stderr.split()
-                        if word.startswith("cand-"))
+    candidate_id = next(word.strip(".") for word in result.stderr.split() if word.startswith("cand-"))
 
     shown = run_si("show-candidate", "--id", candidate_id)
     assert shown.returncode == 0
     assert gate.suppressed(corrected_turn) != "candidate_awaiting_presentation"
 
 
-def test_an_already_accepted_lesson_is_suppressed(run_si, corrected_turn,
-                                                  fake_reviewer):
+def test_an_already_accepted_lesson_is_suppressed(run_si, corrected_turn, fake_reviewer):
     fake_reviewer.mode("propose")
-    fingerprint = proposals.fingerprint(PROPOSAL["lesson"],
-                                        PROPOSAL["destination_scope"],
-                                        PROPOSAL["destination_kind"])
+    fingerprint = proposals.fingerprint(PROPOSAL["lesson"], PROPOSAL["destination_scope"], PROPOSAL["destination_kind"])
     journal.record_fingerprint(fingerprint, "accepted")
     assert run_stop(run_si, corrected_turn).returncode == 0
 
 
-def test_an_already_rejected_lesson_is_suppressed(run_si, corrected_turn,
-                                                  fake_reviewer):
+def test_an_already_rejected_lesson_is_suppressed(run_si, corrected_turn, fake_reviewer):
     fake_reviewer.mode("propose")
-    fingerprint = proposals.fingerprint(PROPOSAL["lesson"],
-                                        PROPOSAL["destination_scope"],
-                                        PROPOSAL["destination_kind"])
+    fingerprint = proposals.fingerprint(PROPOSAL["lesson"], PROPOSAL["destination_scope"], PROPOSAL["destination_kind"])
     journal.record_fingerprint(fingerprint, "rejected", "too_generic")
     assert run_stop(run_si, corrected_turn).returncode == 0
 
 
-def test_a_suppressed_duplicate_says_so_in_the_journal(run_si, corrected_turn,
-                                                       fake_reviewer, state_root):
+def test_a_suppressed_duplicate_says_so_in_the_journal(run_si, corrected_turn, fake_reviewer, state_root):
     """A duplicate is the other outcome that is silent and leaves no candidate.
 
     It is the good case — the lesson is already known — but from state alone it
     reads exactly like a reviewer that proposed nothing, so it says which it was.
     """
     fake_reviewer.mode("propose")
-    fingerprint = proposals.fingerprint(PROPOSAL["lesson"],
-                                        PROPOSAL["destination_scope"],
-                                        PROPOSAL["destination_kind"])
+    fingerprint = proposals.fingerprint(PROPOSAL["lesson"], PROPOSAL["destination_scope"], PROPOSAL["destination_kind"])
     journal.record_fingerprint(fingerprint, "accepted")
     run_stop(run_si, corrected_turn)
 
-    outcomes = [record for record in _diagnostics(state_root)
-                if record["stage"] == "review_outcome"]
-    assert [(record["error_class"], record["reason"]) for record in outcomes] \
-        == [("duplicate", "accepted")]
+    outcomes = [record for record in _diagnostics(state_root) if record["stage"] == "review_outcome"]
+    assert [(record["error_class"], record["reason"]) for record in outcomes] == [("duplicate", "accepted")]
 
 
-def test_the_candidate_is_queued_before_the_wake(run_si, corrected_turn,
-                                                 fake_reviewer, project):
+def test_the_candidate_is_queued_before_the_wake(run_si, corrected_turn, fake_reviewer, project):
     """A wake that never lands must still be recoverable."""
     fake_reviewer.mode("propose")
     run_stop(run_si, corrected_turn)
@@ -201,14 +188,16 @@ def test_the_candidate_is_queued_before_the_wake(run_si, corrected_turn,
     assert len(waiting) == 1
 
 
-def test_session_start_surfaces_a_queued_candidate(run_si, corrected_turn,
-                                                   fake_reviewer, project):
+def test_session_start_surfaces_a_queued_candidate(run_si, corrected_turn, fake_reviewer, project):
     fake_reviewer.mode("propose")
     run_stop(run_si, corrected_turn)
 
-    result = run_si("session-start", stdin=json.dumps(
-        {"hook_event_name": "SessionStart", "session_id": "session-2",
-         "cwd": str(project), "source": "startup"}))
+    result = run_si(
+        "session-start",
+        stdin=json.dumps(
+            {"hook_event_name": "SessionStart", "session_id": "session-2", "cwd": str(project), "source": "startup"}
+        ),
+    )
     assert result.returncode == 0
     payload = json.loads(result.stdout)
     context = payload["hookSpecificOutput"]["additionalContext"]
@@ -217,14 +206,12 @@ def test_session_start_surfaces_a_queued_candidate(run_si, corrected_turn,
 
 
 def test_session_start_is_silent_with_nothing_queued(run_si, state_root, project):
-    result = run_si("session-start", stdin=json.dumps(
-        {"hook_event_name": "SessionStart", "cwd": str(project)}))
+    result = run_si("session-start", stdin=json.dumps({"hook_event_name": "SessionStart", "cwd": str(project)}))
     assert result.returncode == 0
     assert result.stdout == ""
 
 
-def test_review_never_persists_prompt_or_response_text(run_si, corrected_turn,
-                                                       fake_reviewer, state_root):
+def test_review_never_persists_prompt_or_response_text(run_si, corrected_turn, fake_reviewer, state_root):
     """Section 15 point 10, checked across the whole state root."""
     fake_reviewer.mode("propose")
     run_stop(run_si, corrected_turn)
@@ -232,8 +219,7 @@ def test_review_never_persists_prompt_or_response_text(run_si, corrected_turn,
     blob = []
     for dirpath, _dirs, files in os.walk(str(state_root)):
         for name in files:
-            with open(os.path.join(dirpath, name), encoding="utf-8",
-                      errors="replace") as handle:
+            with open(os.path.join(dirpath, name), encoding="utf-8", errors="replace") as handle:
                 blob.append(handle.read())
     combined = "\n".join(blob)
     # Without this the assertions below would pass on an empty state root.
@@ -243,8 +229,7 @@ def test_review_never_persists_prompt_or_response_text(run_si, corrected_turn,
     assert "no, use make test instead" not in combined, "raw prompt persisted"
 
 
-def test_forced_review_runs_the_same_pipeline(run_si, state_root, project,
-                                              fake_reviewer):
+def test_forced_review_runs_the_same_pipeline(run_si, state_root, project, fake_reviewer):
     fake_reviewer.mode("propose")
     event = json.dumps({"session_id": "session-9", "cwd": str(project)})
     result = run_si("improve", "--focus", "the deploy step", stdin=event)
@@ -254,8 +239,7 @@ def test_forced_review_runs_the_same_pipeline(run_si, state_root, project,
     assert payload["candidate"]["signal"] == "manual_force"
 
 
-def test_forced_review_reports_when_there_is_no_lesson(run_si, state_root, project,
-                                                       fake_reviewer):
+def test_forced_review_reports_when_there_is_no_lesson(run_si, state_root, project, fake_reviewer):
     fake_reviewer.mode("discard")
     event = json.dumps({"session_id": "session-9", "cwd": str(project)})
     result = run_si("improve", stdin=event)
@@ -271,8 +255,7 @@ def _diagnostics(state_root):
         return [json.loads(line) for line in handle if line.strip()]
 
 
-def test_a_declined_review_says_so_in_the_journal(run_si, corrected_turn,
-                                                  fake_reviewer, state_root):
+def test_a_declined_review_says_so_in_the_journal(run_si, corrected_turn, fake_reviewer, state_root):
     """A decline must leave a trace, or it cannot be told from a review that
     never ran.
 
@@ -284,28 +267,22 @@ def test_a_declined_review_says_so_in_the_journal(run_si, corrected_turn,
     fake_reviewer.mode("discard")
     run_stop(run_si, corrected_turn)
 
-    outcomes = [record for record in _diagnostics(state_root)
-                if record["stage"] == "review_outcome"]
+    outcomes = [record for record in _diagnostics(state_root) if record["stage"] == "review_outcome"]
     assert len(outcomes) == 1, "a review that ran left no outcome record"
     assert outcomes[0]["error_class"] == "no_lesson"
     assert outcomes[0]["reason"] == "one_off_instruction"
 
 
-def test_a_decline_without_a_category_is_still_journaled(run_si, corrected_turn,
-                                                         fake_reviewer, state_root):
+def test_a_decline_without_a_category_is_still_journaled(run_si, corrected_turn, fake_reviewer, state_root):
     """The field is optional, so its absence must not cost the record."""
     fake_reviewer.mode("bare_discard")
     run_stop(run_si, corrected_turn)
 
-    outcomes = [record for record in _diagnostics(state_root)
-                if record["stage"] == "review_outcome"]
-    assert [(record["error_class"], record["reason"]) for record in outcomes] \
-        == [("no_lesson", "reviewer_discarded")]
+    outcomes = [record for record in _diagnostics(state_root) if record["stage"] == "review_outcome"]
+    assert [(record["error_class"], record["reason"]) for record in outcomes] == [("no_lesson", "reviewer_discarded")]
 
 
-def test_the_journaled_reason_is_a_category_never_model_text(run_si, corrected_turn,
-                                                             fake_reviewer,
-                                                             state_root):
+def test_the_journaled_reason_is_a_category_never_model_text(run_si, corrected_turn, fake_reviewer, state_root):
     """Section 10: nothing durable may carry prose the reviewer wrote.
 
     The category is bounded precisely so the diagnostics file stays shareable
@@ -314,15 +291,11 @@ def test_the_journaled_reason_is_a_category_never_model_text(run_si, corrected_t
     fake_reviewer.mode("discard")
     run_stop(run_si, corrected_turn)
 
-    reasons = {record["reason"] for record in _diagnostics(state_root)
-               if record["stage"] == "review_outcome"}
+    reasons = {record["reason"] for record in _diagnostics(state_root) if record["stage"] == "review_outcome"}
     assert reasons <= set(schema.load_schema()["properties"]["discard_reason"]["enum"])
 
 
-def test_a_review_that_never_reached_the_model_is_distinguishable(run_si,
-                                                                  corrected_turn,
-                                                                  fake_reviewer,
-                                                                  state_root):
+def test_a_review_that_never_reached_the_model_is_distinguishable(run_si, corrected_turn, fake_reviewer, state_root):
     """The distinction the outcome record exists to draw.
 
     A transport failure and a considered decline both end as a discard, and the
@@ -332,8 +305,8 @@ def test_a_review_that_never_reached_the_model_is_distinguishable(run_si,
     fake_reviewer.mode("crash")
     run_stop(run_si, corrected_turn)
 
-    outcomes = [record for record in _diagnostics(state_root)
-                if record["stage"] == "review_outcome"]
+    outcomes = [record for record in _diagnostics(state_root) if record["stage"] == "review_outcome"]
     assert len(outcomes) == 1
-    assert outcomes[0]["reason"] != "reviewer_discarded", \
+    assert outcomes[0]["reason"] != "reviewer_discarded", (
         "a reviewer that was never reached is being reported as a decline"
+    )

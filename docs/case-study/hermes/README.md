@@ -91,22 +91,22 @@ The ordinary response is delivered before background review starts, so learning 
 
 Paths below are relative to the Hermes Agent source checkout unless otherwise noted.
 
-| File | Responsibility |
-|---|---|
-| `agent/prompt_builder.py` | Defines foreground memory and skill guidance injected into the system prompt. |
-| `agent/system_prompt.py` | Assembles identity, tool-aware guidance, project context, memory, and profile information. |
-| `agent/background_review.py` | Contains the detailed post-turn memory and skill review prompts and launches the review fork. |
-| `agent/turn_finalizer.py` | Checks review triggers and starts background review after the normal response. |
-| `agent/agent_init.py` | Loads configured nudge intervals and initializes review counters. |
-| `tools/memory_tool.py` | Defines the memory tool's operational instructions and persistence interface. |
-| `tools/skill_manager_tool.py` | Defines skill mutation instructions and mutation guardrails. |
-| `tools/skill_usage.py` | Tracks ownership, use, views, patches, state, and pinning. |
-| `agent/curator.py` | Implements stale-skill and consolidation lifecycle operations. |
-| `hermes_cli/config.py` | Defines curator defaults and other configuration defaults. |
-| `$HERMES_HOME/SOUL.md` | Optional local identity and high-level continuity policy. |
-| `$HERMES_HOME/memories/USER.md` | Persisted user profile and preferences. |
-| `$HERMES_HOME/memories/MEMORY.md` | Persisted stable environmental facts and conventions. |
-| `$HERMES_HOME/skills/**/SKILL.md` | Reusable procedural knowledge loaded into future sessions. |
+| File                              | Responsibility                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| `agent/prompt_builder.py`         | Defines foreground memory and skill guidance injected into the system prompt.                 |
+| `agent/system_prompt.py`          | Assembles identity, tool-aware guidance, project context, memory, and profile information.    |
+| `agent/background_review.py`      | Contains the detailed post-turn memory and skill review prompts and launches the review fork. |
+| `agent/turn_finalizer.py`         | Checks review triggers and starts background review after the normal response.                |
+| `agent/agent_init.py`             | Loads configured nudge intervals and initializes review counters.                             |
+| `tools/memory_tool.py`            | Defines the memory tool's operational instructions and persistence interface.                 |
+| `tools/skill_manager_tool.py`     | Defines skill mutation instructions and mutation guardrails.                                  |
+| `tools/skill_usage.py`            | Tracks ownership, use, views, patches, state, and pinning.                                    |
+| `agent/curator.py`                | Implements stale-skill and consolidation lifecycle operations.                                |
+| `hermes_cli/config.py`            | Defines curator defaults and other configuration defaults.                                    |
+| `$HERMES_HOME/SOUL.md`            | Optional local identity and high-level continuity policy.                                     |
+| `$HERMES_HOME/memories/USER.md`   | Persisted user profile and preferences.                                                       |
+| `$HERMES_HOME/memories/MEMORY.md` | Persisted stable environmental facts and conventions.                                         |
+| `$HERMES_HOME/skills/**/SKILL.md` | Reusable procedural knowledge loaded into future sessions.                                    |
 
 ### Prompt assembly
 
@@ -344,19 +344,19 @@ Archiving is recoverable rather than deletion. Pinned artifacts are protected fr
 
 Hermes's implementation divides self-improvement into distinct responsibilities:
 
-| Concern | Mechanism |
-|---|---|
-| Detect a possible lesson | Foreground judgment and periodic background review |
-| Decide whether it is durable | Prompt policy plus deterministic exclusions |
-| Route the lesson | User profile, memory, existing skill, support file, or new umbrella |
-| Find the owner | Loaded-skill preference followed by library search |
-| Author a candidate change | Foreground or forked model |
-| Authorize mutation | Tool-level ownership and provenance guards |
-| Prevent stale writes | Read-before-write enforcement |
-| Persist | Markdown and packaged skill files |
-| Observe use | `.usage.json` telemetry |
-| Maintain the library | Deterministic curator plus optional model consolidation |
-| Recover | Archives, snapshots, and rollback commands |
+| Concern                      | Mechanism                                                           |
+| ---------------------------- | ------------------------------------------------------------------- |
+| Detect a possible lesson     | Foreground judgment and periodic background review                  |
+| Decide whether it is durable | Prompt policy plus deterministic exclusions                         |
+| Route the lesson             | User profile, memory, existing skill, support file, or new umbrella |
+| Find the owner               | Loaded-skill preference followed by library search                  |
+| Author a candidate change    | Foreground or forked model                                          |
+| Authorize mutation           | Tool-level ownership and provenance guards                          |
+| Prevent stale writes         | Read-before-write enforcement                                       |
+| Persist                      | Markdown and packaged skill files                                   |
+| Observe use                  | `.usage.json` telemetry                                             |
+| Maintain the library         | Deterministic curator plus optional model consolidation             |
+| Recover                      | Archives, snapshots, and rollback commands                          |
 
 This separation is more important than any individual prompt string.
 
@@ -414,17 +414,17 @@ Hermes demonstrates a mature routing and curation architecture. It does not elim
 
 ## Recommended mapping to the Claude plugin
 
-| Hermes concept | Claude Self-Improvement analogue |
-|---|---|
-| `USER.md` | Supported user-preference artifact controlled by plugin policy; do not mutate Claude-managed auto-memory without a documented contract |
-| `MEMORY.md` | Plugin-owned durable fact store or reviewed rule artifact |
-| `SKILL.md` | Personal or project Claude skill |
-| Background review fork | Post-task reviewer invoked explicitly in Phase 1 and automatically only in later phases |
-| `skill_manage` guards | Deterministic Go mutation policy and ownership checks |
-| `.usage.json` | SQLite metadata and/or sidecar provenance, reconciled against filesystem hashes |
-| Curator | Engine-event curator introduced in Phase 3 |
-| Curator backup | Mutation journal, backup, rollback, and reconciliation workflow |
-| Fresh session reuse | Packaged Claude Code session acceptance test |
+| Hermes concept         | Claude Self-Improvement analogue                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `USER.md`              | Supported user-preference artifact controlled by plugin policy; do not mutate Claude-managed auto-memory without a documented contract |
+| `MEMORY.md`            | Plugin-owned durable fact store or reviewed rule artifact                                                                              |
+| `SKILL.md`             | Personal or project Claude skill                                                                                                       |
+| Background review fork | Post-task reviewer invoked explicitly in Phase 1 and automatically only in later phases                                                |
+| `skill_manage` guards  | Deterministic Go mutation policy and ownership checks                                                                                  |
+| `.usage.json`          | SQLite metadata and/or sidecar provenance, reconciled against filesystem hashes                                                        |
+| Curator                | Engine-event curator introduced in Phase 3                                                                                             |
+| Curator backup         | Mutation journal, backup, rollback, and reconciliation workflow                                                                        |
+| Fresh session reuse    | Packaged Claude Code session acceptance test                                                                                           |
 
 ## Conclusion
 

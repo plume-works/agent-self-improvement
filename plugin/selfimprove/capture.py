@@ -60,8 +60,7 @@ def _latest_turn(session):
 
 
 def _save(event, record):
-    store.write_record(store.TURNS, turn_id(event), record,
-                       ttl=config.TURN_TTL, subdir=session_id(event))
+    store.write_record(store.TURNS, turn_id(event), record, ttl=config.TURN_TTL, subdir=session_id(event))
     return record
 
 
@@ -87,23 +86,28 @@ def record_prompt(event):
     prompt = event.get("prompt")
     found = markers.detect(prompt)
     record = load_turn(event)
-    record.update({
-        "session_id": session_id(event),
-        "turn_id": turn_id(event),
-        "cwd": event.get("cwd"),
-        "markers": found,
-        "started_at": record.get("started_at", int(time.time())),
-    })
+    record.update(
+        {
+            "session_id": session_id(event),
+            "turn_id": turn_id(event),
+            "cwd": event.get("cwd"),
+            "markers": found,
+            "started_at": record.get("started_at", int(time.time())),
+        }
+    )
     if markers.justifies_keeping_prompt(found):
         record["prompt"] = redact.scrub(prompt, limit=1500)
     else:
         record.pop("prompt", None)
     record.setdefault("events", [])
-    record["events"] = _append(record["events"], {
-        "kind": PROMPT,
-        "ts": int(time.time()),
-        "markers": found,
-    })
+    record["events"] = _append(
+        record["events"],
+        {
+            "kind": PROMPT,
+            "ts": int(time.time()),
+            "markers": found,
+        },
+    )
     return _save(event, record)
 
 
@@ -118,17 +122,18 @@ def record_tool_failure(event):
         return None
 
     record = load_turn(event)
-    signature = redact.tool_signature(event.get("tool_name"),
-                                      event.get("tool_input"),
-                                      cwd=event.get("cwd"))
+    signature = redact.tool_signature(event.get("tool_name"), event.get("tool_input"), cwd=event.get("cwd"))
     record.setdefault("events", [])
-    record["events"] = _append(record["events"], {
-        "kind": TOOL_FAILURE,
-        "ts": int(time.time()),
-        "tool": event.get("tool_name"),
-        "signature": signature,
-        "error_class": redact.error_class(event.get("error")),
-    })
+    record["events"] = _append(
+        record["events"],
+        {
+            "kind": TOOL_FAILURE,
+            "ts": int(time.time()),
+            "tool": event.get("tool_name"),
+            "signature": signature,
+            "error_class": redact.error_class(event.get("error")),
+        },
+    )
     return _save(event, record)
 
 
@@ -142,29 +147,31 @@ def record_tool_success(event):
     """
     record = load_turn(event)
     events = record.get("events", [])
-    signature = redact.tool_signature(event.get("tool_name"),
-                                      event.get("tool_input"),
-                                      cwd=event.get("cwd"))
+    signature = redact.tool_signature(event.get("tool_name"), event.get("tool_input"), cwd=event.get("cwd"))
 
-    prior = [item for item in events
-             if item.get("kind") == TOOL_FAILURE
-             and item.get("signature") == signature
-             and not item.get("resolved")]
+    prior = [
+        item
+        for item in events
+        if item.get("kind") == TOOL_FAILURE and item.get("signature") == signature and not item.get("resolved")
+    ]
     if not prior:
         return None
 
     for item in prior:
         item["resolved"] = True
 
-    record["events"] = _append(events, {
-        "kind": TOOL_SUCCESS,
-        "ts": int(time.time()),
-        "tool": event.get("tool_name"),
-        "signature": signature,
-        "after_failure": True,
-        "prior_error_class": prior[-1].get("error_class"),
-        "failures_before_success": len(prior),
-    })
+    record["events"] = _append(
+        events,
+        {
+            "kind": TOOL_SUCCESS,
+            "ts": int(time.time()),
+            "tool": event.get("tool_name"),
+            "signature": signature,
+            "after_failure": True,
+            "prior_error_class": prior[-1].get("error_class"),
+            "failures_before_success": len(prior),
+        },
+    )
     return _save(event, record)
 
 
@@ -173,5 +180,5 @@ def _append(events, item):
     events = list(events)
     events.append(item)
     if len(events) > config.MAX_EVENTS_PER_TURN:
-        events = events[-config.MAX_EVENTS_PER_TURN:]
+        events = events[-config.MAX_EVENTS_PER_TURN :]
     return events

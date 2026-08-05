@@ -10,28 +10,34 @@ import pytest
 from selfimprove import markers
 
 
-@pytest.mark.parametrize("prompt", [
-    "remember this for next time",
-    "please don't forget the migration step",
-    "from now on use uv",
-    "always run make test before committing",
-    "never commit directly to main",
-    "add this to your CLAUDE.md",
-    "going forward, prefer the shorter form",
-    "keep this in mind when editing schemas",
-])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "remember this for next time",
+        "please don't forget the migration step",
+        "from now on use uv",
+        "always run make test before committing",
+        "never commit directly to main",
+        "add this to your CLAUDE.md",
+        "going forward, prefer the shorter form",
+        "keep this in mind when editing schemas",
+    ],
+)
 def test_retention_requests_are_detected(prompt):
     assert markers.RETENTION in markers.detect(prompt)
 
 
-@pytest.mark.parametrize("prompt", [
-    "always prefer uv",
-    "never push to main",
-    "always format with black",
-    "no, always use `make test` in this repo, not pytest directly",
-    "use uv, and never call pip directly",
-    "fix the imports, then always sort them",
-])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "always prefer uv",
+        "never push to main",
+        "always format with black",
+        "no, always use `make test` in this repo, not pytest directly",
+        "use uv, and never call pip directly",
+        "fix the imports, then always sort them",
+    ],
+)
 def test_a_standing_directive_is_a_retention_request_whatever_verb_follows(prompt):
     """`always` and `never` are not tied to a list of blessed verbs.
 
@@ -43,16 +49,19 @@ def test_a_standing_directive_is_a_retention_request_whatever_verb_follows(promp
     assert markers.RETENTION in markers.detect(prompt)
 
 
-@pytest.mark.parametrize("prompt", [
-    "I'd like you to always use uv",
-    "you must never use pip",
-    "you should always run make test first",
-    "the agent shall never touch main",
-    "from here on you will always use uv",
-    "Could you always use uv?",
-    "Would you never push to main?",
-    "Can you always run make test?",
-])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "I'd like you to always use uv",
+        "you must never use pip",
+        "you should always run make test first",
+        "the agent shall never touch main",
+        "from here on you will always use uv",
+        "Could you always use uv?",
+        "Would you never push to main?",
+        "Can you always run make test?",
+    ],
+)
 def test_a_directive_introduced_by_a_modal_is_still_a_directive(prompt):
     """Politeness is not a reason to stop reviewing a standing rule.
 
@@ -64,18 +73,21 @@ def test_a_directive_introduced_by_a_modal_is_still_a_directive(prompt):
     assert markers.RETENTION in markers.detect(prompt)
 
 
-@pytest.mark.parametrize("prompt", [
-    "the build always fails on CI",
-    "it seems to always fail here",
-    "that will never work",
-    "that never worked",
-    "the flag was never set",
-    "this is always the case",
-    "tests never seem to pass",
-    "I have never seen that",
-    "The build will always break on Windows",
-    "This script will always delete the cache",
-])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "the build always fails on CI",
+        "it seems to always fail here",
+        "that will never work",
+        "that never worked",
+        "the flag was never set",
+        "this is always the case",
+        "tests never seem to pass",
+        "I have never seen that",
+        "The build will always break on Windows",
+        "This script will always delete the cache",
+    ],
+)
 def test_always_and_never_describing_the_world_are_not_directives(prompt):
     """The other half of widening the pattern, and the expensive half to get wrong.
 
@@ -86,41 +98,50 @@ def test_always_and_never_describing_the_world_are_not_directives(prompt):
     assert markers.RETENTION not in markers.detect(prompt)
 
 
-@pytest.mark.parametrize("prompt", [
-    "no, that's the wrong directory",
-    "actually, use the staging config",
-    "that's wrong",
-    "instead of pytest, run make test",
-    "don't use npm here",
-    "that didn't work, try again",
-    "the wrong branch was checked out",
-    "undo that change please",
-])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "no, that's the wrong directory",
+        "actually, use the staging config",
+        "that's wrong",
+        "instead of pytest, run make test",
+        "don't use npm here",
+        "that didn't work, try again",
+        "the wrong branch was checked out",
+        "undo that change please",
+    ],
+)
 def test_corrections_are_detected(prompt):
     assert markers.CORRECTION in markers.detect(prompt)
 
 
-@pytest.mark.parametrize("prompt", [
-    "that worked, thanks",
-    "yes, that did it",
-    "thanks, that fixed it",
-])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "that worked, thanks",
+        "yes, that did it",
+        "thanks, that fixed it",
+    ],
+)
 def test_confirmations_are_detected(prompt):
     assert markers.CONFIRMATION in markers.detect(prompt)
 
 
-@pytest.mark.parametrize("prompt", [
-    "add a test for the parser",
-    "what does this function do?",
-    "refactor the handler to use async",
-    "the build is failing on CI",
-    "show me the diff",
-    "run the tests",
-    "explain how routing works",
-    "I need to remember to call my mother",
-    "",
-    None,
-])
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "add a test for the parser",
+        "what does this function do?",
+        "refactor the handler to use async",
+        "the build is failing on CI",
+        "show me the diff",
+        "run the tests",
+        "explain how routing works",
+        "I need to remember to call my mother",
+        "",
+        None,
+    ],
+)
 def test_ordinary_prompts_produce_no_markers(prompt):
     """False positives cost a wasted review, so the negative cases matter most."""
     assert markers.detect(prompt) == []
@@ -143,13 +164,16 @@ def test_only_categories_are_returned():
     assert all(kind in markers.KINDS for kind in found)
 
 
-@pytest.mark.parametrize(("found", "expected"), [
-    ([markers.CORRECTION], True),
-    ([markers.RETENTION], True),
-    ([markers.CONFIRMATION], False),
-    ([], False),
-    (None, False),
-])
+@pytest.mark.parametrize(
+    ("found", "expected"),
+    [
+        ([markers.CORRECTION], True),
+        ([markers.RETENTION], True),
+        ([markers.CONFIRMATION], False),
+        ([], False),
+        (None, False),
+    ],
+)
 def test_only_corrections_and_retention_justify_keeping_the_prompt(found, expected):
     """Section 5.1 permits the prompt only for those two cases."""
     assert markers.justifies_keeping_prompt(found) is expected

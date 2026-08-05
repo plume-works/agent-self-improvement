@@ -61,12 +61,10 @@ def main(argv=None):
     except BaseException as exc:
         # Deliberate catch-all: recording why is worth more than propagating.
         with contextlib.suppress(Exception):
-            journal.diagnostic(subcommand, redact.error_class(str(exc)),
-                               exception=type(exc).__name__)
+            journal.diagnostic(subcommand, redact.error_class(str(exc)), exception=type(exc).__name__)
         if subcommand in FAIL_OPEN:
             return 0
-        sys.stderr.write("self-improve: %s failed (%s)\n"
-                         % (subcommand, type(exc).__name__))
+        sys.stderr.write("self-improve: %s failed (%s)\n" % (subcommand, type(exc).__name__))
         return 1
 
 

@@ -100,8 +100,7 @@ def grant(event, operation, arguments):
         "consumed": False,
     }
     record.update(arguments)
-    store.write_record(store.AUTHORIZATIONS, nonce, record,
-                       ttl=config.AUTHORIZATION_TTL)
+    store.write_record(store.AUTHORIZATIONS, nonce, record, ttl=config.AUTHORIZATION_TTL)
     return record
 
 

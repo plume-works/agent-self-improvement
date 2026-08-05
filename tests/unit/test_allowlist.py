@@ -26,12 +26,15 @@ def workspace(tmp_path, monkeypatch):
     return {"home": home, "project": project, "tmp": tmp_path}
 
 
-@pytest.mark.parametrize("relative", [
-    "CLAUDE.md",
-    "rules/testing.md",
-    "rules/frontend/style.md",
-    "skills/deploy/SKILL.md",
-])
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "CLAUDE.md",
+        "rules/testing.md",
+        "rules/frontend/style.md",
+        "skills/deploy/SKILL.md",
+    ],
+)
 def test_user_scope_artifacts_are_allowed(workspace, relative):
     target = workspace["home"] / relative
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -39,12 +42,15 @@ def test_user_scope_artifacts_are_allowed(workspace, relative):
     assert resolved["scope"] == allowlist.USER
 
 
-@pytest.mark.parametrize(("relative", "kind"), [
-    ("CLAUDE.md", allowlist.CLAUDE_MD),
-    (".claude/CLAUDE.md", allowlist.CLAUDE_MD),
-    (".claude/rules/testing.md", allowlist.RULE),
-    (".claude/skills/deploy/SKILL.md", allowlist.SKILL),
-])
+@pytest.mark.parametrize(
+    ("relative", "kind"),
+    [
+        ("CLAUDE.md", allowlist.CLAUDE_MD),
+        (".claude/CLAUDE.md", allowlist.CLAUDE_MD),
+        (".claude/rules/testing.md", allowlist.RULE),
+        (".claude/skills/deploy/SKILL.md", allowlist.SKILL),
+    ],
+)
 def test_project_scope_artifacts_are_allowed(workspace, relative, kind):
     target = workspace["project"] / relative
     resolved = allowlist.resolve(str(target))
@@ -52,17 +58,20 @@ def test_project_scope_artifacts_are_allowed(workspace, relative, kind):
     assert resolved["kind"] == kind
 
 
-@pytest.mark.parametrize("relative", [
-    "settings.json",
-    ".claude/settings.json",
-    ".claude/settings.local.json",
-    ".claude/hooks/hooks.json",
-    "src/main.py",
-    "README.md",
-    ".claude/skills/deploy/reference.md",
-    ".claude/rules",
-    ".git/config",
-])
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "settings.json",
+        ".claude/settings.json",
+        ".claude/settings.local.json",
+        ".claude/hooks/hooks.json",
+        "src/main.py",
+        "README.md",
+        ".claude/skills/deploy/reference.md",
+        ".claude/rules",
+        ".git/config",
+    ],
+)
 def test_everything_else_in_the_project_is_rejected(workspace, relative):
     with pytest.raises(allowlist.PathRejected):
         allowlist.resolve(str(workspace["project"] / relative))
@@ -87,18 +96,20 @@ def test_paths_outside_both_roots_are_rejected(workspace):
     assert caught.value.reason == "outside_allowed_roots"
 
 
-@pytest.mark.parametrize("attack", [
-    "../../../etc/passwd",
-    ".claude/../../outside/CLAUDE.md",
-    ".claude/rules/../../../CLAUDE.md",
-])
+@pytest.mark.parametrize(
+    "attack",
+    [
+        "../../../etc/passwd",
+        ".claude/../../outside/CLAUDE.md",
+        ".claude/rules/../../../CLAUDE.md",
+    ],
+)
 def test_traversal_is_rejected(workspace, attack):
     with pytest.raises(allowlist.PathRejected):
         allowlist.resolve(str(workspace["project"] / attack))
 
 
-def test_an_ordinary_path_reached_through_a_symlinked_prefix_is_allowed(
-        workspace, tmp_path, monkeypatch):
+def test_an_ordinary_path_reached_through_a_symlinked_prefix_is_allowed(workspace, tmp_path, monkeypatch):
     """A regression: /tmp is a symlink to /private/tmp on macOS.
 
     Comparing only the caller's literal spelling of the path rejected every
@@ -199,9 +210,12 @@ def test_candidate_paths_rejects_an_unknown_kind(workspace):
 def test_every_described_shape_actually_resolves(workspace):
     """The list shown to a user must match the list actually enforced."""
     for shape in allowlist.describe():
-        concrete = (shape.replace("<name>", "deploy").replace("*", "testing")
-                    .replace("~", str(workspace["home"]))
-                    .replace("./", str(workspace["project"]) + "/"))
+        concrete = (
+            shape.replace("<name>", "deploy")
+            .replace("*", "testing")
+            .replace("~", str(workspace["home"]))
+            .replace("./", str(workspace["project"]) + "/")
+        )
         if concrete.startswith(str(workspace["home"])) and "/.claude/" in concrete:
             concrete = concrete.replace("/.claude/", "/")
         allowlist.resolve(concrete)

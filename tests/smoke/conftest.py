@@ -66,7 +66,10 @@ CORRECTION = "no, always use `make test` in this repo, not pytest directly"
 # nothing that can write a file: staging goes through si, which is the only
 # component allowed to touch a target.
 ALLOWED_TOOLS = [
-    "Read", "Grep", "Glob", "Bash(%s:*)" % SI,
+    "Read",
+    "Grep",
+    "Glob",
+    "Bash(%s:*)" % SI,
 ]
 
 # Check 2 runs interactively, where a permission prompt is not a rejected tool
@@ -75,7 +78,11 @@ ALLOWED_TOOLS = [
 # run are allowed up front.
 INTERACTIVE_ALLOWED_TOOLS = [
     *ALLOWED_TOOLS,
-    "Bash(pytest:*)", "Bash(make:*)", "Bash(git:*)", "Bash(ls:*)", "Bash(cat:*)",
+    "Bash(pytest:*)",
+    "Bash(make:*)",
+    "Bash(git:*)",
+    "Bash(ls:*)",
+    "Bash(cat:*)",
 ]
 
 MAKEFILE = """\
@@ -124,10 +131,21 @@ def seed_runnable_project(project):
     tests.mkdir(exist_ok=True)
     (tests / "test_calculator.py").write_text(TEST_MODULE)
     subprocess.run(["git", "add", "-A"], cwd=str(project), check=True)
-    subprocess.run(["git", "-c", "user.email=smoke@example.invalid",
-                    "-c", "user.name=Smoke Test", "commit", "-q",
-                    "-m", "Add a calculator and its tests"],
-                   cwd=str(project), check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.email=smoke@example.invalid",
+            "-c",
+            "user.name=Smoke Test",
+            "commit",
+            "-q",
+            "-m",
+            "Add a calculator and its tests",
+        ],
+        cwd=str(project),
+        check=True,
+    )
     return project
 
 
@@ -178,8 +196,7 @@ def runner_environment(auto_memory=None):
     turn of check 2 succeeds instead of failing on a missing module.
     """
     environment = dict(os.environ)
-    environment["PATH"] = os.pathsep.join(
-        [os.path.dirname(sys.executable), environment.get("PATH", "")])
+    environment["PATH"] = os.pathsep.join([os.path.dirname(sys.executable), environment.get("PATH", "")])
     return with_auto_memory(environment, auto_memory)
 
 
@@ -191,31 +208,35 @@ def require_cli():
 @pytest.fixture(scope="session")
 def cli_version():
     require_cli()
-    result = subprocess.run(["claude", "--version"], capture_output=True,
-                            text=True, timeout=30)
+    result = subprocess.run(["claude", "--version"], capture_output=True, text=True, timeout=30)
     match = re.search(r"(\d+)\.(\d+)\.(\d+)", result.stdout or "")
     if not match:
         pytest.skip("could not determine the claude version")
     version = tuple(int(part) for part in match.groups())
     if version < (2, 1, 196):
-        pytest.skip("claude %s predates UserPromptExpansion; upgrade to 2.1.196+"
-                    % ".".join(str(p) for p in version))
+        pytest.skip("claude %s predates UserPromptExpansion; upgrade to 2.1.196+" % ".".join(str(p) for p in version))
     return version
 
 
 # Provider-side failures: the CLI ran, the call inside it did not. These say
 # nothing about the plugin, so a check that hits one is retried and then skipped
 # rather than reported as a product failure. Everything else fails loudly.
-PROVIDER_STATUSES = {401: "unauthenticated", 403: "unauthenticated",
-                     429: "rate_limited", 500: "provider_error",
-                     502: "provider_error", 503: "overloaded",
-                     529: "overloaded"}
+PROVIDER_STATUSES = {
+    401: "unauthenticated",
+    403: "unauthenticated",
+    429: "rate_limited",
+    500: "provider_error",
+    502: "provider_error",
+    503: "overloaded",
+    529: "overloaded",
+}
 
 PROVIDER_PHRASES = re.compile(
     r"(?i)usage limit|out of credit|quota|rate[ _-]?limit|too many requests|"
     r"overloaded|service unavailable|api error|internal server error|"
     r"invalid api key|please run /login|not logged in|"
-    r"issue with the selected model")
+    r"issue with the selected model"
+)
 
 SESSION_RETRY_DELAY = 20
 
@@ -305,8 +326,7 @@ def scratch(request, monkeypatch, cli_version):
     monkeypatch.delenv("CLAUDE_PLUGIN_DATA", raising=False)
     monkeypatch.setenv("CLAUDE_PLUGIN_ROOT", PLUGIN_ROOT)
     monkeypatch.chdir(project)
-    return {"project": project, "state": state, "target": project / "CLAUDE.md",
-            "workspace": pathlib.Path(workspace)}
+    return {"project": project, "state": state, "target": project / "CLAUDE.md", "workspace": pathlib.Path(workspace)}
 
 
 class Session:
@@ -366,10 +386,8 @@ class Session:
             if event.get("type") == "assistant" and event.get("is_api_error_message"):
                 return _provider_class(event.get("error"), _text_of(event))
         for event in self.results():
-            if event.get("terminal_reason") == "api_error" or \
-                    event.get("api_error_status"):
-                return _provider_class(event.get("api_error_status"),
-                                       event.get("result"))
+            if event.get("terminal_reason") == "api_error" or event.get("api_error_status"):
+                return _provider_class(event.get("api_error_status"), event.get("result"))
         if not self.results():
             # No result event at all: the CLI never got as far as a turn. Only a
             # provider or authentication failure is transient; anything else has
@@ -381,23 +399,24 @@ class Session:
         """Why this session did not complete a normal turn, provider aside."""
         if self.returncode != 0:
             return "the claude CLI exited %d: %s" % (
-                self.returncode, (self.stderr or "").strip()[:400] or "(no stderr)")
+                self.returncode,
+                (self.stderr or "").strip()[:400] or "(no stderr)",
+            )
         results = self.results()
         if not results:
             return "the session emitted no result event"
         last = results[-1]
         if last.get("is_error") or last.get("subtype") not in (None, "success"):
-            return "the session ended in %s (%s)" % (
-                last.get("subtype"), last.get("terminal_reason"))
+            return "the session ended in %s (%s)" % (last.get("subtype"), last.get("terminal_reason"))
         if not [event for event in self.events if event.get("type") == "assistant"]:
             return "the session produced no assistant message"
         return None
 
 
 def _text_of(event):
-    chunks = [block.get("text", "")
-              for block in event.get("message", {}).get("content", [])
-              if block.get("type") == "text"]
+    chunks = [
+        block.get("text", "") for block in event.get("message", {}).get("content", []) if block.get("type") == "text"
+    ]
     return "\n".join(chunks)
 
 
@@ -425,8 +444,7 @@ def run_session(cwd, messages, timeout=600, extra_args=None, attempts=2):
     session = None
     reason = None
     for attempt in range(attempts):
-        session = _run_session_once(cwd, messages, timeout=timeout,
-                                    extra_args=extra_args)
+        session = _run_session_once(cwd, messages, timeout=timeout, extra_args=extra_args)
         reason = session.provider_failure()
         if reason is None:
             break
@@ -434,44 +452,53 @@ def run_session(cwd, messages, timeout=600, extra_args=None, attempts=2):
             time.sleep(SESSION_RETRY_DELAY)
 
     if reason is not None:
-        pytest.skip("the model call did not go through (%s); this check observed "
-                    "nothing about the plugin. %d attempt%s, %ds apart."
-                    % (reason, attempts, "" if attempts == 1 else "s",
-                       SESSION_RETRY_DELAY))
+        pytest.skip(
+            "the model call did not go through (%s); this check observed "
+            "nothing about the plugin. %d attempt%s, %ds apart."
+            % (reason, attempts, "" if attempts == 1 else "s", SESSION_RETRY_DELAY)
+        )
 
     failed = session.failure()
-    assert failed is None, \
-        "the session did not complete a turn, so nothing below is meaningful: %s" \
-        % failed
+    assert failed is None, "the session did not complete a turn, so nothing below is meaningful: %s" % failed
     return session
 
 
 def _run_session_once(cwd, messages, timeout=600, extra_args=None):
     require_cli()
     command = [
-        "claude", "-p",
-        "--input-format", "stream-json",
-        "--output-format", "stream-json",
+        "claude",
+        "-p",
+        "--input-format",
+        "stream-json",
+        "--output-format",
+        "stream-json",
         "--include-hook-events",
         "--verbose",
-        "--plugin-dir", PLUGIN_ROOT,
+        "--plugin-dir",
+        PLUGIN_ROOT,
         *session_args(),
-        "--allowedTools", *ALLOWED_TOOLS,
-        "--max-turns", "40",
+        "--allowedTools",
+        *ALLOWED_TOOLS,
+        "--max-turns",
+        "40",
     ]
     command += list(extra_args or [])
 
     payload = "".join(
-        json.dumps({"type": "user",
-                    "message": {"role": "user",
-                                "content": [{"type": "text", "text": text}]}}) + "\n"
+        json.dumps({"type": "user", "message": {"role": "user", "content": [{"type": "text", "text": text}]}}) + "\n"
         for text in messages
     )
 
     started = time.time()
-    process = subprocess.run(command, input=payload, capture_output=True,
-                             text=True, cwd=str(cwd), timeout=timeout,
-                             env=with_auto_memory(dict(os.environ)))
+    process = subprocess.run(
+        command,
+        input=payload,
+        capture_output=True,
+        text=True,
+        cwd=str(cwd),
+        timeout=timeout,
+        env=with_auto_memory(dict(os.environ)),
+    )
     elapsed = time.time() - started
 
     events = []
@@ -492,27 +519,35 @@ def session(scratch):
         if isinstance(messages, str):
             messages = [messages]
         return run_session(scratch["project"], messages, **kwargs)
+
     return _run
 
 
 def si(scratch, *args, stdin=None):
     """Invoke the packaged dispatcher the way a hook or skill would."""
-    return subprocess.run([SI, *args], input=stdin if stdin is not None else "",
-                          capture_output=True, text=True,
-                          cwd=str(scratch["project"]), env=dict(os.environ),
-                          timeout=120)
+    return subprocess.run(
+        [SI, *args],
+        input=stdin if stdin is not None else "",
+        capture_output=True,
+        text=True,
+        cwd=str(scratch["project"]),
+        env=dict(os.environ),
+        timeout=120,
+    )
 
 
 def expansion(operation, args, session_id="smoke-session"):
     """The hook payload Claude Code emits when the user types a plugin command."""
-    return json.dumps({
-        "hook_event_name": "UserPromptExpansion",
-        "session_id": session_id,
-        "expansion_type": "slash_command",
-        "command_source": "plugin",
-        "command_name": operation,
-        "command_args": args,
-    })
+    return json.dumps(
+        {
+            "hook_event_name": "UserPromptExpansion",
+            "session_id": session_id,
+            "expansion_type": "slash_command",
+            "command_source": "plugin",
+            "command_name": operation,
+            "command_args": args,
+        }
+    )
 
 
 def ask(question):

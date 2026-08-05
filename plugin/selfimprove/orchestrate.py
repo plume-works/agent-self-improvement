@@ -77,14 +77,11 @@ def run(event, forced=False, focus=None):
         # decline reads completely differently depending on which turn was
         # reviewed, and without this the journal cannot say. It is one of the
         # gate's own bounded labels, never anything the user or the model wrote.
-        journal.diagnostic("review_outcome", "no_lesson", reason=reason,
-                           signal=signal.get("type"))
+        journal.diagnostic("review_outcome", "no_lesson", reason=reason, signal=signal.get("type"))
         capture.discard_turn(event, turn)
         return {"outcome": "no_lesson", "reason": reason}
 
-    fingerprint = proposals.fingerprint(result["lesson"],
-                                        result["destination_scope"],
-                                        result["destination_kind"])
+    fingerprint = proposals.fingerprint(result["lesson"], result["destination_scope"], result["destination_kind"])
     status = journal.fingerprint_status(fingerprint)
     if status is not None:
         # Section 11: a duplicate candidate is suppressed, whether the user
@@ -97,26 +94,25 @@ def run(event, forced=False, focus=None):
 
     candidate = _store_candidate(event, signal, result, fingerprint)
     capture.discard_turn(event, turn)
-    gate.note_awaiting_presentation(event.get("session_id"),
-                                    candidate["candidate_id"])
-    return {"outcome": "candidate", "candidate": candidate,
-            "message": wake_message(candidate)}
+    gate.note_awaiting_presentation(event.get("session_id"), candidate["candidate_id"])
+    return {"outcome": "candidate", "candidate": candidate, "message": wake_message(candidate)}
 
 
 def _store_candidate(event, signal, result, fingerprint):
     candidate_id = "cand-%s" % uuid.uuid4().hex[:12]
     record = dict(result)
-    record.update({
-        "candidate_id": candidate_id,
-        "fingerprint": fingerprint,
-        "session_id": event.get("session_id"),
-        "cwd": event.get("cwd"),
-        "signal": signal.get("type"),
-        "detected_at": int(time.time()),
-    })
+    record.update(
+        {
+            "candidate_id": candidate_id,
+            "fingerprint": fingerprint,
+            "session_id": event.get("session_id"),
+            "cwd": event.get("cwd"),
+            "signal": signal.get("type"),
+            "detected_at": int(time.time()),
+        }
+    )
     record.pop("decision", None)
-    store.write_record(store.CANDIDATES, candidate_id, record,
-                       ttl=config.CANDIDATE_TTL)
+    store.write_record(store.CANDIDATES, candidate_id, record, ttl=config.CANDIDATE_TTL)
     _add_pending(record)
     return record
 
@@ -131,16 +127,16 @@ def _add_pending(record):
     path = paths.state_path(PENDING)
     existing = store.read_path(path, allow_expired=True) or {}
     entries = existing.get("candidates", [])
-    entries = [entry for entry in entries
-               if entry.get("candidate_id") != record["candidate_id"]]
-    entries.append({
-        "candidate_id": record["candidate_id"],
-        "cwd": record.get("cwd"),
-        "lesson": record.get("lesson"),
-        "expires_at": int(time.time()) + config.CANDIDATE_TTL,
-    })
-    paths.atomic_write(path, json.dumps({"candidates": entries[-25:]},
-                                        sort_keys=True, indent=2) + "\n")
+    entries = [entry for entry in entries if entry.get("candidate_id") != record["candidate_id"]]
+    entries.append(
+        {
+            "candidate_id": record["candidate_id"],
+            "cwd": record.get("cwd"),
+            "lesson": record.get("lesson"),
+            "expires_at": int(time.time()) + config.CANDIDATE_TTL,
+        }
+    )
+    paths.atomic_write(path, json.dumps({"candidates": entries[-25:]}, sort_keys=True, indent=2) + "\n")
     return path
 
 
@@ -163,10 +159,8 @@ def pending_candidates(cwd=None, now=None):
 def drop_pending(candidate_id):
     path = paths.state_path(PENDING)
     record = store.read_path(path, allow_expired=True) or {}
-    entries = [entry for entry in record.get("candidates", [])
-               if entry.get("candidate_id") != candidate_id]
-    paths.atomic_write(path, json.dumps({"candidates": entries},
-                                        sort_keys=True, indent=2) + "\n")
+    entries = [entry for entry in record.get("candidates", []) if entry.get("candidate_id") != candidate_id]
+    paths.atomic_write(path, json.dumps({"candidates": entries}, sort_keys=True, indent=2) + "\n")
 
 
 def _owner_summaries(event):
@@ -195,6 +189,5 @@ def wake_message(candidate):
         "to approve. Present the staged proposal verbatim. Do not edit any file "
         "yourself, and do not apply anything: only a command the user types can "
         "authorize a change."
-        % (candidate["candidate_id"], candidate.get("signal"),
-           candidate.get("confidence"), candidate.get("lesson"))
+        % (candidate["candidate_id"], candidate.get("signal"), candidate.get("confidence"), candidate.get("lesson"))
     )

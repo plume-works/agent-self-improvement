@@ -81,7 +81,7 @@ def _strip_code_fence(text):
     closing = text.rfind("```")
     if closing <= newline:
         return None
-    return text[newline + 1:closing].strip()
+    return text[newline + 1 : closing].strip()
 
 
 def _first_balanced_object(text):
@@ -109,7 +109,7 @@ def _first_balanced_object(text):
         elif char == "}":
             depth -= 1
             if depth == 0:
-                return text[start:index + 1]
+                return text[start : index + 1]
     return None
 
 

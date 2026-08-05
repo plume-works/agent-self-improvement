@@ -72,18 +72,19 @@ def test_authentication_failure_is_classified(state_root, fake_reviewer):
     assert reviewer.review(BUNDLE)["discard_reason"] == "unauthenticated"
 
 
-def test_provider_failures_are_classified_apart_from_a_declined_review(
-        state_root, fake_reviewer):
+def test_provider_failures_are_classified_apart_from_a_declined_review(state_root, fake_reviewer):
     """A review that never happened must not look like one that said no.
 
     Section 11 keeps every one of these silent, but the recorded class is the
     only thing a later investigation has, and "the provider was busy" and "the
     reviewer found no lesson" call for opposite responses.
     """
-    for mode, expected in (("rate_limited", "rate_limited"),
-                           ("overloaded", "overloaded"),
-                           ("provider_error", "provider_error"),
-                           ("bad_model", "model_unavailable")):
+    for mode, expected in (
+        ("rate_limited", "rate_limited"),
+        ("overloaded", "overloaded"),
+        ("provider_error", "provider_error"),
+        ("bad_model", "model_unavailable"),
+    ):
         fake_reviewer.mode(mode)
         result = reviewer.review(BUNDLE)
         assert result["decision"] == schema.DISCARD
@@ -103,8 +104,7 @@ def test_missing_binary_becomes_a_discard(state_root, monkeypatch):
 def test_every_failure_is_recorded_as_a_bounded_class(state_root, fake_reviewer):
     fake_reviewer.mode("crash")
     reviewer.review(BUNDLE)
-    with open(os.path.join(paths.state_root(), journal.DIAGNOSTICS),
-              encoding="utf-8") as handle:
+    with open(os.path.join(paths.state_root(), journal.DIAGNOSTICS), encoding="utf-8") as handle:
         records = [json.loads(line) for line in handle if line.strip()]
     assert records
     for record in records:
@@ -130,8 +130,7 @@ def test_reviewer_is_invoked_with_no_tools(state_root, fake_reviewer):
 def test_reviewer_uses_the_configured_model(state_root, fake_reviewer, monkeypatch):
     fake_reviewer.mode("discard")
     reviewer.review(BUNDLE)
-    assert fake_reviewer.recorded_argv()[
-        fake_reviewer.recorded_argv().index("--model") + 1] == "sonnet"
+    assert fake_reviewer.recorded_argv()[fake_reviewer.recorded_argv().index("--model") + 1] == "sonnet"
 
     monkeypatch.setenv("SELF_IMPROVE_REVIEW_MODEL", "haiku")
     reviewer.review(BUNDLE)
@@ -198,8 +197,7 @@ def test_an_empty_reviewer_effort_also_drops_an_inherited_level(state_root, monk
 
 def test_reviewer_prompt_forbids_tool_use_in_its_own_text():
     """The prompt should not invite behavior the flags already prevent."""
-    with open(os.path.join(paths.plugin_root(), "reviewer", "prompt.md"),
-              encoding="utf-8") as handle:
+    with open(os.path.join(paths.plugin_root(), "reviewer", "prompt.md"), encoding="utf-8") as handle:
         text = handle.read()
     assert "You have no tools" in text
     assert "discard" in text

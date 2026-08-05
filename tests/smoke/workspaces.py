@@ -62,8 +62,7 @@ def run_stamp(now=None):
     """
     now = time.time_ns() if now is None else now
     seconds, nanoseconds = divmod(now, 1_000_000_000)
-    return "%s.%09d" % (time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(seconds)),
-                        nanoseconds)
+    return "%s.%09d" % (time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime(seconds)), nanoseconds)
 
 
 def run_root():
@@ -145,8 +144,7 @@ LEGACY_KEY_TAIL = r"-test-.+-project"
 
 
 def claude_config_dir():
-    return os.environ.get("CLAUDE_CONFIG_DIR") or \
-        os.path.join(os.path.expanduser("~"), ".claude")
+    return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
 
 
 def claude_session_dir(project):
@@ -166,12 +164,15 @@ def scratch_project_dirs(config_dir=None):
     projects = os.path.join(config_dir or claude_config_dir(), "projects")
     if not os.path.isdir(projects):
         return []
-    patterns = [re.compile(re.escape(mangle_path(root)) + tail + r"\Z")
-                for root, tail in [(RUNS_ROOT, RUN_KEY_TAIL)]
-                + [(legacy, LEGACY_KEY_TAIL) for legacy in LEGACY_ROOTS]]
-    return sorted(os.path.join(projects, entry)
-                  for entry in os.listdir(projects)
-                  if any(pattern.match(entry) for pattern in patterns))
+    patterns = [
+        re.compile(re.escape(mangle_path(root)) + tail + r"\Z")
+        for root, tail in [(RUNS_ROOT, RUN_KEY_TAIL)] + [(legacy, LEGACY_KEY_TAIL) for legacy in LEGACY_ROOTS]
+    ]
+    return sorted(
+        os.path.join(projects, entry)
+        for entry in os.listdir(projects)
+        if any(pattern.match(entry) for pattern in patterns)
+    )
 
 
 def sweep_claude_projects(config_dir=None, stream=None):
@@ -193,8 +194,7 @@ def sweep_claude_projects(config_dir=None, stream=None):
         stream.write("removing %s\n" % path)
         shutil.rmtree(path, ignore_errors=True)
         removed.append(path)
-    stream.write("removed %d test-run project director%s\n"
-                 % (len(removed), "y" if len(removed) == 1 else "ies"))
+    stream.write("removed %d test-run project director%s\n" % (len(removed), "y" if len(removed) == 1 else "ies"))
     return removed
 
 

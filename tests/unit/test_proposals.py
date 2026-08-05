@@ -36,8 +36,9 @@ def test_staging_does_not_touch_the_target(target, state_root):
 
 
 def test_staged_record_carries_a_readable_diff(target, state_root):
-    record = proposals.stage(str(target), "# Project\n\n- Existing instruction.\n"
-                             "- Run the suite with `make test`.\n", CANDIDATE)
+    record = proposals.stage(
+        str(target), "# Project\n\n- Existing instruction.\n- Run the suite with `make test`.\n", CANDIDATE
+    )
     assert "+- Run the suite with `make test`." in record["diff"]
     assert record["diff"].startswith("---")
 
@@ -127,13 +128,13 @@ def test_loading_an_unknown_proposal_fails(state_root):
 
 
 def test_fingerprints_ignore_trivial_rewording():
-    assert proposals.fingerprint("Use  MAKE test.", "project", "CLAUDE.md") == \
-        proposals.fingerprint("use make TEST.", "project", "CLAUDE.md")
+    assert proposals.fingerprint("Use  MAKE test.", "project", "CLAUDE.md") == proposals.fingerprint(
+        "use make TEST.", "project", "CLAUDE.md"
+    )
 
 
 def test_fingerprints_distinguish_scope():
-    assert proposals.fingerprint("x y z", "project", "CLAUDE.md") != \
-        proposals.fingerprint("x y z", "user", "CLAUDE.md")
+    assert proposals.fingerprint("x y z", "project", "CLAUDE.md") != proposals.fingerprint("x y z", "user", "CLAUDE.md")
 
 
 def test_summary_shows_destination_hash_and_both_commands(target, state_root):
@@ -141,12 +142,10 @@ def test_summary_shows_destination_hash_and_both_commands(target, state_root):
     text = proposals.summary(record)
     assert record["target"] in text
     assert record["hash_prefix"] in text
-    assert "/self-improve:apply %s %s" % (record["proposal_id"],
-                                          record["hash_prefix"]) in text
+    assert "/self-improve:apply %s %s" % (record["proposal_id"], record["hash_prefix"]) in text
     assert "/self-improve:reject %s" % record["proposal_id"] in text
 
 
 def test_summary_scrubs_credentials_from_the_lesson(target, state_root):
-    record = proposals.stage(str(target), "new\n",
-                             {"lesson": "token is ghp_abcdefghijklmnopqrstuvwxyz01"})
+    record = proposals.stage(str(target), "new\n", {"lesson": "token is ghp_abcdefghijklmnopqrstuvwxyz01"})
     assert "ghp_" not in proposals.summary(record)

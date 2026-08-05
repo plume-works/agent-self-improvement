@@ -54,9 +54,7 @@ def test_sweep_clears_ephemeral_turn_data(state_root):
     """Spec section 10 requires ephemeral turn input to be deleted on expiry."""
     store.write_record(store.TURNS, "t1", {"prompt": "x"}, ttl=-1, subdir="session-a")
     store.sweep()
-    assert not os.path.exists(
-        os.path.join(paths.state_root(), store.TURNS, "session-a", "t1.json")
-    )
+    assert not os.path.exists(os.path.join(paths.state_root(), store.TURNS, "session-a", "t1.json"))
 
 
 def test_sweep_prunes_empty_session_directories(state_root):

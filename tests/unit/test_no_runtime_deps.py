@@ -42,10 +42,8 @@ def imported_roots(path):
     return roots
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10),
-                    reason="sys.stdlib_module_names requires Python 3.10")
-@pytest.mark.parametrize("path", sorted(runtime_modules()),
-                         ids=lambda p: os.path.relpath(p, PLUGIN_ROOT))
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="sys.stdlib_module_names requires Python 3.10")
+@pytest.mark.parametrize("path", sorted(runtime_modules()), ids=lambda p: os.path.relpath(p, PLUGIN_ROOT))
 def test_runtime_imports_stdlib_only(path):
     local_packages = {"selfimprove"}
     allowed = set(sys.stdlib_module_names) | local_packages
@@ -56,15 +54,13 @@ def test_runtime_imports_stdlib_only(path):
     )
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10),
-                    reason="sys.stdlib_module_names requires Python 3.10")
-@pytest.mark.parametrize("path", sorted(runtime_modules()),
-                         ids=lambda p: os.path.relpath(p, PLUGIN_ROOT))
+@pytest.mark.skipif(sys.version_info < (3, 10), reason="sys.stdlib_module_names requires Python 3.10")
+@pytest.mark.parametrize("path", sorted(runtime_modules()), ids=lambda p: os.path.relpath(p, PLUGIN_ROOT))
 def test_runtime_avoids_post_39_stdlib(path):
     used = imported_roots(path) & POST_39_STDLIB
-    assert not used, (
-        "%s imports %s, which the 3.9 runtime target does not provide"
-        % (os.path.relpath(path, PLUGIN_ROOT), sorted(used))
+    assert not used, "%s imports %s, which the 3.9 runtime target does not provide" % (
+        os.path.relpath(path, PLUGIN_ROOT),
+        sorted(used),
     )
 
 
@@ -75,6 +71,4 @@ def test_project_declares_no_runtime_dependencies():
     """
     with open(os.path.join(REPO_ROOT, "pyproject.toml"), encoding="utf-8") as handle:
         text = handle.read()
-    assert "\ndependencies = []\n" in text, (
-        "pyproject.toml must declare an empty project.dependencies list"
-    )
+    assert "\ndependencies = []\n" in text, "pyproject.toml must declare an empty project.dependencies list"

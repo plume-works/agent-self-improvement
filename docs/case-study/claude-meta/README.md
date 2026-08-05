@@ -36,14 +36,14 @@ Immutable upstream citations use the pinned commit. Repository metadata such as 
 
 ### Inventory
 
-| File | Lines | Role |
-| --- | ---: | --- |
-| [`README.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/README.md) | 214 | Article and adoption pitch |
-| [`ARTICLE.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/ARTICLE.md) | 140 | Clean standalone copy of the article |
-| [`CLAUDE_TEMPLATE.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/CLAUDE_TEMPLATE.md) | 193 | Starter project-instruction template |
-| [`CLAUDE_FULL.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/CLAUDE_FULL.md) | 875 | Project-specific “production” example |
-| [`CONTRIBUTING.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/CONTRIBUTING.md) | 43 | Contribution guidance |
-| [`LICENSE`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/LICENSE) | 21 | MIT license |
+| File                                                                                                                            | Lines | Role                                  |
+| ------------------------------------------------------------------------------------------------------------------------------- | ----: | ------------------------------------- |
+| [`README.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/README.md)                   |   214 | Article and adoption pitch            |
+| [`ARTICLE.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/ARTICLE.md)                 |   140 | Clean standalone copy of the article  |
+| [`CLAUDE_TEMPLATE.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/CLAUDE_TEMPLATE.md) |   193 | Starter project-instruction template  |
+| [`CLAUDE_FULL.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/CLAUDE_FULL.md)         |   875 | Project-specific “production” example |
+| [`CONTRIBUTING.md`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/CONTRIBUTING.md)       |    43 | Contribution guidance                 |
+| [`LICENSE`](https://github.com/aviadr1/claude-meta/blob/93bf944ffabc525808f4cd7d5cca09ff9cd0876c/LICENSE)                       |    21 | MIT license                           |
 
 Observed release reality at the pinned study date:
 
@@ -60,14 +60,14 @@ This is consistent with the contribution guide's explicit statement that [“thi
 
 ### Claims versus implementation
 
-| Claim or implication | Repository evidence | Assessment |
-| --- | --- | --- |
-| “One prompt” creates a learning loop | The prompt is documented in the article and starter template | Implemented as a manual convention |
-| Meta-rules maintain quality | Starter template contains writing and anti-bloat rules | Partially implemented; prompt adherence is the only enforcement |
-| Every mistake becomes permanent learning | Claude is told to write directly to `CLAUDE.md` | Overstated; persistence does not prove correctness or future adherence |
-| Quality compounds rather than degrades | No longitudinal data, evaluations, or contradiction checks are included | Unsupported outcome claim |
-| Full example demonstrates months of evolution | An 875-line project-specific snapshot is supplied | Example exists; evolution history and outcomes are not evidenced in this repository |
-| Complete self-improving system | No runtime, automatic trigger, policy, validation, or rollback exists | A useful manual workflow, not a complete control plane |
+| Claim or implication                          | Repository evidence                                                     | Assessment                                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| “One prompt” creates a learning loop          | The prompt is documented in the article and starter template            | Implemented as a manual convention                                                  |
+| Meta-rules maintain quality                   | Starter template contains writing and anti-bloat rules                  | Partially implemented; prompt adherence is the only enforcement                     |
+| Every mistake becomes permanent learning      | Claude is told to write directly to `CLAUDE.md`                         | Overstated; persistence does not prove correctness or future adherence              |
+| Quality compounds rather than degrades        | No longitudinal data, evaluations, or contradiction checks are included | Unsupported outcome claim                                                           |
+| Full example demonstrates months of evolution | An 875-line project-specific snapshot is supplied                       | Example exists; evolution history and outcomes are not evidenced in this repository |
+| Complete self-improving system                | No runtime, automatic trigger, policy, validation, or rollback exists   | A useful manual workflow, not a complete control plane                              |
 
 ## Actual mechanism
 
@@ -234,24 +234,24 @@ Use fresh sessions and held-out tasks; measure recurrence, false generalization,
 
 ## Comparison with Claude Self-Improvement
 
-| Concern | `claude-meta` | Claude Self-Improvement design |
-| --- | --- | --- |
-| First trigger | Explicit human prompt | Explicit `/self-improvement:learn` |
-| Detection cost | None until user invokes | None in `v0.1`; bounded hooks later |
-| Reflection | Free-form prompt | Structured reviewer rubric |
-| Evidence | Current conversation context | Bounded typed evidence |
-| Destination | Project `CLAUDE.md` only | Memory, rule, skill, hook, reference, or discard |
-| Proposal review | Implicit; model writes directly | Exact typed proposal, separate approve/apply |
-| Mutation owner | Claude file tools | Deterministic `claude-si` engine |
-| Existing artifacts | Append/edit by model judgment | Search first; ownership and base-hash checks |
-| Recovery | Incidental editor/Git history | Mutation journal, observed hashes, recovery and rollback |
-| Provenance | None | Candidate, proposal, actor, ownership, mutation history |
-| Privacy | No defined filter | Credential canaries, redaction, bounded persistence |
-| Concurrency | Undefined | Engine lock plus explicit external-writer conflict limits |
-| Enforcement | Prompt adherence | Hooks/settings when deterministic enforcement is required |
-| Context cost | Grows with one always-loaded file | Route procedures to on-demand skills and path-scoped rules |
-| Packaging/tests | None | Exact packaged-artifact and crash-recovery gates |
-| Complexity | Minimal | Higher; justified only if it demonstrates safer durable value |
+| Concern            | `claude-meta`                     | Claude Self-Improvement design                                |
+| ------------------ | --------------------------------- | ------------------------------------------------------------- |
+| First trigger      | Explicit human prompt             | Explicit `/self-improvement:learn`                            |
+| Detection cost     | None until user invokes           | None in `v0.1`; bounded hooks later                           |
+| Reflection         | Free-form prompt                  | Structured reviewer rubric                                    |
+| Evidence           | Current conversation context      | Bounded typed evidence                                        |
+| Destination        | Project `CLAUDE.md` only          | Memory, rule, skill, hook, reference, or discard              |
+| Proposal review    | Implicit; model writes directly   | Exact typed proposal, separate approve/apply                  |
+| Mutation owner     | Claude file tools                 | Deterministic `claude-si` engine                              |
+| Existing artifacts | Append/edit by model judgment     | Search first; ownership and base-hash checks                  |
+| Recovery           | Incidental editor/Git history     | Mutation journal, observed hashes, recovery and rollback      |
+| Provenance         | None                              | Candidate, proposal, actor, ownership, mutation history       |
+| Privacy            | No defined filter                 | Credential canaries, redaction, bounded persistence           |
+| Concurrency        | Undefined                         | Engine lock plus explicit external-writer conflict limits     |
+| Enforcement        | Prompt adherence                  | Hooks/settings when deterministic enforcement is required     |
+| Context cost       | Grows with one always-loaded file | Route procedures to on-demand skills and path-scoped rules    |
+| Packaging/tests    | None                              | Exact packaged-artifact and crash-recovery gates              |
+| Complexity         | Minimal                           | Higher; justified only if it demonstrates safer durable value |
 
 ## Adopt, adapt, and reject
 
@@ -324,18 +324,18 @@ The system may perform classification, validation, proposal rendering, approval,
 
 ## Keep / defer / avoid
 
-| Decision | Item | Reason |
-| --- | --- | --- |
-| Keep now | Explicit user-triggered learning | Highest-signal, lowest-cost initial detector |
-| Keep now | Reflect/abstract/generalize rubric | Strong cognitive decomposition |
-| Keep now | Concision and anti-bloat checks | Protects context and adherence |
-| Keep now | Exact user-visible proposal | Adds the safety missing upstream |
-| Defer | Automatic hooks | Must prove value after the manual path |
-| Defer | Existing `CLAUDE.md` mutation | Requires Phase 2A ownership/conflict/recovery controls |
-| Defer | Automatic curation | Needs reliable engine-owned evidence |
-| Avoid | One-file universal knowledge store | Wrong scope and context cost |
-| Avoid | Direct proposal-and-write action | Conflates judgment and authorization |
-| Avoid | Absolute directives by default | Encourages false generalization |
+| Decision | Item                               | Reason                                                 |
+| -------- | ---------------------------------- | ------------------------------------------------------ |
+| Keep now | Explicit user-triggered learning   | Highest-signal, lowest-cost initial detector           |
+| Keep now | Reflect/abstract/generalize rubric | Strong cognitive decomposition                         |
+| Keep now | Concision and anti-bloat checks    | Protects context and adherence                         |
+| Keep now | Exact user-visible proposal        | Adds the safety missing upstream                       |
+| Defer    | Automatic hooks                    | Must prove value after the manual path                 |
+| Defer    | Existing `CLAUDE.md` mutation      | Requires Phase 2A ownership/conflict/recovery controls |
+| Defer    | Automatic curation                 | Needs reliable engine-owned evidence                   |
+| Avoid    | One-file universal knowledge store | Wrong scope and context cost                           |
+| Avoid    | Direct proposal-and-write action   | Conflates judgment and authorization                   |
+| Avoid    | Absolute directives by default     | Encourages false generalization                        |
 
 ## Final assessment
 

@@ -58,11 +58,15 @@ def redraw(index):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--wake-after", type=float, default=None,
-                        help="seconds after the first turn to emit --wake-text "
-                             "with nothing typed, imitating an async wake")
-    parser.add_argument("--wake-text", default="self-improve: candidate cand-echo",
-                        help="what the imitated wake writes to the terminal")
+    parser.add_argument(
+        "--wake-after",
+        type=float,
+        default=None,
+        help="seconds after the first turn to emit --wake-text with nothing typed, imitating an async wake",
+    )
+    parser.add_argument(
+        "--wake-text", default="self-improve: candidate cand-echo", help="what the imitated wake writes to the terminal"
+    )
     options = parser.parse_args(argv)
 
     emit(BANNER + "\r\n" + PROMPT)
@@ -92,9 +96,7 @@ def main(argv=None):
             # A daemon thread, so an exit while the wake is pending is still an
             # exit — the harness asserts on the status and must not be made to
             # wait for this.
-            waking = threading.Thread(
-                target=_wake_later, args=(options.wake_after, options.wake_text),
-                daemon=True)
+            waking = threading.Thread(target=_wake_later, args=(options.wake_after, options.wake_text), daemon=True)
             waking.start()
 
 

@@ -13,8 +13,7 @@ import pytest
 from selfimprove import capture, store
 from tests.conftest import PLUGIN_ROOT
 
-FIXTURES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        "fixtures", "hooks")
+FIXTURES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fixtures", "hooks")
 
 
 def fixture(name):
@@ -73,14 +72,19 @@ def test_session_end_fixture_sweeps(run_si, state_root):
     store.write_record(store.TURNS, "old", {}, ttl=-1, subdir="session-1")
     result = run_si("session-end", stdin=fixture("sessionend.json"))
     assert result.returncode == 0, result.stderr
-    assert store.read_record(store.TURNS, "old", subdir="session-1",
-                             allow_expired=True) is None
+    assert store.read_record(store.TURNS, "old", subdir="session-1", allow_expired=True) is None
 
 
-@pytest.mark.parametrize("subcommand", [
-    "capture-prompt", "capture-tool-failure", "capture-tool-success",
-    "capture-expansion", "session-end",
-])
+@pytest.mark.parametrize(
+    "subcommand",
+    [
+        "capture-prompt",
+        "capture-tool-failure",
+        "capture-tool-success",
+        "capture-expansion",
+        "session-end",
+    ],
+)
 @pytest.mark.parametrize("payload", ["", "   ", "not json", "[]", "null", '{"a":1}'])
 def test_capture_fails_open_on_any_input(run_si, state_root, subcommand, payload):
     """Section 11: a capture failure must never disturb the completed task."""
@@ -93,8 +97,11 @@ def test_capture_survives_an_unwritable_state_root(run_si, tmp_path):
     blocked = tmp_path / "blocked"
     blocked.mkdir(mode=0o500)
     try:
-        result = run_si("capture-prompt", stdin=fixture("userpromptsubmit.json"),
-                        env={"SELF_IMPROVE_STATE_DIR": str(blocked / "state")})
+        result = run_si(
+            "capture-prompt",
+            stdin=fixture("userpromptsubmit.json"),
+            env={"SELF_IMPROVE_STATE_DIR": str(blocked / "state")},
+        )
         assert result.returncode == 0
     finally:
         blocked.chmod(0o700)

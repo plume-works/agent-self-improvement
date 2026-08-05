@@ -17,14 +17,14 @@ Nothing in Spec-0002 records any of the below, deliberately: a specification tha
 
 ## 1. The measurement
 
-`make wake` drives two live checks from an identical script: the wake check, and a negative control running the same exchange against a `Stop` hook that discards its exit code. Only the wake mechanism differs, and it differs *after* the review.
+`make wake` drives two live checks from an identical script: the wake check, and a negative control running the same exchange against a `Stop` hook that discards its exit code. Only the wake mechanism differs, and it differs _after_ the review.
 
 The ten-run loop of 2026-08-02, twenty reviews:
 
-| | proposed | declined |
-| --- | --- | --- |
-| the wake check | 9 | 1 |
-| the negative control | 6 | 4 |
+|                      | proposed | declined |
+| -------------------- | -------- | -------- |
+| the wake check       | 9        | 1        |
+| the negative control | 6        | 4        |
 
 Four of the five declines were `transient_state`, the fifth `one_off_instruction`. Adding the three earlier live runs recorded during Spec-0002's development, the control has declined **seven** times and the wake check **once**.
 
@@ -55,7 +55,7 @@ This is the cheapest possible check and it was available from `diagnostics.jsonl
 …/test_the_async_wake_arrives_at_an_idle_session/project/CLAUDE.md
 ```
 
-Every control bundle tells the reviewer *fails*, *does not arrive*. That is the only field differing between the two checks by construction rather than by chance, and it is suggestive enough that leaving it untested would have been negligent.
+Every control bundle tells the reviewer _fails_, _does not arrive_. That is the only field differing between the two checks by construction rather than by chance, and it is suggestive enough that leaving it untested would have been negligent.
 
 Tested directly: two bundles identical in every other byte, fifteen reviews each. **No declines either way.** The name does not move the reviewer.
 
@@ -75,7 +75,7 @@ This is the most consequential of the three results, because it invalidates the 
 
 ## 5. What would settle it
 
-**Not a two-run diff.** The question is a difference in *rates*, and the fields that vary run-to-run within one check — model prose above all — will differ between checks too, for reasons that mean nothing. The wake check compared against itself is the baseline that has to come first.
+**Not a two-run diff.** The question is a difference in _rates_, and the fields that vary run-to-run within one check — model prose above all — will differ between checks too, for reasons that mean nothing. The wake check compared against itself is the baseline that has to come first.
 
 What would settle it is the aggregating form in [Spec-0004 section 8.3](0004-plugin-execution-tracing.md#83-a-pair-is-the-wrong-unit-and-a-diff-alone-would-mislead): shape descriptors from many runs, grouped by check and by outcome, so that a field constant within a check and different across checks separates from one that is merely noisy. That is Spec-0004 slices T1, T4, T5, and T6.
 

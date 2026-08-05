@@ -32,8 +32,8 @@ def runs_root(tmp_path, monkeypatch):
 
 # Naming --------------------------------------------------------------------
 
-def test_the_run_directory_is_named_for_the_target_that_started_it(runs_root,
-                                                                   monkeypatch):
+
+def test_the_run_directory_is_named_for_the_target_that_started_it(runs_root, monkeypatch):
     """`make wake` can never land in a `make smoke` directory."""
     monkeypatch.setenv("TEST_RUN_LABEL", "wake")
     assert os.path.basename(workspaces.run_root()).startswith("wake_")
@@ -49,8 +49,7 @@ def test_the_stamp_is_sortable_and_carries_nanoseconds():
     """Sortable so `ls` is chronological; nanoseconds so it cannot collide."""
     stamp = workspaces.run_stamp(1785652202123456789)
     assert stamp.endswith(".123456789")
-    assert stamp.startswith(time.strftime("%Y-%m-%d",
-                                          time.localtime(1785652202)))
+    assert stamp.startswith(time.strftime("%Y-%m-%d", time.localtime(1785652202)))
     assert workspaces.run_stamp(1) < workspaces.run_stamp(2)
 
 
@@ -60,6 +59,7 @@ def test_two_stamps_taken_in_a_row_differ():
 
 
 # One root per process ------------------------------------------------------
+
 
 def test_the_root_is_claimed_once_and_reused(runs_root, monkeypatch):
     """Both live checks of one `make wake` must land in the same directory."""
@@ -94,6 +94,7 @@ def test_nothing_is_created_until_a_root_is_asked_for(runs_root, monkeypatch):
 
 # The latest symlinks -------------------------------------------------------
 
+
 def test_latest_points_at_the_newest_run(runs_root, monkeypatch):
     monkeypatch.setenv("TEST_RUN_LABEL", "wake")
     first = workspaces.run_root()
@@ -103,8 +104,7 @@ def test_latest_points_at_the_newest_run(runs_root, monkeypatch):
 
     assert (runs_root / "latest").is_symlink()
     assert os.path.realpath(str(runs_root / "latest")) == os.path.realpath(second)
-    assert os.path.realpath(str(runs_root / "latest-wake")) == \
-        os.path.realpath(second)
+    assert os.path.realpath(str(runs_root / "latest-wake")) == os.path.realpath(second)
     assert os.path.isdir(first), "the previous run must survive being superseded"
 
 
@@ -117,15 +117,12 @@ def test_each_target_keeps_its_own_latest(runs_root, monkeypatch):
     monkeypatch.setenv("TEST_RUN_LABEL", "wake")
     wake = workspaces.run_root()
 
-    assert os.path.realpath(str(runs_root / "latest-smoke")) == \
-        os.path.realpath(smoke)
-    assert os.path.realpath(str(runs_root / "latest-wake")) == \
-        os.path.realpath(wake)
+    assert os.path.realpath(str(runs_root / "latest-smoke")) == os.path.realpath(smoke)
+    assert os.path.realpath(str(runs_root / "latest-wake")) == os.path.realpath(wake)
     assert os.path.realpath(str(runs_root / "latest")) == os.path.realpath(wake)
 
 
-def test_a_numbered_run_updates_its_family_link_not_one_of_its_own(runs_root,
-                                                                   monkeypatch):
+def test_a_numbered_run_updates_its_family_link_not_one_of_its_own(runs_root, monkeypatch):
     """Ten iterations of `make wake-repeat` leave one shortcut, not ten.
 
     Observed on the first real ten-run loop: every iteration carries its own
@@ -138,11 +135,9 @@ def test_a_numbered_run_updates_its_family_link_not_one_of_its_own(runs_root,
         monkeypatch.setenv("TEST_RUN_LABEL", "wake-repeat-%s" % number)
         newest = workspaces.run_root()
 
-    links = sorted(name for name in os.listdir(str(runs_root))
-                   if name.startswith("latest"))
+    links = sorted(name for name in os.listdir(str(runs_root)) if name.startswith("latest"))
     assert links == ["latest", "latest-wake-repeat"]
-    assert os.path.realpath(str(runs_root / "latest-wake-repeat")) == \
-        os.path.realpath(newest)
+    assert os.path.realpath(str(runs_root / "latest-wake-repeat")) == os.path.realpath(newest)
 
 
 def test_the_family_is_only_a_trailing_run_number(runs_root):
@@ -153,8 +148,7 @@ def test_the_family_is_only_a_trailing_run_number(runs_root):
     assert workspaces.run_family("wake-memory") == "wake-memory"
 
 
-def test_a_filesystem_without_symlinks_costs_a_shortcut_not_a_run(runs_root,
-                                                                  monkeypatch):
+def test_a_filesystem_without_symlinks_costs_a_shortcut_not_a_run(runs_root, monkeypatch):
     def refuse(*_args, **_kwargs):
         raise OSError("symlinks not supported here")
 
@@ -164,6 +158,7 @@ def test_a_filesystem_without_symlinks_costs_a_shortcut_not_a_run(runs_root,
 
 
 # The sweep -----------------------------------------------------------------
+
 
 def _project_entry(config_dir, path):
     """A Claude project directory as the CLI would key it for ``path``."""
@@ -181,8 +176,7 @@ def test_the_sweep_finds_a_directory_belonging_to_a_run(tmp_path, runs_root):
     config = tmp_path / "claude"
     mine = _project_entry(str(config), str(_run_dir(runs_root) / "project"))
 
-    removed = workspaces.sweep_claude_projects(config_dir=str(config),
-                                               stream=io.StringIO())
+    removed = workspaces.sweep_claude_projects(config_dir=str(config), stream=io.StringIO())
 
     assert removed == [mine]
     assert not os.path.exists(mine)
@@ -195,8 +189,7 @@ def test_the_sweep_finds_the_directories_of_the_old_layout(tmp_path, monkeypatch
     monkeypatch.setattr(workspaces, "LEGACY_ROOTS", (str(legacy),))
     old = _project_entry(str(config), str(legacy / "test_x" / "project"))
 
-    assert workspaces.sweep_claude_projects(config_dir=str(config),
-                                            stream=io.StringIO()) == [old]
+    assert workspaces.sweep_claude_projects(config_dir=str(config), stream=io.StringIO()) == [old]
 
 
 def test_the_sweep_cannot_name_anything_outside_a_test_run(tmp_path, runs_root):
@@ -205,8 +198,7 @@ def test_the_sweep_cannot_name_anything_outside_a_test_run(tmp_path, runs_root):
     theirs = _project_entry(str(config), "/Users/someone/Develop/real-project")
     mine = _project_entry(str(config), str(_run_dir(runs_root) / "project"))
 
-    removed = workspaces.sweep_claude_projects(config_dir=str(config),
-                                               stream=io.StringIO())
+    removed = workspaces.sweep_claude_projects(config_dir=str(config), stream=io.StringIO())
 
     assert removed == [mine]
     assert os.path.isdir(theirs), "a real project directory was in range"
@@ -222,28 +214,23 @@ def test_a_neighbour_of_the_runs_root_is_not_a_test_run(tmp_path, runs_root):
     config = tmp_path / "claude"
     sibling = runs_root.parent / (runs_root.name + "-archive")
     theirs = _project_entry(str(config), str(sibling / "project"))
-    nested = _project_entry(str(config),
-                            str(sibling / "2026" / "notes" / "project"))
+    nested = _project_entry(str(config), str(sibling / "2026" / "notes" / "project"))
     mine = _project_entry(str(config), str(_run_dir(runs_root) / "project"))
 
-    removed = workspaces.sweep_claude_projects(config_dir=str(config),
-                                               stream=io.StringIO())
+    removed = workspaces.sweep_claude_projects(config_dir=str(config), stream=io.StringIO())
 
     assert removed == [mine]
     assert os.path.isdir(theirs), "a neighbouring project directory was in range"
     assert os.path.isdir(nested), "a neighbour's own subtree was in range"
 
 
-def test_a_neighbour_of_the_old_layouts_root_is_not_a_test_run(tmp_path,
-                                                               monkeypatch):
+def test_a_neighbour_of_the_old_layouts_root_is_not_a_test_run(tmp_path, monkeypatch):
     config = tmp_path / "claude"
     legacy = tmp_path / "tmp" / "smoke"
     monkeypatch.setattr(workspaces, "LEGACY_ROOTS", (str(legacy),))
-    theirs = _project_entry(str(config),
-                            str(legacy.parent / "smoke-reports" / "project"))
+    theirs = _project_entry(str(config), str(legacy.parent / "smoke-reports" / "project"))
 
-    assert workspaces.sweep_claude_projects(config_dir=str(config),
-                                            stream=io.StringIO()) == []
+    assert workspaces.sweep_claude_projects(config_dir=str(config), stream=io.StringIO()) == []
     assert os.path.isdir(theirs), "a neighbouring project directory was in range"
 
 
@@ -261,5 +248,4 @@ def test_the_sweep_says_what_it_deleted(tmp_path, runs_root):
 
 def test_the_sweep_is_quiet_when_there_is_nothing_to_do(tmp_path):
     config = tmp_path / "claude"
-    assert workspaces.sweep_claude_projects(config_dir=str(config),
-                                            stream=io.StringIO()) == []
+    assert workspaces.sweep_claude_projects(config_dir=str(config), stream=io.StringIO()) == []

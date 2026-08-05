@@ -4,22 +4,38 @@ from selfimprove import capture, config, store
 
 
 def prompt_event(prompt, session="s1", turn="t1", cwd="/project"):
-    return {"hook_event_name": "UserPromptSubmit", "session_id": session,
-            "prompt_id": turn, "prompt": prompt, "cwd": cwd}
+    return {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": session,
+        "prompt_id": turn,
+        "prompt": prompt,
+        "cwd": cwd,
+    }
 
 
 def failure_event(command, error, session="s1", turn="t1", cwd="/project", **extra):
-    event = {"hook_event_name": "PostToolUseFailure", "session_id": session,
-             "prompt_id": turn, "tool_name": "Bash",
-             "tool_input": {"command": command}, "error": error, "cwd": cwd}
+    event = {
+        "hook_event_name": "PostToolUseFailure",
+        "session_id": session,
+        "prompt_id": turn,
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+        "error": error,
+        "cwd": cwd,
+    }
     event.update(extra)
     return event
 
 
 def success_event(command, session="s1", turn="t1", cwd="/project"):
-    return {"hook_event_name": "PostToolUse", "session_id": session,
-            "prompt_id": turn, "tool_name": "Bash",
-            "tool_input": {"command": command}, "cwd": cwd}
+    return {
+        "hook_event_name": "PostToolUse",
+        "session_id": session,
+        "prompt_id": turn,
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+        "cwd": cwd,
+    }
 
 
 def test_a_prompt_starts_a_turn(state_root):
@@ -34,14 +50,12 @@ def test_the_prompt_is_kept_only_for_a_correction_or_retention(state_root):
     ordinary = capture.record_prompt(prompt_event("add a test"))
     assert "prompt" not in ordinary
 
-    corrected = capture.record_prompt(
-        prompt_event("no, use make test", turn="t2"))
+    corrected = capture.record_prompt(prompt_event("no, use make test", turn="t2"))
     assert corrected["prompt"] == "no, use make test"
 
 
 def test_a_kept_prompt_is_scrubbed(state_root):
-    record = capture.record_prompt(
-        prompt_event("remember this: key is ghp_abcdefghijklmnopqrstuvwxyz01"))
+    record = capture.record_prompt(prompt_event("remember this: key is ghp_abcdefghijklmnopqrstuvwxyz01"))
     assert "ghp_" not in record["prompt"]
 
 
@@ -53,9 +67,12 @@ def test_turn_files_are_ephemeral_and_expire(state_root):
 
 def test_a_failure_records_only_bounded_metadata(state_root):
     """No raw output, no arguments, no environment values."""
-    record = capture.record_tool_failure(failure_event(
-        "pytest tests/unit --secret-flag=hunter2",
-        "AssertionError: expected 1 to equal 2 in /Users/someone/private/x.py"))
+    record = capture.record_tool_failure(
+        failure_event(
+            "pytest tests/unit --secret-flag=hunter2",
+            "AssertionError: expected 1 to equal 2 in /Users/someone/private/x.py",
+        )
+    )
     [event] = [e for e in record["events"] if e["kind"] == capture.TOOL_FAILURE]
     assert event["signature"] == "Bash:pytest"
     assert event["error_class"] == "assertion_failed"
@@ -66,8 +83,7 @@ def test_a_failure_records_only_bounded_metadata(state_root):
 
 def test_a_user_interrupt_is_not_recorded(state_root):
     """An interrupt says nothing about whether the approach was right."""
-    assert capture.record_tool_failure(
-        failure_event("pytest", "interrupted", is_interrupt=True)) is None
+    assert capture.record_tool_failure(failure_event("pytest", "interrupted", is_interrupt=True)) is None
 
 
 def test_a_success_after_a_matching_failure_is_paired(state_root):
@@ -105,13 +121,23 @@ def test_a_failure_is_paired_only_once(state_root):
 
 
 def test_file_tool_failures_pair_on_the_same_path(state_root):
-    failure = {"hook_event_name": "PostToolUseFailure", "session_id": "s1",
-               "prompt_id": "t1", "tool_name": "Edit",
-               "tool_input": {"file_path": "/project/src/a.py"},
-               "error": "String not found", "cwd": "/project"}
-    success = {"hook_event_name": "PostToolUse", "session_id": "s1",
-               "prompt_id": "t1", "tool_name": "Edit",
-               "tool_input": {"file_path": "/project/src/a.py"}, "cwd": "/project"}
+    failure = {
+        "hook_event_name": "PostToolUseFailure",
+        "session_id": "s1",
+        "prompt_id": "t1",
+        "tool_name": "Edit",
+        "tool_input": {"file_path": "/project/src/a.py"},
+        "error": "String not found",
+        "cwd": "/project",
+    }
+    success = {
+        "hook_event_name": "PostToolUse",
+        "session_id": "s1",
+        "prompt_id": "t1",
+        "tool_name": "Edit",
+        "tool_input": {"file_path": "/project/src/a.py"},
+        "cwd": "/project",
+    }
     capture.record_tool_failure(failure)
     record = capture.record_tool_success(success)
     assert record is not None
@@ -138,9 +164,14 @@ def test_turns_are_isolated_by_session_and_turn(state_root):
 
 def test_a_missing_prompt_id_falls_back_without_losing_capture(state_root):
     """Claude Code before 2.1.196 omits prompt_id."""
-    event = {"hook_event_name": "PostToolUseFailure", "session_id": "s1",
-             "tool_name": "Bash", "tool_input": {"command": "pytest"},
-             "error": "exit code 1", "cwd": "/project"}
+    event = {
+        "hook_event_name": "PostToolUseFailure",
+        "session_id": "s1",
+        "tool_name": "Bash",
+        "tool_input": {"command": "pytest"},
+        "error": "exit code 1",
+        "cwd": "/project",
+    }
     record = capture.record_tool_failure(event)
     assert record is not None
     assert record["events"][0]["signature"] == "Bash:pytest"
@@ -175,12 +206,10 @@ def test_discarding_uses_the_turn_that_was_actually_loaded(state_root):
     loaded = capture.load_turn({"session_id": "s1"})
 
     capture.discard_turn({"session_id": "s1"}, loaded)
-    assert store.read_record(store.TURNS, "prompt-abc", subdir="s1",
-                             allow_expired=True) is None
+    assert store.read_record(store.TURNS, "prompt-abc", subdir="s1", allow_expired=True) is None
 
 
 def test_discarding_a_turn_removes_the_file(state_root):
     capture.record_prompt(prompt_event("remember this"))
     assert capture.discard_turn(prompt_event("remember this")) is True
-    assert store.read_record(store.TURNS, "t1", subdir="s1",
-                             allow_expired=True) is None
+    assert store.read_record(store.TURNS, "t1", subdir="s1", allow_expired=True) is None

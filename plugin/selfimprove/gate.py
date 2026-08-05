@@ -44,8 +44,7 @@ def _read_counters():
 
 
 def _write_counters(data):
-    paths.atomic_write(_counters_path(),
-                       json.dumps(data, sort_keys=True, indent=2) + "\n")
+    paths.atomic_write(_counters_path(), json.dumps(data, sort_keys=True, indent=2) + "\n")
 
 
 def _today():
@@ -116,8 +115,7 @@ def suppressed(event, now=None):
             return "candidate_awaiting_presentation"
 
     counters = _read_counters()
-    if counters.get("day") == _today() and \
-            counters.get("count", 0) >= config.DAILY_REVIEW_LIMIT:
+    if counters.get("day") == _today() and counters.get("count", 0) >= config.DAILY_REVIEW_LIMIT:
         return "daily_limit_reached"
     last = counters.get("last_review_at")
     if last is not None and now - last < config.COOLDOWN_SECONDS:
@@ -175,8 +173,7 @@ def evaluate(event, turn=None, forced=False, focus=None, now=None):
 
     verified = evidence.transitions(events)
     if verified:
-        return _signal(VERIFIED_WORKAROUND,
-                       detail="%d verified transition(s)" % len(verified))
+        return _signal(VERIFIED_WORKAROUND, detail="%d verified transition(s)" % len(verified))
 
     if evidence.exceeds_friction_threshold(events):
         return _signal(REPEATED_FRICTION)
@@ -200,8 +197,7 @@ def _signal(signal_type, include_prompt=False, detail=None, focus=None):
 
 
 def _has_tool_activity(events):
-    return any(item.get("kind") in (capture.TOOL_FAILURE, capture.TOOL_SUCCESS)
-               for item in events)
+    return any(item.get("kind") in (capture.TOOL_FAILURE, capture.TOOL_SUCCESS) for item in events)
 
 
 def _looks_like_a_completed_procedure(event, events):
@@ -218,5 +214,4 @@ def _looks_like_a_completed_procedure(event, events):
     message = (event.get("last_assistant_message") or "").lower()
     if not message:
         return False
-    return ("passing" in message or "all tests pass" in message
-            or "verified" in message or "now works" in message)
+    return "passing" in message or "all tests pass" in message or "verified" in message or "now works" in message

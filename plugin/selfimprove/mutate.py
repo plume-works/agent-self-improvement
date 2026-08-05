@@ -41,8 +41,7 @@ def read_inflight():
 
 
 def _write_inflight(record):
-    paths.atomic_write(_inflight_path(),
-                       json.dumps(record, sort_keys=True, indent=2) + "\n")
+    paths.atomic_write(_inflight_path(), json.dumps(record, sort_keys=True, indent=2) + "\n")
 
 
 def _clear_inflight():
@@ -273,5 +272,4 @@ def rollback_mutation(mutation_id, project_dir=None):
 
 
 def _already_rolled_back(mutation_id):
-    return any(record.get("rolls_back") == mutation_id
-               for record in journal.read_mutations())
+    return any(record.get("rolls_back") == mutation_id for record in journal.read_mutations())

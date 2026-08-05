@@ -99,13 +99,11 @@ def discover(project_dir=None, include_missing=True):
     available = []
 
     for scope in (allowlist.PROJECT, allowlist.USER):
-        for path in allowlist.candidate_paths(scope, allowlist.CLAUDE_MD,
-                                              project_dir=project_dir):
+        for path in allowlist.candidate_paths(scope, allowlist.CLAUDE_MD, project_dir=project_dir):
             if os.path.isfile(path):
                 found.append(describe(path, scope, allowlist.CLAUDE_MD))
             elif include_missing:
-                available.append({"path": path, "scope": scope,
-                                  "kind": allowlist.CLAUDE_MD, "exists": False})
+                available.append({"path": path, "scope": scope, "kind": allowlist.CLAUDE_MD, "exists": False})
 
         found.extend(_scan_directory(scope, allowlist.RULE, "rules", project_dir))
         found.extend(_scan_directory(scope, allowlist.SKILL, "skills", project_dir))
@@ -114,8 +112,11 @@ def discover(project_dir=None, include_missing=True):
 
 
 def _scan_directory(scope, kind, subdir, project_dir):
-    root = (allowlist.roots(project_dir)[scope] if scope == allowlist.USER
-            else os.path.join(allowlist.roots(project_dir)[scope], ".claude"))
+    root = (
+        allowlist.roots(project_dir)[scope]
+        if scope == allowlist.USER
+        else os.path.join(allowlist.roots(project_dir)[scope], ".claude")
+    )
     base = os.path.join(root, subdir)
     if not os.path.isdir(base):
         return []
@@ -151,12 +152,14 @@ def search(query, project_dir=None):
     terms = {term for term in re.split(r"\W+", (query or "").lower()) if len(term) > 2}
     scored = []
     for entry in discover(project_dir=project_dir):
-        haystack = " ".join([
-            entry.get("path", ""),
-            " ".join(entry.get("headings", [])),
-            entry.get("name", ""),
-            entry.get("description", ""),
-        ]).lower()
+        haystack = " ".join(
+            [
+                entry.get("path", ""),
+                " ".join(entry.get("headings", [])),
+                entry.get("name", ""),
+                entry.get("description", ""),
+            ]
+        ).lower()
         score = sum(1 for term in terms if term in haystack)
         if entry.get("exists"):
             score += 1

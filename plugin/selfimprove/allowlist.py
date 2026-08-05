@@ -55,8 +55,7 @@ def candidate_paths(scope, kind, name=None, project_dir=None):
             return [os.path.join(root, "CLAUDE.md")]
         # Both project locations are documented; the repository root is the
         # conventional one, so it leads.
-        return [os.path.join(root, "CLAUDE.md"),
-                os.path.join(root, ".claude", "CLAUDE.md")]
+        return [os.path.join(root, "CLAUDE.md"), os.path.join(root, ".claude", "CLAUDE.md")]
     if kind == RULE:
         if not name:
             raise PathRejected("missing_name")
@@ -148,8 +147,7 @@ def _scope_of(real, expanded, project_dir):
     # symlink took it out, and naming that is more useful than reporting the
     # destination it happened to land on.
     for scope in (USER, PROJECT):
-        for root in (resolved[scope], os.path.abspath(_original_root(scope,
-                                                                     project_dir))):
+        for root in (resolved[scope], os.path.abspath(_original_root(scope, project_dir))):
             if _within(expanded, root):
                 _reject_symlinks_below_root_of_original(expanded, root)
                 raise PathRejected("outside_allowed_roots")
@@ -193,8 +191,7 @@ def _kind_of(real, scope, project_dir):
     if parts == ["CLAUDE.md"]:
         return CLAUDE_MD
     if len(parts) >= 2 and parts[0] == "rules" and parts[-1].endswith(".md"):
-        if not all(RULE_NAME.match(part.replace(".md", "") or "x")
-                   for part in parts[1:]):
+        if not all(RULE_NAME.match(part.replace(".md", "") or "x") for part in parts[1:]):
             raise PathRejected("bad_name")
         return RULE
     if len(parts) == 3 and parts[0] == "skills" and parts[2] == "SKILL.md":

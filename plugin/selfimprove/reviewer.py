@@ -38,12 +38,15 @@ _PHRASE_CLASSES = [
     ("usage_limited", re.compile(r"(?i)credit|quota|usage limit")),
     ("rate_limited", re.compile(r"(?i)rate[ _-]?limit|too many requests")),
     ("overloaded", re.compile(r"(?i)overloaded|service unavailable")),
-    ("model_unavailable", re.compile(
-        r"(?i)(unknown|invalid|unsupported) model|model_not_found|"
-        r"model .{0,40}(does not exist|may not exist|access to it)")),
+    (
+        "model_unavailable",
+        re.compile(
+            r"(?i)(unknown|invalid|unsupported) model|model_not_found|"
+            r"model .{0,40}(does not exist|may not exist|access to it)"
+        ),
+    ),
     ("unauthenticated", re.compile(r"(?i)auth|login|api key")),
-    ("provider_error", re.compile(
-        r"(?i)internal server error|bad gateway|api error")),
+    ("provider_error", re.compile(r"(?i)internal server error|bad gateway|api error")),
 ]
 
 
@@ -65,14 +68,21 @@ def build_command(prompt_path, model=None):
     return [
         config.reviewer_command(),
         "-p",
-        "--model", model or config.review_model(),
-        "--system-prompt-file", prompt_path,
-        "--tools", "",
-        "--disallowedTools", "*",
+        "--model",
+        model or config.review_model(),
+        "--system-prompt-file",
+        prompt_path,
+        "--tools",
+        "",
+        "--disallowedTools",
+        "*",
         "--strict-mcp-config",
-        "--settings", json.dumps({"disableAllHooks": True}),
-        "--output-format", "json",
-        "--max-turns", "1",
+        "--settings",
+        json.dumps({"disableAllHooks": True}),
+        "--output-format",
+        "json",
+        "--max-turns",
+        "1",
     ]
 
 
@@ -107,6 +117,7 @@ def build_environment():
 
 def prompt_path():
     from . import paths
+
     return os.path.join(paths.plugin_root(), "reviewer", "prompt.md")
 
 

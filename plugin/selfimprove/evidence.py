@@ -11,8 +11,7 @@ MAX_EVENTS_IN_BUNDLE = 40
 MAX_OWNERS_IN_BUNDLE = 25
 
 
-def build(turn, signal, owners=None, last_assistant_message=None,
-          fingerprints=None, focus=None):
+def build(turn, signal, owners=None, last_assistant_message=None, fingerprints=None, focus=None):
     """Compose the bundle for one completed turn.
 
     ``turn`` is the ephemeral record; ``signal`` is what the deterministic gate
@@ -64,11 +63,13 @@ def transitions(events):
             continue
         if not event.get("after_failure"):
             continue
-        found.append({
-            "signature": event.get("signature"),
-            "prior_error_class": event.get("prior_error_class"),
-            "failures_before_success": event.get("failures_before_success", 1),
-        })
+        found.append(
+            {
+                "signature": event.get("signature"),
+                "prior_error_class": event.get("prior_error_class"),
+                "failures_before_success": event.get("failures_before_success", 1),
+            }
+        )
     return found
 
 

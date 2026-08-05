@@ -69,9 +69,18 @@ def _api_error(status, text):
     Real envelopes also carry durations and token counts; the numbers are kept
     here because a classifier that reads bare digits would trip over them.
     """
-    return json.dumps({"type": "result", "is_error": True, "subtype": "success",
-                       "terminal_reason": "api_error", "api_error_status": status,
-                       "duration_ms": 529, "num_turns": 1, "result": text})
+    return json.dumps(
+        {
+            "type": "result",
+            "is_error": True,
+            "subtype": "success",
+            "terminal_reason": "api_error",
+            "api_error_status": status,
+            "duration_ms": 529,
+            "num_turns": 1,
+            "result": text,
+        }
+    )
 
 
 def main():
@@ -97,9 +106,13 @@ def main():
         sys.stdout.write(_api_error(500, "something went wrong"))
         return 1
     if mode == "bad_model":
-        sys.stdout.write(_api_error(
-            404, "There's an issue with the selected model (sonnet-9). It may "
-                 "not exist or you may not have access to it."))
+        sys.stdout.write(
+            _api_error(
+                404,
+                "There's an issue with the selected model (sonnet-9). It may "
+                "not exist or you may not have access to it.",
+            )
+        )
         return 0
     if mode == "empty":
         return 0
@@ -107,8 +120,7 @@ def main():
     if mode == "propose":
         body = json.dumps(PROPOSAL)
     elif mode == "discard":
-        body = json.dumps({"decision": "discard",
-                           "discard_reason": "one_off_instruction"})
+        body = json.dumps({"decision": "discard", "discard_reason": "one_off_instruction"})
     elif mode == "bare_discard":
         # A reviewer that declines without labelling why. Still a valid answer,
         # and the path that has to keep working when a model ignores the field.
@@ -118,8 +130,7 @@ def main():
     elif mode == "fenced":
         body = "```json\n%s\n```" % json.dumps(PROPOSAL, indent=2)
     elif mode == "chatty":
-        body = ("Here is my assessment:\n\n%s\n\nHope that helps."
-                % json.dumps(PROPOSAL))
+        body = "Here is my assessment:\n\n%s\n\nHope that helps." % json.dumps(PROPOSAL)
     elif mode == "unknown_field":
         payload = dict(PROPOSAL, extra_field="not in the contract")
         body = json.dumps(payload)

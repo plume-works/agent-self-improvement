@@ -122,8 +122,7 @@ def test_the_pty_scrub_keeps_what_the_launch_site_named():
     """
     from tests.smoke.pty_harness import PtySession
 
-    session = PtySession(["true"], cwd=".", env=ENVIRONMENT,
-                         configured=(conftest.AUTO_MEMORY_VARIABLE,))
+    session = PtySession(["true"], cwd=".", env=ENVIRONMENT, configured=(conftest.AUTO_MEMORY_VARIABLE,))
     assert session.env[conftest.AUTO_MEMORY_VARIABLE] == "1"
     assert "CLAUDE_CODE_SOMETHING_INHERITED" not in session.env
     assert "CLAUDECODE" not in session.env

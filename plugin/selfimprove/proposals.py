@@ -52,9 +52,7 @@ def fingerprint(lesson, scope, kind):
     proposed twice should be recognized the second time.
     """
     normalized = " ".join((lesson or "").lower().split())
-    return hashlib.sha256(
-        ("%s|%s|%s" % (normalized, scope, kind)).encode("utf-8")
-    ).hexdigest()[:32]
+    return hashlib.sha256(("%s|%s|%s" % (normalized, scope, kind)).encode("utf-8")).hexdigest()[:32]
 
 
 def content_hash(target, preimage_sha, new_bytes):
@@ -122,7 +120,7 @@ def stage(target, new_bytes, candidate=None, project_dir=None, reason=None):
     record = {
         "proposal_id": proposal_id,
         "content_hash": full_hash,
-        "hash_prefix": full_hash[:config.HASH_PREFIX_LENGTH],
+        "hash_prefix": full_hash[: config.HASH_PREFIX_LENGTH],
         "target": path,
         "scope": resolved["scope"],
         "kind": resolved["kind"],
@@ -192,8 +190,7 @@ def summary(record):
     """
     lines = [
         "Proposal %s" % record["proposal_id"],
-        "Destination: %s (%s scope, %s)"
-        % (record["target"], record["scope"], record["kind"]),
+        "Destination: %s (%s scope, %s)" % (record["target"], record["scope"], record["kind"]),
         "Hash prefix: %s" % record["hash_prefix"],
         "Action: %s" % ("create new file" if record["is_new_file"] else "patch"),
         "",
@@ -213,8 +210,7 @@ def summary(record):
         record["diff"] or "(new file)",
         "--- end change ---",
         "",
-        "Apply:  /self-improve:apply %s %s"
-        % (record["proposal_id"], record["hash_prefix"]),
+        "Apply:  /self-improve:apply %s %s" % (record["proposal_id"], record["hash_prefix"]),
         "Reject: /self-improve:reject %s" % record["proposal_id"],
     ]
     return "\n".join(lines)

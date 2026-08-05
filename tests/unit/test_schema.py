@@ -31,10 +31,8 @@ def test_a_discard_may_name_a_category_and_it_is_carried_through():
     never reached: same absent candidate, same absent diagnostics, same
     incremented counter.
     """
-    result = schema.validate({"decision": "discard",
-                              "discard_reason": "inferred_not_stated"})
-    assert result == {"decision": "discard",
-                      "discard_reason": "inferred_not_stated"}
+    result = schema.validate({"decision": "discard", "discard_reason": "inferred_not_stated"})
+    assert result == {"decision": "discard", "discard_reason": "inferred_not_stated"}
 
 
 @pytest.mark.parametrize("reason", ["made_up", "", None, 7, {"a": 1}])
@@ -45,8 +43,7 @@ def test_an_unrecognized_discard_category_is_dropped_not_fatal(reason):
     object would turn a correct discard into a `SchemaError`, which is both a
     worse diagnostic and a lie about what the reviewer said.
     """
-    assert schema.validate({"decision": "discard", "discard_reason": reason}) \
-        == {"decision": "discard"}
+    assert schema.validate({"decision": "discard", "discard_reason": reason}) == {"decision": "discard"}
 
 
 def test_the_category_does_not_travel_with_a_proposal():
@@ -61,11 +58,20 @@ def test_low_confidence_is_rejected():
     assert caught.value.reason == "low_confidence"
 
 
-@pytest.mark.parametrize("field", [
-    "signal_type", "evidence_summary", "lesson", "applicability",
-    "counterexample", "destination_scope", "destination_kind",
-    "owner_query", "confidence",
-])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "signal_type",
+        "evidence_summary",
+        "lesson",
+        "applicability",
+        "counterexample",
+        "destination_scope",
+        "destination_kind",
+        "owner_query",
+        "confidence",
+    ],
+)
 def test_a_proposal_missing_any_required_field_is_rejected(field):
     payload = dict(PROPOSAL)
     del payload[field]
@@ -74,13 +80,16 @@ def test_a_proposal_missing_any_required_field_is_rejected(field):
     assert caught.value.reason == "missing_field"
 
 
-@pytest.mark.parametrize(("field", "value"), [
-    ("decision", "maybe"),
-    ("signal_type", "vibes"),
-    ("destination_scope", "global"),
-    ("destination_kind", "settings.json"),
-    ("confidence", "certain"),
-])
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("decision", "maybe"),
+        ("signal_type", "vibes"),
+        ("destination_scope", "global"),
+        ("destination_kind", "settings.json"),
+        ("confidence", "certain"),
+    ],
+)
 def test_values_outside_the_contract_are_rejected(field, value):
     payload = dict(PROPOSAL)
     payload[field] = value
@@ -129,12 +138,15 @@ def test_non_object_payload_is_rejected():
         schema.validate(["decision", "propose"])
 
 
-@pytest.mark.parametrize("text", [
-    json.dumps(PROPOSAL),
-    "```json\n%s\n```" % json.dumps(PROPOSAL),
-    "```\n%s\n```" % json.dumps(PROPOSAL),
-    "Here is my answer:\n%s\nLet me know." % json.dumps(PROPOSAL),
-])
+@pytest.mark.parametrize(
+    "text",
+    [
+        json.dumps(PROPOSAL),
+        "```json\n%s\n```" % json.dumps(PROPOSAL),
+        "```\n%s\n```" % json.dumps(PROPOSAL),
+        "Here is my answer:\n%s\nLet me know." % json.dumps(PROPOSAL),
+    ],
+)
 def test_extract_json_recovers_the_object_from_common_wrappings(text):
     """Models wrap structured output more often than not."""
     assert schema.extract_json(text)["decision"] == "propose"
@@ -142,17 +154,19 @@ def test_extract_json_recovers_the_object_from_common_wrappings(text):
 
 def test_extract_json_ignores_braces_inside_strings():
     payload = dict(PROPOSAL, lesson="Use ${VAR} syntax, never {bare} braces here")
-    assert schema.extract_json("noise " + json.dumps(payload))["lesson"] == \
-        payload["lesson"]
+    assert schema.extract_json("noise " + json.dumps(payload))["lesson"] == payload["lesson"]
 
 
-@pytest.mark.parametrize(("text", "reason"), [
-    ("", "empty_response"),
-    (None, "empty_response"),
-    ("   ", "empty_response"),
-    ("no json here at all", "not_json"),
-    ("[1, 2, 3]", "not_an_object"),
-])
+@pytest.mark.parametrize(
+    ("text", "reason"),
+    [
+        ("", "empty_response"),
+        (None, "empty_response"),
+        ("   ", "empty_response"),
+        ("no json here at all", "not_json"),
+        ("[1, 2, 3]", "not_an_object"),
+    ],
+)
 def test_extract_json_rejects_unusable_text(text, reason):
     with pytest.raises(schema.SchemaError) as caught:
         schema.extract_json(text)

@@ -168,15 +168,15 @@ The explicit override precedes the plugin data directory because Claude Code set
 
 #### Environment variables
 
-| Variable | Purpose |
-| --- | --- |
-| `SELF_IMPROVE_REVIEW_MODEL` | Reviewer model; defaults to `sonnet` |
-| `SELF_IMPROVE_REVIEW_EFFORT` | Reviewer effort level; defaults to `medium`. Empty accepts the CLI default |
-| `SELF_IMPROVE_REVIEW_TIMEOUT` | Seconds to wait for the reviewer before giving up silently |
-| `SELF_IMPROVE_DISABLE` | Set to `1` to disable the plugin without uninstalling it |
-| `SELF_IMPROVE_REVIEWER` | Set to `1` in the reviewer's own environment; suppresses reflection in reviewer-originated sessions |
-| `SELF_IMPROVE_REVIEWER_CMD` | Overrides the reviewer binary; used by tests to substitute a deterministic fake |
-| `SELF_IMPROVE_STATE_DIR` | Overrides the state root |
+| Variable                      | Purpose                                                                                             |
+| ----------------------------- | --------------------------------------------------------------------------------------------------- |
+| `SELF_IMPROVE_REVIEW_MODEL`   | Reviewer model; defaults to `sonnet`                                                                |
+| `SELF_IMPROVE_REVIEW_EFFORT`  | Reviewer effort level; defaults to `medium`. Empty accepts the CLI default                          |
+| `SELF_IMPROVE_REVIEW_TIMEOUT` | Seconds to wait for the reviewer before giving up silently                                          |
+| `SELF_IMPROVE_DISABLE`        | Set to `1` to disable the plugin without uninstalling it                                            |
+| `SELF_IMPROVE_REVIEWER`       | Set to `1` in the reviewer's own environment; suppresses reflection in reviewer-originated sessions |
+| `SELF_IMPROVE_REVIEWER_CMD`   | Overrides the reviewer binary; used by tests to substitute a deterministic fake                     |
+| `SELF_IMPROVE_STATE_DIR`      | Overrides the state root                                                                            |
 
 ## 5. Hook design
 
@@ -312,7 +312,7 @@ The reviewer receives its entire evidence bundle on standard input. Candidate ow
 
 `SELF_IMPROVE_REVIEWER=1` is set in the reviewer's environment so that any session it originates suppresses reflection.
 
-Effort is carried by `CLAUDE_CODE_EFFORT_LEVEL` in that same environment, defaulting to `medium` against a Claude Code default of `high`. The review is one bounded judgement over an already-assembled evidence bundle, with no tools and a single turn, so it does not need the default; `medium` keeps the ownership and phrasing decisions the schema cannot check. It is deliberately *not* the `--effort` flag: review failure is silent by design, so a CLI too old to know the flag would abort every review with nothing on screen to explain it, whereas an unrecognized environment variable is ignored and the review still happens at the default level. Losing the saving is the acceptable failure; losing the review is not.
+Effort is carried by `CLAUDE_CODE_EFFORT_LEVEL` in that same environment, defaulting to `medium` against a Claude Code default of `high`. The review is one bounded judgement over an already-assembled evidence bundle, with no tools and a single turn, so it does not need the default; `medium` keeps the ownership and phrasing decisions the schema cannot check. It is deliberately _not_ the `--effort` flag: review failure is silent by design, so a CLI too old to know the flag would abort every review with nothing on screen to explain it, whereas an unrecognized environment variable is ignored and the review still happens at the default level. Losing the saving is the acceptable failure; losing the review is not.
 
 ### 7.4 Reviewer output
 
@@ -361,9 +361,9 @@ The MVP may patch one explicitly selected artifact or create one personal/projec
 
 A proposal may target only these paths. The list is normative and is enforced by the mutator, not by the reviewer or by any model-authored instruction.
 
-| Scope | Allowed targets |
-| --- | --- |
-| User | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md` |
+| Scope   | Allowed targets                                                                                  |
+| ------- | ------------------------------------------------------------------------------------------------ |
+| User    | `~/.claude/CLAUDE.md`, `~/.claude/rules/*.md`, `~/.claude/skills/<name>/SKILL.md`                |
 | Project | `./CLAUDE.md`, `./.claude/CLAUDE.md`, `./.claude/rules/*.md`, `./.claude/skills/<name>/SKILL.md` |
 
 Paths are resolved to their real location before the check, and containment and shape are both decided on the resolved path. Traversal outside an allowed root and non-regular files are rejected before any I/O.
@@ -421,19 +421,19 @@ Runtime state is private to the user and separated into:
 
 Relative to the state root defined in section 4.1. Directories are created mode `0700` and files mode `0600`.
 
-| Path | Contents | Lifetime |
-| --- | --- | --- |
-| `turns/<session>/<turn>.json` | bounded event records for one turn | deleted after review; expires after 1 hour |
-| `candidates/<id>.json` | accepted reviewer output awaiting presentation | expires after 24 hours |
-| `proposals/<id>.json` | immutable staged bytes and hashes | expires after 24 hours |
-| `authorizations/<nonce>.json` | one-time apply, reject, or rollback grant | expires after 10 minutes |
-| `backups/<mutation_id>/` | mode-preserving verified preimage | retained |
-| `inflight.json` | interrupted-mutation reconciliation marker | cleared on completion |
-| `mutations.jsonl` | redacted mutation and rollback journal | retained |
-| `fingerprints.json` | accepted and rejected proposal fingerprints | retained |
-| `counters.json` | cooldown and daily invocation counters | retained |
-| `pending.json` | candidates awaiting an available session | expires with the candidate |
-| `diagnostics.jsonl` | bounded error classes and review outcomes; never prose | retained |
+| Path                          | Contents                                               | Lifetime                                   |
+| ----------------------------- | ------------------------------------------------------ | ------------------------------------------ |
+| `turns/<session>/<turn>.json` | bounded event records for one turn                     | deleted after review; expires after 1 hour |
+| `candidates/<id>.json`        | accepted reviewer output awaiting presentation         | expires after 24 hours                     |
+| `proposals/<id>.json`         | immutable staged bytes and hashes                      | expires after 24 hours                     |
+| `authorizations/<nonce>.json` | one-time apply, reject, or rollback grant              | expires after 10 minutes                   |
+| `backups/<mutation_id>/`      | mode-preserving verified preimage                      | retained                                   |
+| `inflight.json`               | interrupted-mutation reconciliation marker             | cleared on completion                      |
+| `mutations.jsonl`             | redacted mutation and rollback journal                 | retained                                   |
+| `fingerprints.json`           | accepted and rejected proposal fingerprints            | retained                                   |
+| `counters.json`               | cooldown and daily invocation counters                 | retained                                   |
+| `pending.json`                | candidates awaiting an available session               | expires with the candidate                 |
+| `diagnostics.jsonl`           | bounded error classes and review outcomes; never prose | retained                                   |
 
 Permissions default to user-only access. Durable state must not contain:
 

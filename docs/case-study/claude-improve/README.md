@@ -52,12 +52,12 @@ The command was not invoked against Anton's real Claude configuration. It has no
 
 The pinned repository contains four tracked files:
 
-| File | Lines | Purpose |
-| --- | ---: | --- |
-| [`improve.md`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/improve.md) | 578 | Entire executable skill/command prompt |
-| [`README.md`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/README.md) | 158 | Installation, workflow, claims, examples, and credits |
-| [`CHANGELOG.md`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/CHANGELOG.md) | 98 | Evolution from `v1.0.0` through `v3.2.0` |
-| [`LICENSE`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/LICENSE) | 21 | MIT license |
+| File                                                                                                                          | Lines | Purpose                                               |
+| ----------------------------------------------------------------------------------------------------------------------------- | ----: | ----------------------------------------------------- |
+| [`improve.md`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/improve.md)     |   578 | Entire executable skill/command prompt                |
+| [`README.md`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/README.md)       |   158 | Installation, workflow, claims, examples, and credits |
+| [`CHANGELOG.md`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/CHANGELOG.md) |    98 | Evolution from `v1.0.0` through `v3.2.0`              |
+| [`LICENSE`](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/LICENSE)           |    21 | MIT license                                           |
 
 There is no executable program source beyond the prompt, deterministic parser, bundled shell script, fixture, test, evaluation, CI workflow, plugin manifest, package manifest, dependency lock, schema, generated example, or machine-readable mutation record.
 
@@ -126,13 +126,13 @@ This is not a stable integration seam. Current official [session documentation](
 
 A content-free local probe with Claude Code `2.1.214` inspected only aggregate entry types from the available transcript sample:
 
-| Probe | Result |
-| --- | ---: |
-| Transcript files available | 1 |
-| JSONL entries | 8 |
-| Top-level types | `attachment=3`, `queue-operation=2`, `user=1`, `assistant=1`, `last-prompt=1` |
-| Top-level `type: human` entries | 0 |
-| Malformed entries | 0 |
+| Probe                           |                                                                        Result |
+| ------------------------------- | ----------------------------------------------------------------------------: |
+| Transcript files available      |                                                                             1 |
+| JSONL entries                   |                                                                             8 |
+| Top-level types                 | `attachment=3`, `queue-operation=2`, `user=1`, `assistant=1`, `last-prompt=1` |
+| Top-level `type: human` entries |                                                                             0 |
+| Malformed entries               |                                                                             0 |
 
 This small sample does not establish every current transcript shape, and the upstream-generated Bash parser was not executed. It shows narrowly that an exact top-level `type == "human"` filter would select zero entries in the sampled file. That is the kind of schema-drift failure the official docs warn about. The command's documented fallback degrades to current-conversation analysis rather than corrupting files, which is good, but the advertised historical feature is version-fragile.
 
@@ -161,13 +161,13 @@ It also checks cross-level duplication, contradictory instructions, path-scoped 
 
 The command's placement rubric is close to this project's intended routing:
 
-| Content | `claude-improve` recommendation | This project's interpretation |
-| --- | --- | --- |
-| Universal behavioral instruction | `CLAUDE.md` | Human-owned instruction candidate; exact review required |
-| Path-specific instruction | `.claude/rules/` | Rule candidate; verify platform semantics and ownership |
-| Reusable procedure | Skill | Skill candidate with provenance and fresh-session test |
-| Fact or reference | Auto memory | Memory candidate after privacy, durability, and scope checks |
-| Repeated violation | Hook | Enforcement candidate requiring threat analysis and independent validation |
+| Content                          | `claude-improve` recommendation | This project's interpretation                                              |
+| -------------------------------- | ------------------------------- | -------------------------------------------------------------------------- |
+| Universal behavioral instruction | `CLAUDE.md`                     | Human-owned instruction candidate; exact review required                   |
+| Path-specific instruction        | `.claude/rules/`                | Rule candidate; verify platform semantics and ownership                    |
+| Reusable procedure               | Skill                           | Skill candidate with provenance and fresh-session test                     |
+| Fact or reference                | Auto memory                     | Memory candidate after privacy, durability, and scope checks               |
+| Repeated violation               | Hook                            | Enforcement candidate requiring threat analysis and independent validation |
 
 ### Review
 
@@ -211,19 +211,19 @@ This is transparent and resettable, but it has no explicit approval, schema, ver
 
 ## Claims versus evidence
 
-| Upstream claim | Observed implementation | Assessment |
-| --- | --- | --- |
-| “One command makes your AI agents get better after every conversation” | One model-run proposes and applies instruction changes | Aspirational; no longitudinal behavior evaluation |
-| “Nothing changes without your approval” | Proposed config changes are reviewed; the learning file is updated after a completed workflow reaches its save phase | False as an absolute claim |
-| “No dependencies” | No package dependencies; workflow requires Claude Code, shell tools, Bash generation, filesystem layout, and subagents | Reasonable only in the narrow package-manager sense |
-| “Works on any project structure” | Broad discovery plus hard-coded fallbacks and project-specific heuristics | Broadly adaptable, not universal |
-| Historical analysis | Direct parser for internal JSONL and `type: human` | Version-fragile; that exact filter would select zero entries in the available local sample |
-| Hook conversion gives 100% deterministic enforcement | Claude generates event, matcher, JSON, and shell logic | Hook invocation can be deterministic; enforcement correctness is not |
-| Prior accepted changes are verified | Key text is grepped in target files | Presence check, not behavioral or semantic verification |
-| Redundant memories are safe to delete | Grep before presentation, integrate before cleanup, grep again before removal | Strong prompt-level guard; still no backup, exact semantic proof, or transaction |
-| Confidence is evidence-based | Thresholds use signal count, recurrence, or direct correction | Useful presentation heuristic, not calibrated confidence |
-| Self-learning adapts to the user | Acceptance aggregates influence ranking and style | Preference adaptation exists; outcome improvement is unmeasured |
-| Research supports fixed compliance and activation numbers | Prompt cites ~80%, 20–90%, and “linear decay” without sources | Unsupported in the repository |
+| Upstream claim                                                         | Observed implementation                                                                                                | Assessment                                                                                 |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| “One command makes your AI agents get better after every conversation” | One model-run proposes and applies instruction changes                                                                 | Aspirational; no longitudinal behavior evaluation                                          |
+| “Nothing changes without your approval”                                | Proposed config changes are reviewed; the learning file is updated after a completed workflow reaches its save phase   | False as an absolute claim                                                                 |
+| “No dependencies”                                                      | No package dependencies; workflow requires Claude Code, shell tools, Bash generation, filesystem layout, and subagents | Reasonable only in the narrow package-manager sense                                        |
+| “Works on any project structure”                                       | Broad discovery plus hard-coded fallbacks and project-specific heuristics                                              | Broadly adaptable, not universal                                                           |
+| Historical analysis                                                    | Direct parser for internal JSONL and `type: human`                                                                     | Version-fragile; that exact filter would select zero entries in the available local sample |
+| Hook conversion gives 100% deterministic enforcement                   | Claude generates event, matcher, JSON, and shell logic                                                                 | Hook invocation can be deterministic; enforcement correctness is not                       |
+| Prior accepted changes are verified                                    | Key text is grepped in target files                                                                                    | Presence check, not behavioral or semantic verification                                    |
+| Redundant memories are safe to delete                                  | Grep before presentation, integrate before cleanup, grep again before removal                                          | Strong prompt-level guard; still no backup, exact semantic proof, or transaction           |
+| Confidence is evidence-based                                           | Thresholds use signal count, recurrence, or direct correction                                                          | Useful presentation heuristic, not calibrated confidence                                   |
+| Self-learning adapts to the user                                       | Acceptance aggregates influence ranking and style                                                                      | Preference adaptation exists; outcome improvement is unmeasured                            |
+| Research supports fixed compliance and activation numbers              | Prompt cites ~80%, 20–90%, and “linear decay” without sources                                                          | Unsupported in the repository                                                              |
 
 One internal inconsistency is concrete: the README says Promotion means a pattern repeated **3+ times** ([line 98](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/README.md#L98)), while the command promotes the same feedback after **2+ sessions** ([lines 200–210](https://github.com/TerenceBristol/claude-improve/blob/ae7ce8cc61d905ef1032b164d4097a4c4b248716/improve.md#L200-L210)). There is no test to detect this drift.
 
@@ -300,24 +300,24 @@ The history agent explicitly generates Bash, so “any project” does not mean 
 
 This is a source-to-design comparison. Claude Self-Improvement's specifications are **Proposed**, and the repository has not accepted a runtime implementation.
 
-| Concern | `claude-improve` | Claude Self-Improvement design |
-| --- | --- | --- |
-| Trigger | Slash command; model invocation not disabled | Explicit user-triggered Phase 1 intake |
-| Runtime | One 578-line model prompt | Plugin adapter plus deterministic local engine |
-| Evidence | Current context, private raw transcripts, config scan | Typed, privacy-filtered evidence envelope |
-| Candidate | Prose finding | Durable typed candidate with provenance |
-| Routing | Model chooses among instruction/rule/skill/memory/hook | LLM destination proposal constrained by deterministic authorization policy |
-| Approval | Accept/Reject/Modify summary | Exact mutation proposal tied to base state |
-| Ownership | No human/system distinction | Explicit owner and mutation authority |
-| Mutation | Model edits files directly | Journaled state machine with backups and recovery |
-| Deletion | Grep, integrate, grep again, then delete | Archive-first, provenance-preserving, reversible |
-| Hooks | Model writes settings intended to execute generated shell logic | Separate high-risk artifact with independent tests and approval |
-| Privacy | Broad scan; no exclusions or redaction | Data minimization and sensitive-content rejection |
-| Concurrency | Same-file exclusion across waves | Serialized journal or explicit dependency graph |
-| Verification | Grep/text presence and summary table | Structural validation; fresh packaged-session evidence for the narrow Phase 1 skill path |
-| Learning | Acceptance-rate Markdown | Outcome evidence separated from preference evidence |
-| Platform seam | Raw internal JSONL and copied command | Documented APIs and certified adapters; bounded versioned transcript parsing only as a compatibility fallback |
-| Rollback | Git offered after mutation | Recovery metadata required before mutation |
+| Concern       | `claude-improve`                                                | Claude Self-Improvement design                                                                                |
+| ------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Trigger       | Slash command; model invocation not disabled                    | Explicit user-triggered Phase 1 intake                                                                        |
+| Runtime       | One 578-line model prompt                                       | Plugin adapter plus deterministic local engine                                                                |
+| Evidence      | Current context, private raw transcripts, config scan           | Typed, privacy-filtered evidence envelope                                                                     |
+| Candidate     | Prose finding                                                   | Durable typed candidate with provenance                                                                       |
+| Routing       | Model chooses among instruction/rule/skill/memory/hook          | LLM destination proposal constrained by deterministic authorization policy                                    |
+| Approval      | Accept/Reject/Modify summary                                    | Exact mutation proposal tied to base state                                                                    |
+| Ownership     | No human/system distinction                                     | Explicit owner and mutation authority                                                                         |
+| Mutation      | Model edits files directly                                      | Journaled state machine with backups and recovery                                                             |
+| Deletion      | Grep, integrate, grep again, then delete                        | Archive-first, provenance-preserving, reversible                                                              |
+| Hooks         | Model writes settings intended to execute generated shell logic | Separate high-risk artifact with independent tests and approval                                               |
+| Privacy       | Broad scan; no exclusions or redaction                          | Data minimization and sensitive-content rejection                                                             |
+| Concurrency   | Same-file exclusion across waves                                | Serialized journal or explicit dependency graph                                                               |
+| Verification  | Grep/text presence and summary table                            | Structural validation; fresh packaged-session evidence for the narrow Phase 1 skill path                      |
+| Learning      | Acceptance-rate Markdown                                        | Outcome evidence separated from preference evidence                                                           |
+| Platform seam | Raw internal JSONL and copied command                           | Documented APIs and certified adapters; bounded versioned transcript parsing only as a compatibility fallback |
+| Rollback      | Git offered after mutation                                      | Recovery metadata required before mutation                                                                    |
 
 ## Adopt, adapt, reject
 
