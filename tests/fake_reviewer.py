@@ -7,7 +7,8 @@ a deterministic answer instead of a model call.
 The behavior is chosen by ``FAKE_REVIEWER_MODE``:
 
     propose        a valid proposal
-    discard        a valid discard
+    discard        a valid discard, with a category
+    bare_discard   a valid discard that names no category
     malformed      prose that contains no JSON object
     fenced         a valid proposal wrapped in a code fence
     chatty         a valid proposal surrounded by prose
@@ -106,6 +107,11 @@ def main():
     if mode == "propose":
         body = json.dumps(PROPOSAL)
     elif mode == "discard":
+        body = json.dumps({"decision": "discard",
+                           "discard_reason": "one_off_instruction"})
+    elif mode == "bare_discard":
+        # A reviewer that declines without labelling why. Still a valid answer,
+        # and the path that has to keep working when a model ignores the field.
         body = json.dumps({"decision": "discard"})
     elif mode == "malformed":
         body = "I looked at the turn and honestly nothing stood out to me."

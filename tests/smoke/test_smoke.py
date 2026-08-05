@@ -24,10 +24,14 @@ import sys
 import pytest
 
 from tests.smoke.conftest import (
+    CORRECTION,
     INTERACTIVE_ALLOWED_TOOLS,
     PLUGIN_ROOT,
     ask,
     expansion,
+    session_args,
+    smoke_effort,
+    smoke_model,
     run_session,
     runner_environment,
     seed_runnable_project,
@@ -35,12 +39,6 @@ from tests.smoke.conftest import (
 )
 
 pytestmark = pytest.mark.smoke
-
-CORRECTION = (
-    "Run the project's test suite. Then note: no, don't run pytest directly in "
-    "this repository, always run the suite with `make test` because it sets the "
-    "required environment variables first. Please remember that for the future."
-)
 
 
 def report(label, detail=""):
@@ -108,6 +106,11 @@ def test_3_a_real_reviewer_produces_a_schema_valid_candidate(scratch):
     Everything offline uses a deterministic fake, so this is the only place the
     committed prompt and the schema validator are tested against the thing they
     were written for.
+
+    The correction it is given is one line, with no reason and no request to
+    remember it, because that is what a real one looks like. Inferring the
+    durable lesson from it is the product; a reviewer that only proposes when
+    the user has already done the inferring has nothing left to contribute.
     """
     from selfimprove import capture
 
@@ -131,10 +134,12 @@ def test_3_a_real_reviewer_produces_a_schema_valid_candidate(scratch):
                 "means it was a failure this build cannot name yet." % (
                     reason, scratch["state"]))
         pytest.fail(
-            "the real reviewer returned %r for an explicit correction with a "
-            "stated reason and a request to remember it. Either the prompt is "
-            "too conservative or the model disagreed; check "
-            "%s/diagnostics.jsonl" % (payload, scratch["state"]))
+            "the real reviewer returned %r for a stated standing preference "
+            "(%r) — an `always`, scoped to this repository, replacing what "
+            "Claude had just done. If this is a discard, the reviewer prompt is "
+            "waiting for a rationale or a request to remember that real users "
+            "do not supply; check %s/diagnostics.jsonl"
+            % (payload, CORRECTION, scratch["state"]))
 
     candidate = payload["candidate"]
     assert candidate["destination_kind"] in {"CLAUDE.md", "rule", "skill"}
@@ -386,6 +391,7 @@ INTERACTIVE_SCRIPT = """
 
   Working directory: %s
   Plugin state:      %s
+  Session model:     %s at %s effort
 ==============================================================================
 """
 
@@ -473,11 +479,14 @@ def test_2_the_async_wake_reaches_an_idle_session(scratch):
 
     seed_runnable_project(scratch["project"])
 
-    sys.stdout.write(INTERACTIVE_SCRIPT % (scratch["project"], scratch["state"]))
+    sys.stdout.write(INTERACTIVE_SCRIPT % (
+        scratch["project"], scratch["state"],
+        smoke_model() or "the CLI default",
+        smoke_effort() or "default"))
     sys.stdout.flush()
     input("  Press Enter to launch the session... ")
 
-    subprocess.run(["claude", "--plugin-dir", PLUGIN_ROOT,
+    subprocess.run(["claude", "--plugin-dir", PLUGIN_ROOT, *session_args(),
                     "--allowedTools", *INTERACTIVE_ALLOWED_TOOLS],
                    cwd=str(scratch["project"]), env=runner_environment(),
                    check=False)

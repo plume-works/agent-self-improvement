@@ -33,6 +33,8 @@ import time
 
 import pytest
 
+from tests.smoke import workspaces
+
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PLUGIN_ROOT = os.path.join(REPO_ROOT, "plugin")
 SI = os.path.join(PLUGIN_ROOT, "scripts", "si")
@@ -43,6 +45,22 @@ SEED_CLAUDE_MD = """# Scratch project
 
 - Build with `make build`.
 """
+
+# The correction every suite drives, deliberately as terse as a real one.
+#
+# Shared rather than written per suite so that no check can quietly make itself
+# pass by explaining more than a user would. An earlier version stated the
+# reason for the rule and asked in so many words for it to be remembered; that
+# is not how people correct Claude, and a reviewer tuned against it learns to
+# wait for a rationale nobody supplies. Inferring the durable lesson from a few
+# words *is* the product, so the prompt under test has to be a few words.
+#
+# What it does carry is a standing scope ("in this repo") and an `always`, which
+# is what separates a rule from an instruction about the turn in hand. Both
+# markers fire on it: `correction` from the leading "no,", `retention` from
+# "always use".
+FIRST_TURN = "run the tests with pytest"
+CORRECTION = "no, always use `make test` in this repo, not pytest directly"
 
 # The skill needs to read candidate owners and run the dispatcher. It is granted
 # nothing that can write a file: staging goes through si, which is the only
@@ -113,7 +131,44 @@ def seed_runnable_project(project):
     return project
 
 
-def runner_environment():
+# Claude Code's own auto memory writes a lesson into
+# ~/.claude/projects/<project>/memory/ during the turn that teaches it, before
+# this plugin's Stop hook ever runs. On the correction these suites drive, it
+# reliably records "always run `make test` in this repo" first — so the reviewer
+# is handed a turn whose lesson is already owned, and correctly declines with
+# `already_covered`. That is the right answer to the wrong question: the check
+# is meant to observe the wake, not to race another system for the same lesson.
+#
+# So it is off by default, and the two systems meeting is a separate check that
+# says so in its name. `1` disables and `0` forces on; that polarity is Claude
+# Code's, not this suite's.
+DEFAULT_SMOKE_AUTO_MEMORY = "0"
+
+# Named so a launch site can declare it deliberate. The pty harness scrubs
+# inherited CLAUDE_CODE* variables, and this one has to survive that.
+AUTO_MEMORY_VARIABLE = "CLAUDE_CODE_DISABLE_AUTO_MEMORY"
+
+
+def auto_memory_enabled():
+    """Whether driving sessions may read and write Claude Code's auto memory."""
+    value = os.environ.get("SMOKE_AUTO_MEMORY", DEFAULT_SMOKE_AUTO_MEMORY).strip()
+    return value.lower() not in ("", "0", "false", "no", "off")
+
+
+def with_auto_memory(environment, enabled=None):
+    """Set auto memory explicitly, whichever way — never leave it inherited.
+
+    A default that varies with the developer's settings would make a decline
+    reproduce for one person and not another, which is the failure this whole
+    dial exists to stop happening again.
+    """
+    if enabled is None:
+        enabled = auto_memory_enabled()
+    environment[AUTO_MEMORY_VARIABLE] = "0" if enabled else "1"
+    return environment
+
+
+def runner_environment(auto_memory=None):
     """The environment for a session that is expected to run ``pytest``.
 
     The scratch project has no interpreter of its own, and the plugin has no
@@ -125,7 +180,7 @@ def runner_environment():
     environment = dict(os.environ)
     environment["PATH"] = os.pathsep.join(
         [os.path.dirname(sys.executable), environment.get("PATH", "")])
-    return environment
+    return with_auto_memory(environment, auto_memory)
 
 
 def require_cli():
@@ -148,8 +203,6 @@ def cli_version():
     return version
 
 
-SCRATCH_ROOT = os.path.join(REPO_ROOT, "tmp", "smoke")
-
 # Provider-side failures: the CLI ran, the call inside it did not. These say
 # nothing about the plugin, so a check that hits one is retried and then skipped
 # rather than reported as a product failure. Everything else fails loudly.
@@ -166,63 +219,86 @@ PROVIDER_PHRASES = re.compile(
 
 SESSION_RETRY_DELAY = 20
 
+# The model the *driving* session runs on. Not the reviewer: that is the
+# component under test, it stays on SELF_IMPROVE_REVIEW_MODEL, and lowering it
+# would make a green run stop saying anything about what ships. The driving
+# sessions only follow a short scripted procedure, so they default to sonnet
+# rather than to whatever the developer's CLI prefers — observing a plugin
+# behaviour that does not depend on the model should not cost Opus usage.
+DEFAULT_SMOKE_MODEL = "sonnet"
 
-def mangle_path(path):
-    """The CLI's directory key for a working directory.
 
-    Every character outside ``[A-Za-z0-9-]`` becomes a dash, so
-    ``/tmp/smoke/test_2_x/project`` keys as ``-tmp-smoke-test-2-x-project``.
-    Underscores are included: they are converted, not kept.
+def smoke_model():
+    """The driving session's model, or None to accept the CLI default.
+
+    ``SMOKE_MODEL=`` (empty) is the way back to the CLI default, which a
+    model-specific failure has to be reproducible against.
     """
-    return re.sub(r"[^A-Za-z0-9-]", "-", str(path))
+    return os.environ.get("SMOKE_MODEL", DEFAULT_SMOKE_MODEL).strip() or None
 
 
-def claude_session_dir(project):
-    """Where Claude Code keeps its own transcripts and memories for a directory."""
-    home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(
-        os.path.expanduser("~"), ".claude")
-    return os.path.join(home, "projects", mangle_path(project))
+# Claude Code defaults to `high` effort. These sessions follow a written
+# procedure — run the suite, state a correction, accept a proposal — which is
+# not reasoning work, so they are dropped to `low`. The reviewer is a separate
+# dial and stays higher; see SELF_IMPROVE_REVIEW_EFFORT.
+DEFAULT_SMOKE_EFFORT = "low"
 
 
-def forget_previous_runs(project):
-    """Drop Claude's own transcripts and memories for a scratch directory.
+def smoke_effort():
+    """The driving session's effort level, or None to accept the CLI default."""
+    return os.environ.get("SMOKE_EFFORT", DEFAULT_SMOKE_EFFORT).strip() or None
 
-    These live outside the workspace, so wiping ``tmp/smoke`` does not reach
-    them and the next run starts holding the previous run's memory of the very
-    lesson under test. In check 2 that appeared as Claude answering "already
-    saved in memory, so no update needed" instead of taking the proposal, and in
-    check 6 it would let a fresh session answer from memory rather than from the
-    instruction that was just applied.
 
-    Guarded on the scratch root, so it can only ever remove state belonging to a
-    smoke workspace. If the CLI ever derives these paths differently the guard
-    stops matching and nothing is deleted, which loses repeatability rather than
-    touching anything it should not.
+def model_args():
+    model = smoke_model()
+    return ["--model", model] if model else []
+
+
+def effort_args():
+    """``--effort``, not ``CLAUDE_CODE_EFFORT_LEVEL``.
+
+    The environment variable would be inherited by every session the harness
+    starts *and* by the reviewer subprocesses inside them, overriding the
+    reviewer's own level. The flag reaches only the session it launches. An
+    unknown flag is also a loud CLI error, which is what this suite wants: the
+    version floor is already checked, so an effort level that stopped being
+    accepted should fail rather than silently run at some other level.
     """
-    directory = claude_session_dir(project)
-    if os.path.basename(directory).startswith(mangle_path(SCRATCH_ROOT)):
-        shutil.rmtree(directory, ignore_errors=True)
-    return directory
+    effort = smoke_effort()
+    return ["--effort", effort] if effort else []
+
+
+def session_args():
+    """Everything that decides how much a driving session costs to run."""
+    return model_args() + effort_args()
 
 
 @pytest.fixture
 def scratch(request, monkeypatch, cli_version):
     """A throwaway git repository with isolated plugin state.
 
-    Lives under the repository's own gitignored ``tmp/`` rather than the system
-    temporary directory, so that after a failure the workspace, the plugin
-    state, and the diagnostics are all sitting somewhere obvious. It is wiped at
-    the start of each run and deliberately left behind at the end.
+    Lives under this process's own directory in the repository's gitignored
+    ``test-runs/`` rather than the system temporary directory, so that after a
+    failure the workspace, the plugin state, and the diagnostics are all sitting
+    somewhere obvious — and so that they are still sitting there after the next
+    run, whichever target starts it. Deliberately left behind at the end.
+
+    Nothing is wiped on the way in. The run root is named to the nanosecond and
+    created moments ago, so there is nothing in it to wipe: that is what makes
+    ten runs of `make wake-repeat` ten readable results instead of one.
+
+    Claude Code's own ``~/.claude/projects/<mangled-path>/`` follows the scratch
+    path, so a unique path also means a session that starts with no memory of
+    any earlier run — the thing ``forget_previous_runs`` used to delete by hand.
+    What those directories now need is clearing occasionally, which is
+    ``make clean-claude``.
     """
-    workspace = os.path.join(SCRATCH_ROOT, request.node.name)
-    if os.path.isdir(workspace):
-        shutil.rmtree(workspace)
+    workspace = os.path.join(workspaces.run_root(), request.node.name)
 
     project = pathlib.Path(workspace) / "project"
     project.mkdir(parents=True)
     (project / "CLAUDE.md").write_text(SEED_CLAUDE_MD)
     subprocess.run(["git", "init", "-q"], cwd=str(project), check=True)
-    forget_previous_runs(project)
 
     state = pathlib.Path(workspace) / "state"
     monkeypatch.setenv("SELF_IMPROVE_STATE_DIR", str(state))
@@ -379,6 +455,7 @@ def _run_session_once(cwd, messages, timeout=600, extra_args=None):
         "--include-hook-events",
         "--verbose",
         "--plugin-dir", PLUGIN_ROOT,
+        *session_args(),
         "--allowedTools", *ALLOWED_TOOLS,
         "--max-turns", "40",
     ]
@@ -393,7 +470,8 @@ def _run_session_once(cwd, messages, timeout=600, extra_args=None):
 
     started = time.time()
     process = subprocess.run(command, input=payload, capture_output=True,
-                             text=True, cwd=str(cwd), timeout=timeout)
+                             text=True, cwd=str(cwd), timeout=timeout,
+                             env=with_auto_memory(dict(os.environ)))
     elapsed = time.time() - started
 
     events = []

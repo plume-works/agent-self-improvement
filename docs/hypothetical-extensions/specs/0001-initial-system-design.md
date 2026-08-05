@@ -3,7 +3,7 @@
 - **Status:** Proposed
 - **Date:** 2026-07-28
 - **Owners:** Claude Self-Improvement maintainers
-- **Target repository:** `chocobot-farm/claude-self-improvement`
+- **Target repository:** `plume-works/claude-self-improvement`
 - **First release:** [Spec-0002: Phase 1 — Review-only local core](0002-phase-1-review-only.md)
 
 ## Summary
@@ -498,7 +498,7 @@ Unsupported versions may run with self-improvement disabled and a diagnostic. Th
 
 Initial distribution is private:
 
-- source hosted in `chocobot-farm/claude-self-improvement`;
+- source hosted in `plume-works/claude-self-improvement`;
 - packaged plugin installed at user scope;
 - native macOS artifact built by CI for supported architecture(s);
 - checksums published with each private release; and

@@ -17,6 +17,7 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+*.log
 
 # Runtime state must never enter the repository
 .self-improvement/
@@ -31,5 +32,11 @@ locks/
 *.sqlite-shm
 *.sqlite-wal
 
-# Test scratch
+# Test scratch. Every live run gets its own directory under test-runs/ and is
+# left there to be read afterwards; /tmp/ is where they used to go, and stays
+# ignored until `make clean` clears whatever is still sitting in it.
+/test-runs/
 /tmp/
+
+# Working files of the PR-feedback workflow, not part of the repository.
+/.tmp/

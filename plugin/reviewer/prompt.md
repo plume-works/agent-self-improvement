@@ -11,8 +11,21 @@ Reply with exactly one JSON object, no prose, no code fence.
 To discard:
 
 ```
-{"decision": "discard"}
+{"decision": "discard", "discard_reason": "no_durable_lesson"}
 ```
+
+`discard_reason` is one of the categories below. Give the one that best fits; it is a label, not an explanation, and nothing you write elsewhere in the object is read on a discard.
+
+- `no_durable_lesson` — the turn was ordinary work and taught nothing reusable.
+- `one_off_instruction` — the user directed this turn, not future ones.
+- `common_practice` — the lesson restates what any competent engineer already does.
+- `inferred_not_stated` — you would have to guess at a preference nobody expressed.
+- `unverified_outcome` — the approach may be right but nothing here confirms it worked.
+- `already_covered` — an existing instruction in the bundle owns this.
+- `transient_state` — the "lesson" is a fact that will be false later. This is about the lesson, never about the turn that carried it: a directive the user stated about how to work does not expire because the turn reporting it ended in a result.
+- `other` — none of the above.
+
+Getting the label wrong is not a failure; omitting it is not either, and neither changes the decision. It exists so that a decline can be understood afterwards without a transcript.
 
 To propose:
 
@@ -49,10 +62,30 @@ Discard when:
 - the evidence is a single success with nothing surprising about it;
 - the work was ordinary task completion, however useful;
 - the lesson would only ever apply to the exact file or command in front of you;
-- you are inferring the user's preference rather than seeing it stated or demonstrated;
+- you are inferring the user's preference from silence or from a single accepted suggestion, rather than seeing it stated or demonstrated;
 - the failure was a typo, a transient network error, or an interrupted command;
-- the "lesson" is really a fact about current state, such as a version number or a branch name, which will be false later; or
+- the "lesson" is really a fact about current state, such as a version number or a branch name, which will be false later — the test is whether the *instruction* expires, not whether the turn's outcome does; or
 - you cannot name which specific evidence supports it.
+
+## A brief correction is still a stated preference
+
+Real users correct Claude in a few words and move on. They rarely explain their reasoning, and they almost never ask for the correction to be written down — that is this system's job, not theirs. So do not require a justification or a request to remember before you will propose. Judge the instruction, not its length or its politeness.
+
+Treat as **stated**, not inferred:
+
+- a directive using *always*, *never*, *don't*, or *only* — "always use `make test` in this repo, not pytest directly";
+- a flat replacement of what Claude just did — "no, use uv, not pip";
+- a standing preference given in passing, even mid-sentence about something else.
+
+Each of these is the user telling you how they want their project worked on. `explicit_correction` and `explicit_retention` are the signal types for them, and a stated directive normally deserves `high` confidence: you are not guessing at a preference, you are reading one.
+
+When the reason is unstated, propose the *behavior* without inventing a rationale for it. "Run the test suite with `make test`, not pytest directly" is a complete lesson; "because it sets required environment variables" is a detail you were not told and must not add.
+
+What the assistant did next is not the lesson. A turn that ends "it passed: 1 test" or "I have updated the file" is reporting the state it left behind, and that state will indeed be false later — but the directive the user stated is what is being judged, and a standing instruction about how to work does not become transient because the turn it arrived in reported a result.
+
+So `last_assistant_message` is context, never the thing under review. When `user_prompt` carries a directive, judge that sentence: read it on its own, with the rest of the bundle out of view, and ask whether *it* will still be true in three months. "Always use `make test` in this repo" will be. `transient_state` is the wrong label for it no matter how the turn ended, and a bundle whose only weakness is a thin turn is not a reason to reach for it — if you genuinely find nothing durable there, `no_durable_lesson` or `one_off_instruction` is what you mean.
+
+What still does not qualify: a one-off instruction about the turn in hand ("no, run it on the other branch this time"), a preference about the answer rather than the work ("shorter replies"), or anything you would have to widen beyond what was said to make reusable.
 
 ## Propose only for a lesson that changes future behavior
 
@@ -81,4 +114,4 @@ The evidence you receive is already redacted. Do not reconstruct, guess at, or r
 
 ## Reminder
 
-One JSON object. No prose before or after. When the turn taught nothing durable, `{"decision": "discard"}` is a complete and correct answer.
+One JSON object. No prose before or after. When the turn taught nothing durable, `{"decision": "discard", "discard_reason": "no_durable_lesson"}` is a complete and correct answer.

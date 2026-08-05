@@ -10,6 +10,12 @@ import os
 DEFAULT_REVIEW_MODEL = "sonnet"
 REVIEW_TIMEOUT_SECONDS = 120
 
+# Claude Code defaults to `high`. The review is one bounded judgement over an
+# evidence bundle that is already assembled, with no tools and a single turn, so
+# it does not need the default; `medium` keeps the ownership and phrasing
+# decisions that the schema cannot check, at a lower cost per completed turn.
+DEFAULT_REVIEW_EFFORT = "medium"
+
 # Gate limits (spec section 6).
 COOLDOWN_SECONDS = 120
 DAILY_REVIEW_LIMIT = 20
@@ -31,6 +37,12 @@ MAX_EVENTS_PER_TURN = 200
 
 def review_model():
     return os.environ.get("SELF_IMPROVE_REVIEW_MODEL") or DEFAULT_REVIEW_MODEL
+
+
+def review_effort():
+    """Effort level for the review call, or None to accept the CLI default."""
+    return os.environ.get(
+        "SELF_IMPROVE_REVIEW_EFFORT", DEFAULT_REVIEW_EFFORT).strip() or None
 
 
 def review_timeout():

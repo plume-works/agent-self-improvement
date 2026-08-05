@@ -52,6 +52,20 @@
     "confidence": {
       "type": "string",
       "enum": ["high", "medium", "low"]
+    },
+    "discard_reason": {
+      "$comment": "Discard only, and a bounded category rather than a sentence, because it is journaled: the diagnostics file must stay shareable without a transcript. An unrecognized value is dropped, never an error — a discard must not become a schema failure.",
+      "type": "string",
+      "enum": [
+        "no_durable_lesson",
+        "one_off_instruction",
+        "common_practice",
+        "inferred_not_stated",
+        "unverified_outcome",
+        "already_covered",
+        "transient_state",
+        "other"
+      ]
     }
   },
   "requiredWhenProposing": [

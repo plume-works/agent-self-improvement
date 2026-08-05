@@ -1,6 +1,6 @@
 # Spec-0001: Hook-driven experiential learning plugin MVP
 
-- **Status:** Accepted; implemented in slices 1–4
+- **Status:** Accepted; implemented in slices 1–4. **Evidence observed:** the whole offline suite passes, with no failures and nothing skipped beyond the live markers — observed on 2026-08-02, branch `feat/mvp-continued` (PR #2), commit `ee49df1`. Nine of the ten packaged smoke checks pass against a real Claude Code session; the tenth, smoke check 2, is the asynchronous wake, which the [Spec-0002](0002-pty-wake-harness.md) pseudo-terminal harness observed passing on 2026-08-01 and over ten consecutive `make wake-repeat` runs on 2026-08-02. Section 15 is therefore met in full. **Evidence outstanding:** the smoke and wake runs cost real model calls and were not repeated on the commit above; their result is carried forward from the runs recorded in Spec-0002.
 - **Scope:** Standalone Claude Code CLI on one local user account
 - **Runtime:** Python 3.9+, standard library only
 - **Implementation strategy:** package a narrowed `claude-improve` reviewer as a Claude Code plugin and invoke it selectively through supported lifecycle hooks
@@ -171,6 +171,7 @@ The explicit override precedes the plugin data directory because Claude Code set
 | Variable | Purpose |
 | --- | --- |
 | `SELF_IMPROVE_REVIEW_MODEL` | Reviewer model; defaults to `sonnet` |
+| `SELF_IMPROVE_REVIEW_EFFORT` | Reviewer effort level; defaults to `medium`. Empty accepts the CLI default |
 | `SELF_IMPROVE_REVIEW_TIMEOUT` | Seconds to wait for the reviewer before giving up silently |
 | `SELF_IMPROVE_DISABLE` | Set to `1` to disable the plugin without uninstalling it |
 | `SELF_IMPROVE_REVIEWER` | Set to `1` in the reviewer's own environment; suppresses reflection in reviewer-originated sessions |
@@ -246,6 +247,10 @@ The gate is deterministic and cheap. It requests model review only when at least
 6. **reusable completion:** the final response identifies a completed multi-step procedure with verified outputs; or
 7. **manual force:** `/self-improve:improve` was invoked.
 
+Signals 1 and 2 are read from the user's own words, in the form users actually write them. A bare standing directive — “always use `make test` here”, “never push to main” — is an explicit retention request whether or not it carries a reason, and whether or not the user asks for it to be remembered. The gate recognizes the adverb in any instruction, not in a fixed list of verbs.
+
+The same words describing the world rather than instructing — “the build always fails on CI”, “that never worked” — are not a signal. Only a clause opening with the adverb is read as a rule, which is what keeps the widened pattern from spending a review on a complaint.
+
 A signal is permission to reflect, not proof that a durable lesson exists. The reviewer may and often should return no candidate.
 
 The MVP enforces:
@@ -255,6 +260,10 @@ The MVP enforces:
 - cooldown and daily invocation limits;
 - proposal fingerprint deduplication; and
 - recursion guards for reviewer and plugin-generated sessions.
+
+The recursion and safety guards are decisive for every turn. The two rate limits are not, and rank against the signals as follows.
+
+The cooldown does not suppress signals 1 and 2. Those are read from the user's own words; the remaining automatic signals are inferred from work Claude itself did, and inferring one is what arms the cooldown in the first place. A directive that arrives moments after unrelated work must still be reviewed: it will not be repeated, and the turn that displaced it was, by construction, the cheaper reading of the session. The daily invocation limit is the spending ceiling and suppresses every automatic signal, including 1 and 2. Manual force (signal 7) passes both rate limits and neither guard.
 
 ## 7. Independent reviewer
 
@@ -303,6 +312,8 @@ The reviewer receives its entire evidence bundle on standard input. Candidate ow
 
 `SELF_IMPROVE_REVIEWER=1` is set in the reviewer's environment so that any session it originates suppresses reflection.
 
+Effort is carried by `CLAUDE_CODE_EFFORT_LEVEL` in that same environment, defaulting to `medium` against a Claude Code default of `high`. The review is one bounded judgement over an already-assembled evidence bundle, with no tools and a single turn, so it does not need the default; `medium` keeps the ownership and phrasing decisions the schema cannot check. It is deliberately *not* the `--effort` flag: review failure is silent by design, so a CLI too old to know the flag would abort every review with nothing on screen to explain it, whereas an unrecognized environment variable is ignored and the review still happens at the default level. Losing the saving is the acceptable failure; losing the review is not.
+
 ### 7.4 Reviewer output
 
 The reviewer returns strict structured data:
@@ -318,11 +329,18 @@ The reviewer returns strict structured data:
   "destination_scope": "project | user",
   "destination_kind": "CLAUDE.md | rule | skill",
   "owner_query": "terms used to find an existing owner",
-  "confidence": "high | medium | low"
+  "confidence": "high | medium | low",
+  "discard_reason": "bounded category, discard only"
 }
 ```
 
 Malformed output, low confidence, unsupported destinations, and policy violations become `discard`.
+
+A discard may name why, as one of a fixed set of categories rather than a sentence, and that category is journaled as the review's outcome. It is optional and never fatal: an absent or unrecognized value is dropped and the discard stands. Turning a correct decline into a schema failure over its label would misreport what the reviewer said.
+
+Every review that ends without a candidate records its outcome — a decline with its category, a transport or schema failure with its error class, a suppressed duplicate with the fingerprint status. Without this the three are indistinguishable in durable state, since all of them delete the turn, store no candidate, and leave only an incremented counter behind; diagnosing which one occurred would otherwise require re-running a check that costs real model usage. A review that produced a candidate needs no such record, because the candidate is the record.
+
+Brevity is not grounds for discard. A stated directive is explicit evidence even when the user supplies no rationale and never asks for it to be remembered — that inference is this system's job, not the user's. The reviewer proposes the behavior that was stated and does not invent a justification for it. What it still discards is an instruction about the turn in hand rather than a standing one.
 
 The reviewer does not emit final file bytes and cannot write files.
 
@@ -415,7 +433,7 @@ Relative to the state root defined in section 4.1. Directories are created mode 
 | `fingerprints.json` | accepted and rejected proposal fingerprints | retained |
 | `counters.json` | cooldown and daily invocation counters | retained |
 | `pending.json` | candidates awaiting an available session | expires with the candidate |
-| `diagnostics.jsonl` | redacted error classes only | retained |
+| `diagnostics.jsonl` | bounded error classes and review outcomes; never prose | retained |
 
 Permissions default to user-only access. Durable state must not contain:
 

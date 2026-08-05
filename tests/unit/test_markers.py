@@ -25,6 +25,68 @@ def test_retention_requests_are_detected(prompt):
 
 
 @pytest.mark.parametrize("prompt", [
+    "always prefer uv",
+    "never push to main",
+    "always format with black",
+    "no, always use `make test` in this repo, not pytest directly",
+    "use uv, and never call pip directly",
+    "fix the imports, then always sort them",
+])
+def test_a_standing_directive_is_a_retention_request_whatever_verb_follows(prompt):
+    """`always` and `never` are not tied to a list of blessed verbs.
+
+    A user who says "always format with black" is stating a rule as plainly as
+    one who says "always run make test", and the gate that only knew a handful
+    of verbs decided the difference for them. It is the standing scope that
+    makes this a lesson, not the particular word after it.
+    """
+    assert markers.RETENTION in markers.detect(prompt)
+
+
+@pytest.mark.parametrize("prompt", [
+    "I'd like you to always use uv",
+    "you must never use pip",
+    "you should always run make test first",
+    "the agent shall never touch main",
+    "from here on you will always use uv",
+    "Could you always use uv?",
+    "Would you never push to main?",
+    "Can you always run make test?",
+])
+def test_a_directive_introduced_by_a_modal_is_still_a_directive(prompt):
+    """Politeness is not a reason to stop reviewing a standing rule.
+
+    "you must never use pip" is the same instruction as "never use pip"; only
+    the wind-up differs. A gate that reads the adverb solely at the head of a
+    clause discards the half of plainly stated preferences that arrive with an
+    introduction.
+    """
+    assert markers.RETENTION in markers.detect(prompt)
+
+
+@pytest.mark.parametrize("prompt", [
+    "the build always fails on CI",
+    "it seems to always fail here",
+    "that will never work",
+    "that never worked",
+    "the flag was never set",
+    "this is always the case",
+    "tests never seem to pass",
+    "I have never seen that",
+    "The build will always break on Windows",
+    "This script will always delete the cache",
+])
+def test_always_and_never_describing_the_world_are_not_directives(prompt):
+    """The other half of widening the pattern, and the expensive half to get wrong.
+
+    "the build always fails" is a report, not a rule, and reviewing it costs a
+    real model call. Only a clause that opens with the adverb is read as an
+    instruction.
+    """
+    assert markers.RETENTION not in markers.detect(prompt)
+
+
+@pytest.mark.parametrize("prompt", [
     "no, that's the wrong directory",
     "actually, use the staging config",
     "that's wrong",

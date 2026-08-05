@@ -1,0 +1,26 @@
+{
+  "name": "agent-self-improvement",
+  "owner": {
+    "name": "PlumeWorks",
+    "url": "https://github.com/plume-works/agent-self-improvement"
+  },
+  "description": "Local experiential-learning plugin for Claude Code surfaces.",
+  "plugins": [
+    {
+      "name": "self-improve",
+      "source": "./plugin",
+      "description": "Turns verified corrections and hard-won workflows into durable, reviewable Claude instructions and skills, applied only with explicit user authorization.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Anton Matosov"
+      },
+      "license": "MIT",
+      "keywords": [
+        "learning",
+        "memory",
+        "self-improvement",
+        "reflection"
+      ]
+    }
+  ]
+}

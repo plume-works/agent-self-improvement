@@ -29,20 +29,66 @@ and the [section 15 acceptance gate](specs/0001-hermes-style-experiential-learni
 
 Nothing else. There is no directory to create and no file to seed.
 
+## What a run costs
+
+Two sets of dials, and they are not interchangeable:
+
+| | Model | Effort |
+| --- | --- | --- |
+| The session the suite *drives* | `SMOKE_MODEL`, default `sonnet` | `SMOKE_EFFORT`, default `low` |
+| The reviewer *under test* | `SELF_IMPROVE_REVIEW_MODEL`, default `sonnet` | `SELF_IMPROVE_REVIEW_EFFORT`, default `medium` |
+
+A third dial is not about cost. `SMOKE_AUTO_MEMORY` is off by default, and every
+driving session is launched with `CLAUDE_CODE_DISABLE_AUTO_MEMORY` set explicitly
+either way, never inherited — see [Auto memory](#auto-memory) below for why.
+
+Setting `SMOKE_MODEL`, `SMOKE_EFFORT`, or `SELF_IMPROVE_REVIEW_EFFORT` to empty
+accepts the CLI's own default — `high` effort, and whichever model you normally
+run — which is what a suspected model- or effort-specific failure has to be
+reproduced against. `SELF_IMPROVE_REVIEW_MODEL` is the exception: spec section
+7.3 commits the reviewer to an explicit `--model`, so an empty value falls back
+to `sonnet` rather than to your usual model. Name the model outright to
+reproduce against a different one.
+
+The driving session is pinned rather than inherited. It follows a written
+procedure: run the suite, state a correction, accept a proposal. None of that is
+reasoning work, nothing these checks observe depends on it, and an unconfigured
+run should not bill Opus at `high` effort to find that out.
+
+The reviewer is the component being tested. Its prompt meeting the model and
+effort that ship is the point of the exercise, so leave its two alone unless you
+are deliberately measuring a different reviewer — a green run on a weaker one
+says nothing about production. The harness sets the driving session's effort
+with the `--effort` flag rather than `CLAUDE_CODE_EFFORT_LEVEL` for exactly this
+reason: the variable is inherited, so it would reach the reviewer subprocess
+inside the session and quietly retune the thing under test.
+
 ## What it does not touch
 
 The scratch repository, the plugin state, and every mutation live under
-`tmp/smoke/<test-name>/`, which is gitignored. Each run wipes its own workspace
-at the start and **leaves it in place afterwards**, so a failure can be opened
-and read:
+`test-runs/<target>_<timestamp>/<test-name>/`, which is gitignored. Every run
+claims a directory of its own and **leaves everything in place afterwards**, so
+a failure can be opened and read — including after the next run:
 
 ```bash
-tmp/smoke/test_3_a_real_reviewer_produces_a_schema_valid_candidate/
-├── project/          the scratch repository, with its CLAUDE.md
-└── state/            candidates, proposals, backups, diagnostics.jsonl
+test-runs/
+├── latest -> smoke_2026-08-02_09-12-03.771204418
+├── latest-smoke -> smoke_2026-08-02_09-12-03.771204418
+├── latest-wake -> wake_2026-08-02_03-08-12.801409000
+└── smoke_2026-08-02_09-12-03.771204418/
+    └── test_3_a_real_reviewer_produces_a_schema_valid_candidate/
+        ├── project/     the scratch repository, with its CLAUDE.md
+        └── state/       candidates, proposals, backups, diagnostics.jsonl
 ```
 
-`make clean` removes them.
+Nothing is ever overwritten. The directory is named for the target that started
+it, so `make smoke` and `make wake` cannot collide, and to the nanosecond, so
+two runs of the same target cannot either — which is what makes the ten runs of
+`make wake-repeat` ten results rather than one. One pytest process claims one
+directory, so every check in a run shares it.
+
+`make clean` removes them all; `latest` and `latest-<target>` are there so
+finding the run you just did does not mean reading timestamps.
 
 Isolation works because `SELF_IMPROVE_STATE_DIR` outranks `CLAUDE_PLUGIN_DATA`
 when the state root is resolved. Claude Code sets `CLAUDE_PLUGIN_DATA` in every
@@ -56,12 +102,51 @@ would take the CLI's authentication with it. No check proposes a user-scope
 change, and every mutation assertion checks the file it touched is inside the
 scratch repository.
 
-One thing inside `~/.claude` is removed: `projects/<scratch-path>/`, where Claude
-Code keeps its own transcripts and memories for the scratch directory. Those
-outlive `tmp/smoke`, so without this a second run begins already holding the
-first run's memory of the lesson under test — which is how check 2 once ended in
-"already saved in memory, so no update needed". The deletion is guarded on the
-scratch root and can only match a smoke workspace.
+One thing inside `~/.claude` does grow: `projects/<scratch-path>/`, where Claude
+Code keeps its own transcripts and memories for a working directory. A run used
+to delete it, because the scratch path was the same every time and a second run
+would otherwise begin already holding the first run's memory of the lesson under
+test — which is how check 2 once ended in "already saved in memory, so no update
+needed". A path that no earlier run has used fixes that by construction, and
+nothing needs deleting mid-run.
+
+What it leaves is one small directory per run, outside the repository where
+`make clean` cannot reach it by removing files. `make clean-claude` removes
+them, and `make clean` calls it. It prints every path before deleting it, and it
+matches a key only when the mangled `test-runs/` root (or the old `tmp/smoke`
+one) is followed by the shape a run writes underneath it — the run stamp for the
+current layout, a test's workspace and its `project/` for the old one. The root
+alone would not do: mangling maps `/` and `-` to the same character, so a real
+project under a neighbour like `test-runs-archive/` carries the same prefix.
+
+## Auto memory
+
+Claude Code has a learning system of its own. On the correction these checks
+drive, it writes `memory/feedback_use_make_test.md` **during the turn that
+teaches it** — before this plugin's `Stop` hook has run at all. The reviewer is
+then handed a turn whose lesson is already owned, and correctly declines with
+`already_covered`.
+
+That is right behavior producing a useless check: `make wake` was failing at
+`assert candidates` for two live runs, and neither run was about the wake.
+
+So every driving session sets `CLAUDE_CODE_DISABLE_AUTO_MEMORY` explicitly, and
+by default it is `1`. Explicitly matters as much as the default — `autoMemoryEnabled`
+is a user setting, so leaving it inherited means a failure that reproduces for
+one person and not another, on a check that costs a live run to observe.
+
+The interaction is not ignored, just moved somewhere it can be seen:
+
+```bash
+make wake-memory
+```
+
+This drives the identical exchange with auto memory left on and asserts
+coherence rather than a candidate. Either outcome passes — the reviewer declines
+because the lesson is already owned, or it proposes anyway and the wake arrives.
+What fails is incoherence: no review at all, a reviewer that could not be
+reached, or a candidate stored but never queued. It is a third live session, so
+it is not part of `make wake`.
 
 ## The checks
 
@@ -91,12 +176,37 @@ else uses a deterministic fake. If it fails, the prompt has drifted or become
 too conservative; the candidate it produced, or the reason it declined, is in
 that test's `state/` directory.
 
+Every check drives the same one-line correction — *no, always use `make test` in
+this repo, not pytest directly* — with no reason given and no request to
+remember it, because that is what a real correction looks like. Inferring the
+durable lesson from a few words is the product, so a check that spelled out its
+own rationale would be grading the user rather than the reviewer. Keep it terse
+when editing these.
+
 ## Check 2: the interactive one
 
 A `-p` session ends its turn at `result`, so an `asyncRewake` hook has no idle
 session to wake. This was measured, not assumed — see
-[Spec-0002](specs/0002-pty-wake-harness.md) for the probe and for what
-automating it would take.
+[Spec-0002](specs/0002-pty-wake-harness.md) for the probe.
+
+`make wake` aims to perform this check without you: it drives the same exchange
+through a real interactive session on a pseudo-terminal, waits for the wake, and
+verifies it against a candidate identifier it reads from disk rather than
+against anything on screen. Both live checks were observed passing together on
+2026-08-01: the wake arrived at an idle session, and the negative control saw no
+wake when the `Stop` hook could not signal. Its stability criterion remains
+partially verified because one of ten repeated wake checks skipped when the
+reviewer staged no candidate, so nine reached the arrival assertion. The manual
+procedure below remains available for an operator who wants to watch the wake
+directly.
+
+When `make wake` fails, read its trace before anything else: it names each step
+as it starts, beats every five seconds while waiting, and echoes the screen after
+every turn, and the raw terminal stream of the run is left in
+`test-runs/<target>_<timestamp>/<test>/<name>.pty.log`. `make test-harness` drives the same harness
+against a fake terminal that only echoes what it captured — no model, no cost —
+and a pass there means the input reached the session and the failure is on the
+other side of the pty.
 
 So `make smoke` pauses, prints instructions, and opens a real session in your
 terminal. The scratch repository for this check gets a `Makefile` and a small
@@ -135,6 +245,25 @@ is a turn that never reached `Stop`), and the review counters. A missing
 `counters.json` is the loudest signal there — no review ever started, so no
 correction marker reached the gate.
 
+A `counters.json` with no candidate beside it means the reverse: a review ran and
+ended with nothing. Read `diagnostics.jsonl` for the `review_outcome` record,
+which says which of the three it was —
+
+| `error_class` | `reason` | What happened |
+| --- | --- | --- |
+| `no_lesson` | a discard category | The reviewer read the turn and declined |
+| `no_lesson` | an error class | The reviewer was never reached, or its answer did not parse |
+| `duplicate` | `accepted` or `rejected` | The lesson was already known and was suppressed |
+
+Without that record the three are identical on disk, and telling them apart costs
+another live run.
+
+No record at all is a fourth case: the gate never asked. Check `count` in
+`counters.json` against how many turns the trace shows. One review across two
+turns means it went to the earlier one — the opening prompt runs the test suite,
+and a retry that succeeds there is a real signal in its own right. Compare
+`last_review_at` with the trace timestamps to see which turn was spent.
+
 To skip it — in CI, or when you only want the deterministic checks:
 
 ```bash
@@ -163,7 +292,7 @@ reported success.
 The failing test names its own workspace. Include:
 
 - `claude --version` and `python3 --version`;
-- `tmp/smoke/<test-name>/state/diagnostics.jsonl`, which holds bounded error
+- `test-runs/<target>_<timestamp>/<test-name>/state/diagnostics.jsonl`, which holds bounded error
   classes and no sensitive data; and
 - `./plugin/scripts/si self-test`.
 
