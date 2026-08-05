@@ -192,8 +192,13 @@ session to wake. This was measured, not assumed — see
 `make wake` aims to perform this check without you: it drives the same exchange
 through a real interactive session on a pseudo-terminal, waits for the wake, and
 verifies it against a candidate identifier it reads from disk rather than
-against anything on screen. It has not yet completed a passing live run, so the
-manual procedure below is still the supported way to verify the wake.
+against anything on screen. Both live checks were observed passing together on
+2026-08-01: the wake arrived at an idle session, and the negative control saw no
+wake when the `Stop` hook could not signal. Its stability criterion remains
+partially verified because one of ten repeated wake checks skipped when the
+reviewer staged no candidate, so nine reached the arrival assertion. The manual
+procedure below remains available for an operator who wants to watch the wake
+directly.
 
 When `make wake` fails, read its trace before anything else: it names each step
 as it starts, beats every five seconds while waiting, and echoes the screen after
