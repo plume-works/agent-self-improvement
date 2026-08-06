@@ -57,14 +57,14 @@ The plan's **store / inject / recall** decomposition is a clean way to reason ab
 
 ### Disposition matrix
 
-| Capability | Result | Evaluation |
-| --- | --- | --- |
-| Frozen snapshot injection | **ADAPT** | Keep a bounded, next-session snapshot principle. Prefer supported CLAUDE.md/auto-memory behavior over a second project-local memory authority by default. The existing plugin's `SessionStart` hook currently surfaces deferred proposals, not broad working memory. |
-| Agent-curated writes | **ADAPT** | Keep explicit retention intent, deduplication, and add/replace/remove semantics, but route writes through the implemented exact proposal and explicit authorization boundary. Direct skill-mediated edits are not acceptable for this MVP. |
-| Capture every turn | **REJECT** | Exhaustive durable logs and raw transcript archives conflict with the repository's deliberate redaction and data-minimization boundary. Retain bounded event signatures and asynchronous review only. |
-| Hybrid semantic search | **DEFER** | Plausible as a separate opt-in retrieval extension, but the plan lacks a retrieval benchmark, corpus/retention policy, threat model, embedding portability strategy, and measured need. It also violates the current zero-runtime-dependency constraint. |
-| Source citations | **ADOPT** | Require source file, date, and heading metadata for any future recall corpus; preserve it through retrieval and return an explicit no-result outcome instead of unsupported paraphrase. |
-| Full historical import | **REJECT** | A sentinel prevents duplicate execution, not privacy or scope failures. Default import of historical transcripts should not proceed without explicit opt-in, inventory/dry run, project boundaries, redaction, deletion, and re-index controls. |
+| Capability                | Result     | Evaluation                                                                                                                                                                                                                                                           |
+| ------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frozen snapshot injection | **ADAPT**  | Keep a bounded, next-session snapshot principle. Prefer supported CLAUDE.md/auto-memory behavior over a second project-local memory authority by default. The existing plugin's `SessionStart` hook currently surfaces deferred proposals, not broad working memory. |
+| Agent-curated writes      | **ADAPT**  | Keep explicit retention intent, deduplication, and add/replace/remove semantics, but route writes through the implemented exact proposal and explicit authorization boundary. Direct skill-mediated edits are not acceptable for this MVP.                           |
+| Capture every turn        | **REJECT** | Exhaustive durable logs and raw transcript archives conflict with the repository's deliberate redaction and data-minimization boundary. Retain bounded event signatures and asynchronous review only.                                                                |
+| Hybrid semantic search    | **DEFER**  | Plausible as a separate opt-in retrieval extension, but the plan lacks a retrieval benchmark, corpus/retention policy, threat model, embedding portability strategy, and measured need. It also violates the current zero-runtime-dependency constraint.             |
+| Source citations          | **ADOPT**  | Require source file, date, and heading metadata for any future recall corpus; preserve it through retrieval and return an explicit no-result outcome instead of unsupported paraphrase.                                                                              |
+| Full historical import    | **REJECT** | A sentinel prevents duplicate execution, not privacy or scope failures. Default import of historical transcripts should not proceed without explicit opt-in, inventory/dry run, project boundaries, redaction, deletion, and re-index controls.                      |
 
 ### What the plan gets right
 

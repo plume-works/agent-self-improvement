@@ -60,18 +60,18 @@ No environment service, ReMe service, model API, Ray cluster, model checkpoint, 
 
 At the pinned commit, the local checkout contains:
 
-| Surface | Observed value |
-| --- | ---: |
-| Tracked files | 381 |
-| Reachable commits | 858 |
-| Python files | 202 |
-| Python lines, including blanks/comments | 40,593 |
-| Test-like Python files | 16 |
-| `test_*` function definitions found | 29 |
-| GitHub Actions workflows | 0 |
-| Git tags | 0 |
-| GitHub releases | 0 |
-| Git submodules | 2: AgentScope and veRL |
+| Surface                                 |         Observed value |
+| --------------------------------------- | ---------------------: |
+| Tracked files                           |                    381 |
+| Reachable commits                       |                    858 |
+| Python files                            |                    202 |
+| Python lines, including blanks/comments |                 40,593 |
+| Test-like Python files                  |                     16 |
+| `test_*` function definitions found     |                     29 |
+| GitHub Actions workflows                |                      0 |
+| Git tags                                |                      0 |
+| GitHub releases                         |                      0 |
+| Git submodules                          | 2: AgentScope and veRL |
 
 The history begins in June 2025, is concentrated between June and December 2025, and has only a small number of 2026 commits before the pinned March 2026 revision. The README calls the November 2025 state “v1,” but the repository has no corresponding Git tag or GitHub release ([README lines 27–34](https://github.com/modelscope/AgentEvolver/blob/a5a8db8689d6493b028107dcb4c27415441581dc/README.md#L27-L34)). “Released” here means publicly pushed source, not a versioned release artifact.
 
@@ -107,15 +107,15 @@ The trainer constructs Ray worker groups, a policy/reference/critic topology, ta
 
 This differs categorically from Claude Self-Improvement:
 
-| Dimension | AgentEvolver | Claude Self-Improvement |
-| --- | --- | --- |
-| Improvement target | Qwen policy parameters | Claude-readable local knowledge artifacts |
-| Mutation | Gradient update/checkpoint | Reviewed filesystem change |
-| Primary evidence | Environment or LLM reward | Verified correction, successful method, or explicit request |
-| Unit of reuse | Weights plus external experience pool | Fact, instruction, rule, or skill |
-| Authorization | Training configuration | Deterministic policy plus user approval |
-| Rollback | Model checkpoint discipline, not implemented as a general content journal | Required journal, preimage, validation, and rollback |
-| Compute boundary | Ray, vLLM, veRL, CUDA, multi-GPU | Small local CLI and Claude plugin |
+| Dimension          | AgentEvolver                                                              | Claude Self-Improvement                                     |
+| ------------------ | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Improvement target | Qwen policy parameters                                                    | Claude-readable local knowledge artifacts                   |
+| Mutation           | Gradient update/checkpoint                                                | Reviewed filesystem change                                  |
+| Primary evidence   | Environment or LLM reward                                                 | Verified correction, successful method, or explicit request |
+| Unit of reuse      | Weights plus external experience pool                                     | Fact, instruction, rule, or skill                           |
+| Authorization      | Training configuration                                                    | Deterministic policy plus user approval                     |
+| Rollback           | Model checkpoint discipline, not implemented as a general content journal | Required journal, preimage, validation, and rollback        |
+| Compute boundary   | Ray, vLLM, veRL, CUDA, multi-GPU                                          | Small local CLI and Claude plugin                           |
 
 Calling both systems “self-improvement” must not erase this distinction.
 
@@ -192,18 +192,18 @@ This supports the infrastructure claim in substance, but “seamless” compatib
 
 ## Claim-versus-evidence matrix
 
-| Claim | Evidence at pinned commit | Verdict |
-| --- | --- | --- |
-| End-to-end self-evolving framework | Main entry point constructs all managers and updates actor weights | **Implemented**, with substantial external prerequisites |
-| Automatic task generation | Environment exploration, synthesis, replay filter, cache, and data mixing enter training | **Implemented** |
-| Experience-guided exploration | ReMe retrieval is injected into selected rollout prompts; mixed rollout masks reach training | **Implemented, configuration-gated** |
-| Fine-grained causal attribution | LLM labels steps and ADCA overwrites token advantages | **Implemented as semantic judgment; causal wording not demonstrated** |
-| Continuous evolution | Epoch training and optional task/experience refresh exist | **Partly implemented**; shipped overall config disables periodic ReMe summary updates and no unattended safety/lifecycle contract is provided |
-| Reduced manual task cost | Synthetic task generation is real | **Plausible but not measured as total operating cost**; environment/profile/grader/API work remains |
-| Superior AppWorld/BFCL results | README and paper tables report large gains | **Author-reported; not reproduced here** |
-| Generalizable capability | Paper reports cross-domain transfer | **Author-reported**; only two related tool-use benchmarks and no statistical uncertainty |
-| Modular/extensible | Components have interfaces and configuration blocks | **Substantively true**, but packaging, tests, and service coupling limit plug-and-play reuse |
-| Efficient/cost-effective | Paper reports learning curves and fewer trainable parameters than larger baselines | **Incomplete cost accounting**; generation, Qwen-Plus/235B/Max judges, ReMe, 8×A100 training, and repeated rollouts are not converted to total cost |
+| Claim                              | Evidence at pinned commit                                                                    | Verdict                                                                                                                                             |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| End-to-end self-evolving framework | Main entry point constructs all managers and updates actor weights                           | **Implemented**, with substantial external prerequisites                                                                                            |
+| Automatic task generation          | Environment exploration, synthesis, replay filter, cache, and data mixing enter training     | **Implemented**                                                                                                                                     |
+| Experience-guided exploration      | ReMe retrieval is injected into selected rollout prompts; mixed rollout masks reach training | **Implemented, configuration-gated**                                                                                                                |
+| Fine-grained causal attribution    | LLM labels steps and ADCA overwrites token advantages                                        | **Implemented as semantic judgment; causal wording not demonstrated**                                                                               |
+| Continuous evolution               | Epoch training and optional task/experience refresh exist                                    | **Partly implemented**; shipped overall config disables periodic ReMe summary updates and no unattended safety/lifecycle contract is provided       |
+| Reduced manual task cost           | Synthetic task generation is real                                                            | **Plausible but not measured as total operating cost**; environment/profile/grader/API work remains                                                 |
+| Superior AppWorld/BFCL results     | README and paper tables report large gains                                                   | **Author-reported; not reproduced here**                                                                                                            |
+| Generalizable capability           | Paper reports cross-domain transfer                                                          | **Author-reported**; only two related tool-use benchmarks and no statistical uncertainty                                                            |
+| Modular/extensible                 | Components have interfaces and configuration blocks                                          | **Substantively true**, but packaging, tests, and service coupling limit plug-and-play reuse                                                        |
+| Efficient/cost-effective           | Paper reports learning curves and fewer trainable parameters than larger baselines           | **Incomplete cost accounting**; generation, Qwen-Plus/235B/Max judges, ReMe, 8×A100 training, and repeated rollouts are not converted to total cost |
 
 ## A grouping concern checked rather than repeated
 
@@ -309,14 +309,14 @@ This is credible research infrastructure, not a production self-modification saf
 
 Checks were run from a clean detached checkout at the pinned commit.
 
-| Check | Result |
-| --- | --- |
-| `python3 -m compileall -q agentevolver env_service games research/CuES launcher.py` | **Passed**; exit 0 |
-| Parse every `*.yaml` with PyYAML | **Passed**; 19 files parsed |
-| `pytest -q tests/test_avalon_stop.py` in a disposable Python 3.11 venv | **Passed**; 2 passed in 0.04s |
-| `pytest --collect-only -q` in that venv | **Failed during collection**; 3 errors, no tests collected; `games/test/test_agentscope_cmt.py` calls `sys.exit(1)` after missing `transformers` |
-| Full training or benchmark reproduction | **Not run**; requires large model downloads, APIs/services, CUDA, and the paper's 8×A100 setup |
-| Upstream checkout after checks | **Clean** |
+| Check                                                                               | Result                                                                                                                                           |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `python3 -m compileall -q agentevolver env_service games research/CuES launcher.py` | **Passed**; exit 0                                                                                                                               |
+| Parse every `*.yaml` with PyYAML                                                    | **Passed**; 19 files parsed                                                                                                                      |
+| `pytest -q tests/test_avalon_stop.py` in a disposable Python 3.11 venv              | **Passed**; 2 passed in 0.04s                                                                                                                    |
+| `pytest --collect-only -q` in that venv                                             | **Failed during collection**; 3 errors, no tests collected; `games/test/test_agentscope_cmt.py` calls `sys.exit(1)` after missing `transformers` |
+| Full training or benchmark reproduction                                             | **Not run**; requires large model downloads, APIs/services, CUDA, and the paper's 8×A100 setup                                                   |
+| Upstream checkout after checks                                                      | **Clean**                                                                                                                                        |
 
 The disposable audit environment installed only `pytest==8.4.1` and `PyYAML==6.0.2`; it did not install the project's 210-package GPU stack. The collection result is therefore not evidence that a fully provisioned AgentEvolver environment fails. It is evidence that collection is not dependency-tolerant and that the repository provides no lightweight test profile.
 
@@ -341,17 +341,17 @@ A stronger experiment release would contain one immutable manifest with source/s
 
 Map AgentEvolver's stages into the local artifact domain:
 
-| AgentEvolver abstraction | Claude Self-Improvement adaptation |
-| --- | --- |
-| Environment exploration | Observe verified tool outcomes and explicit corrections |
-| Synthetic task | Candidate durable lesson |
-| Task filter/replay | Evidence review and reproducible verification |
-| Experience pool | Existing memories, rules, and skills discovered read-only |
-| Mixed rollout | Compare proposal with and without retrieved prior guidance |
-| Outcome reward | Deterministic validator plus task/user acceptance |
-| Step attribution | Model critique identifying which evidence or action mattered |
-| Actor update | Exact reviewed artifact mutation |
-| Validation without experience | Fresh Claude session discovery and behavior smoke test |
+| AgentEvolver abstraction      | Claude Self-Improvement adaptation                           |
+| ----------------------------- | ------------------------------------------------------------ |
+| Environment exploration       | Observe verified tool outcomes and explicit corrections      |
+| Synthetic task                | Candidate durable lesson                                     |
+| Task filter/replay            | Evidence review and reproducible verification                |
+| Experience pool               | Existing memories, rules, and skills discovered read-only    |
+| Mixed rollout                 | Compare proposal with and without retrieved prior guidance   |
+| Outcome reward                | Deterministic validator plus task/user acceptance            |
+| Step attribution              | Model critique identifying which evidence or action mattered |
+| Actor update                  | Exact reviewed artifact mutation                             |
+| Validation without experience | Fresh Claude session discovery and behavior smoke test       |
 
 This preserves the useful loop while changing its mutation target and trust model.
 
