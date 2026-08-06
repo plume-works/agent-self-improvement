@@ -12,8 +12,8 @@ import subprocess
 import sys
 
 import pytest
-from selfimprove import capture, journal, paths, store
 
+from selfimprove import capture, journal, paths, store
 from tests.conftest import PLUGIN_ROOT
 
 STOP = {

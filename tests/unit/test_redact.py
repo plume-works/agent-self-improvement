@@ -6,6 +6,7 @@ commands with arguments. These are the tests that hold that line.
 """
 
 import pytest
+
 from selfimprove import redact
 
 

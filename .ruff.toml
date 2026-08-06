@@ -1,8 +1,16 @@
 line-length = 99
 indent-width = 4
 
-# Assume Python 3.12
-target-version = "py312"
+# Verbatim third-party snapshots, kept byte-for-byte under their own exactness
+# contract. They are source captures rather than modules this repository runs.
+extend-exclude = [
+  "docs/case-study/hermes/prompts/",
+  "docs/case-study/scrapeshq-memory-plan/source/",
+]
+
+# The plugin runtime targets Python 3.9 (`requires-python` in pyproject.toml), so
+# lint against the oldest supported interpreter rather than the newest available one.
+target-version = "py39"
 
 [format]
 # Use single quotes for strings
@@ -42,11 +50,23 @@ select = ["E", "W", "F", "BLE", "I",
   "A002", # argument is shadowing a python builtin
   "C408", # Unnecessary dict call - rewrite as a literal
   "E501", # Line too long
+  "B",    # flake8-bugbear
+  "UP",   # pyupgrade
+  "C4",   # flake8-comprehensions
+  "SIM",  # flake8-simplify
+  "RUF",  # ruff-specific rules
 ]
 
 ignore = [
   "E501", # Never enforce `E501` (line length violations) - handled by formatter
   "D212", # Ignore D212 in favor of D213
+  # The runtime targets Python 3.9, so 3.10+ idioms are unavailable.
+  "UP006",
+  "UP007",
+  "UP035",
+  # printf-style formatting is used deliberately for 3.9 compatibility.
+  "UP031",
+  "UP032",
 ]
 
 [lint.isort]
@@ -54,10 +74,8 @@ ignore = [
 force-single-line = false
 force-sort-within-sections = true # sort all imports within section no matter the style
 combine-as-imports = true
-# `mock_catalog` is the shared test-fixture module, first-party like the package
-# it exercises, so it must not be sorted in with third-party imports.
-known-first-party = ["validate_agent_files", "mock_catalog"]
-known-third-party = ["pytest", "yaml"]
+known-first-party = ["selfimprove", "tests"]
+known-third-party = ["pytest"]
 case-sensitive = false
 order-by-type = false # ignore type, use alphabetical order
 
@@ -75,6 +93,8 @@ classmethod-decorators = [
 # Ignoring F403 is not an option as codeql will complain about
 # polluting imports and there seems to be no way to turn it off
 "__init__.py" = ["F401"]
+# `assert False` is a deliberate, readable failure marker in tests.
+"tests/*" = ["B011"]
 
 [lint.pydocstyle]
 convention = "google"

@@ -10,8 +10,8 @@ import json
 import os
 
 import pytest
-from selfimprove import capture, gate, journal, orchestrate, proposals, schema, store
 
+from selfimprove import capture, gate, journal, orchestrate, proposals, schema, store
 from tests.fake_reviewer import PROPOSAL
 
 STOP = {

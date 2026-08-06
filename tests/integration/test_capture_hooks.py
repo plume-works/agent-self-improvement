@@ -10,8 +10,8 @@ import json
 import os
 
 import pytest
-from selfimprove import capture, store
 
+from selfimprove import capture, store
 from tests.conftest import PLUGIN_ROOT
 
 FIXTURES = os.path.join(

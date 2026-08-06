@@ -9,8 +9,8 @@ reach the proposal path.
 import json
 
 import pytest
-from selfimprove import schema
 
+from selfimprove import schema
 from tests.fake_reviewer import PROPOSAL
 
 
