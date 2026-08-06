@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Register a catalog root as a Claude Code marketplace and install the plugin it
+# publishes.
+#
+# Called twice with different roots. postCreate passes the catalog staged in the
+# image, at user scope, so any workspace gets the catalog. postStart passes
+# nothing, which defaults to this checkout at local scope and re-registers the
+# workspace copy on top — that is how the catalog is developed in place.
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+catalog_root="${1:-$(cd "$script_dir/../.." && pwd)}"
+scope="${2:-local}"
+
+marketplace_json="$catalog_root/.claude-plugin/marketplace.json"
+
+# Only the catalog's own repository ships a marketplace. Anywhere else this is a
+# no-op, leaving whatever was installed from the image in place.
+if [[ ! -f "$marketplace_json" ]]; then
+  echo "$catalog_root declares no Claude marketplace; nothing to reinstall."
+  exit 0
+fi
+
+marketplace_name="$(jq -er '.name' "$marketplace_json")"
+plugin_name="$(jq -er '.plugins[0].name' "$marketplace_json")"
+
+# `claude plugin marketplace remove` only accepts a marketplace name, never a
+# path. Collect the name this root currently declares plus any registered under
+# an older name but still pointing here, so a rename does not leave a stale entry
+# shadowing the new one.
+known_marketplaces="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/known_marketplaces.json"
+stale_names=()
+if [[ -f "$known_marketplaces" ]]; then
+  mapfile -t stale_names < <(
+    jq -r --arg root "$catalog_root" '
+      to_entries[]
+      | select(.value.source.path == $root or .value.installLocation == $root)
+      | .key
+    ' "$known_marketplaces"
+  )
+fi
+
+# Both removals sweep every scope on purpose: the image installs at user scope
+# and this checkout at local scope, so a declaration left in either one shadows
+# the other just as effectively, and `add` would report the stale name instead of
+# re-reading marketplace.json. `marketplace remove` does this when --scope is
+# omitted; `uninstall` needs each scope named.
+while read -r name; do
+  [[ -n "$name" ]] || continue
+  for uninstall_scope in user project local; do
+    claude plugin uninstall "$plugin_name@$name" --scope "$uninstall_scope" || true
+  done
+  claude plugin marketplace remove "$name" || true
+done < <(printf '%s\n' "$marketplace_name" "${stale_names[@]}" | sort -u)
+
+claude plugin marketplace add "$catalog_root" --scope "$scope"
+claude plugin install "$plugin_name@$marketplace_name" --scope "$scope"

@@ -1,0 +1,205 @@
+{
+  "name": "Agent Self Improvement",
+  "initializeCommand": ".devcontainer/devcontainer-init.sh",
+  // compose.pins.yml overrides the devcontainer service image with the digest pin
+  // Renovate manages; see the comment at the top of that file for why it lives at the
+  // repository root instead of here.
+  "dockerComposeFile": ["docker-compose.yml", "../compose.pins.yml"],
+  "service": "devcontainer",
+  "features": {
+    // Configures the SSH server (openssh-server is pre-installed in the image)
+    // so `gh codespace ssh` can attach — required by the
+    // remote-codespace-session skill and GitHub Codespaces SSH access.
+    "ghcr.io/devcontainers/features/sshd:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:4.0.0": {}
+  },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "containerEnv": {
+    // The firewall is installed in the image but inert until this is "true".
+    // See .devcontainer/firewall-allowlist.txt for the allowed destinations.
+    "ENABLE_FIREWALL": "false",
+
+    "DISPLAY": ":100",
+    "DOCKER_HOST": "unix:///var/run/docker.sock",
+    "DEVCONTAINER_ID": "${devcontainerId}",
+    "DEV_WORKSPACE_FOLDER": "/workspaces/${localWorkspaceFolderBasename}",
+
+    "UV_CACHE_DIR": "/uv/cache",
+    "UV_PYTHON_INSTALL_DIR": "/uv/python",
+    "UV_PROJECT_ENVIRONMENT": "/uv/venvs/${localWorkspaceFolderBasename}/"
+  },
+
+  // start-xpra.sh derives a per-devcontainer port from DEVCONTAINER_ID so
+  // parallel worktrees do not collide on a single port.
+  "forwardPorts": ["14500-14599"],
+  "portsAttributes": {
+    "14500-14599": {
+      "label": "Xpra HTML5",
+      "onAutoForward": "silent"
+    }
+  },
+  "mounts": [
+    {
+      "source": "agentdev-uv",
+      "target": "/uv",
+      "type": "volume"
+    },
+    {
+      "source": "agentdev-cache",
+      "target": "/workspaces/${localWorkspaceFolderBasename}/.cache",
+      "type": "volume"
+    }
+    // agentdev-claude and agentdev-codex are mounted via docker-compose.yml
+    // (top-level `volumes:` with explicit `name:`) so they're shared across every
+    // devcontainer instance instead of being isolated per compose project.
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Agents
+        "anthropic.claude-code",
+        "openai.chatgpt",
+        // Python
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        // Config & markup formats
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "redhat.vscode-xml",
+        "samuelcolvin.jinjahtml",
+        "davidanson.vscode-markdownlint",
+        "esbenp.prettier-vscode",
+        "executablebookproject.myst-highlight",
+        "editorconfig.editorconfig",
+        // Git & GitHub
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        "github.vscode-pull-request-github",
+        "github.vscode-github-actions",
+        // Containers & remote
+        "ms-azuretools.vscode-containers",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode-remote.remote-ssh",
+        "ms-vscode-remote.remote-ssh-edit",
+        // Build & shell
+        "ms-vscode.cmake-tools",
+        "mads-hartmann.bash-ide-vscode",
+        "rogalmic.bash-debug",
+        "rpinski.shebang-snippets",
+        // Editor utilities
+        "streetsidesoftware.code-spell-checker",
+        "ryanluker.vscode-coverage-gutters",
+        "elagil.pre-commit-helper",
+        "iliazeus.vscode-ansi",
+        "dlech.chmod",
+        "yy0931.save-as-root",
+        "anjali.clipboard-history",
+        "chrisdias.vscode-opennewinstance",
+        "davidkol.fastcompare",
+        "batyan-soft.fast-tasks",
+        "1password.op-vscode"
+      ],
+      "settings": {
+        // Python: uv owns the virtualenv, so never let VS Code auto-activate it.
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python3",
+        "python.terminal.activateEnvironment": false,
+        "python.terminal.activateEnvInCurrentTerminal": false,
+        "python.analysis.typeCheckingMode": "standard",
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": ["tests"],
+        "[python]": {
+          "editor.formatOnSave": false,
+          "editor.defaultFormatter": "charliermarsh.ruff" // cSpell:disable-line
+        },
+        "ruff.organizeImports": true,
+        "ruff.fixAll": true,
+        "ruff.lint.enable": true,
+
+        "cmake.configureOnEdit": false,
+        "cmake.configureOnOpen": false,
+        "cmake.cmakePath": "cmake",
+        "cmake.generator": "Ninja",
+        "cmake.exportCompileCommandsFile": true,
+
+        "coverage-gutters.coverageFileNames": [
+          "*.info",
+          "coverage.xml",
+          "lcov.info"
+        ],
+        "coverage-gutters.showLineCoverage": true,
+        "coverage-gutters.highlightdark": "rgba(0, 122, 30, 0.1)",
+        "coverage-gutters.partialHighlightDark": "rgba(163, 149, 0, 0.1)",
+        "coverage-gutters.noHighlightDark": "rgba(163, 0, 0, 0.1)",
+
+        "search.exclude": {
+          "**/node_modules": true,
+          "**/.venv": true,
+          "**/.tmp": true,
+          "**/*.code-search": true
+        },
+
+        "cSpell.words": [
+          "agentdev",
+          "devcontainer",
+          "dotfiles",
+          "fisher",
+          "hadolint",
+          "noqa",
+          "pytest",
+          "rgba",
+          "shellcheck",
+          "venv",
+          "virtualenv",
+          "xpra",
+          "zizmor"
+        ],
+
+        // Copilot / VS Code chat agent behaviour
+        "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+        "github.copilot.chat.notebook.alternativeFormat": "markdown",
+        "github.copilot.nextEditSuggestions.enabled": true,
+        "github.copilot.enable": {
+          "*": true
+        },
+        "chat.agent.enabled": true,
+        "chat.agent.maxRequests": 250,
+        "chat.useAgentSkills": true,
+        "chat.useAgentsMdFile": true,
+        "chat.mcp.gallery.enabled": true,
+        "chat.mcp.autostart": "newAndOutdated",
+        "chat.tools.terminal.autoApprove": {
+          "/.*/": true, // Allow all commands, denied commands will still need approval.
+          "gh": true,
+          "rm": false
+        },
+        "chat.tools.terminal.ignoreDefaultAutoApproveRules": false,
+        "chat.tools.terminal.blockDetectedFileWrites": "outsideWorkspace",
+        "chat.tools.terminal.autoReplyToPrompts": true,
+        "chat.tools.urls.autoApprove": {
+          "https://code.visualstudio.com": true,
+          "https://code.visualstudio.com/docs": true,
+          "https://github.com": true,
+          "https://docs.github.com": true,
+          "https://*.github.com": {
+            "approveRequest": true
+          },
+          "https://raw.githubusercontent.com/github/github-mcp-server/": true,
+          "https://www.google.com/search": true,
+          "https://docs.docker.com": true,
+          "https://code.claude.com/docs/en/": true
+        }
+      }
+    }
+  },
+  "postCreateCommand": "./.devcontainer/scripts/postCreateCommand.sh",
+  "postAttachCommand": {
+    "git config": "git config --global gpg.ssh.program ssh-keygen",
+    "python-venv": "./.devcontainer/scripts/uv-sync.sh"
+  },
+  "postStartCommand": "./.devcontainer/scripts/postStartCommand.sh"
+}
