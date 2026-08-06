@@ -2,19 +2,6 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "rebaseWhen": "auto",
-  "customManagers": [
-    {
-      "description": "This repository pins the agentdev catalog in .claude/settings.json; bump it when a new marketplace release is tagged.",
-      "customType": "regex",
-      "managerFilePatterns": ["/(^|/)\\.claude/settings(\\.local)?\\.json$/"],
-      "matchStrings": [
-        "\"(?<depName>[a-z0-9-]+)@agent-devcontainer\"\\s*:\\s*\"(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "packageNameTemplate": "plume-works/agent-devcontainer",
-      "versioningTemplate": "semver"
-    }
-  ],
   "packageRules": [
     {
       "description": "Automatically merge GitHub Actions dependency updates after Renovate observes green CI.",
