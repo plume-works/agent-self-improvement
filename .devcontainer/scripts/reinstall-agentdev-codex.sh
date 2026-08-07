@@ -37,10 +37,25 @@ mapfile -t stale_names < <(
       '
 )
 
+# The sweep removes blind, so on a clean machine there is nothing registered to
+# remove yet. Hold each call's output and report it only when the call succeeded,
+# or when it failed for some reason other than the thing not being there.
+absent_pattern='not found|is not configured or installed'
+
+try_remove() {
+  local output status=0
+  output="$("$@" 2>&1)" || status=$?
+  if ((status == 0)); then
+    [[ -z "$output" ]] || printf '%s\n' "$output"
+  elif [[ ! "$output" =~ $absent_pattern ]]; then
+    printf '%s\n' "${output:-"failed: $* (exit $status)"}" >&2
+  fi
+}
+
 while read -r name; do
   [[ -n "$name" ]] || continue
-  codex plugin remove "$plugin_name@$name" || true
-  codex plugin marketplace remove "$name" || true
+  try_remove codex plugin remove "$plugin_name@$name"
+  try_remove codex plugin marketplace remove "$name"
 done < <(printf '%s\n' "$marketplace_name" "${stale_names[@]}" | sort -u)
 
 codex plugin marketplace add "$catalog_root"

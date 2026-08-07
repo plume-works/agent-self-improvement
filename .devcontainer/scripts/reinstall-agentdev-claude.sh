@@ -42,6 +42,23 @@ if [[ -f "$known_marketplaces" ]]; then
   )
 fi
 
+# The sweep below removes blind, so most of its calls are expected to fail: on a
+# clean machine there is nothing registered to remove yet, and a plugin only ever
+# lives in one of the three scopes each is tried in. Hold each call's output and
+# report it only when the call succeeded, or when it failed for some reason other
+# than the thing not being there to remove.
+absent_pattern='not found|is installed in [a-z]+ scope'
+
+try_remove() {
+  local output status=0
+  output="$("$@" 2>&1)" || status=$?
+  if ((status == 0)); then
+    [[ -z "$output" ]] || printf '%s\n' "$output"
+  elif [[ ! "$output" =~ $absent_pattern ]]; then
+    printf '%s\n' "${output:-"failed: $* (exit $status)"}" >&2
+  fi
+}
+
 # Both removals sweep every scope on purpose: the image installs at user scope
 # and this checkout at local scope, so a declaration left in either one shadows
 # the other just as effectively, and `add` would report the stale name instead of
@@ -50,9 +67,9 @@ fi
 while read -r name; do
   [[ -n "$name" ]] || continue
   for uninstall_scope in user project local; do
-    claude plugin uninstall "$plugin_name@$name" --scope "$uninstall_scope" || true
+    try_remove claude plugin uninstall "$plugin_name@$name" --scope "$uninstall_scope"
   done
-  claude plugin marketplace remove "$name" || true
+  try_remove claude plugin marketplace remove "$name"
 done < <(printf '%s\n' "$marketplace_name" "${stale_names[@]}" | sort -u)
 
 claude plugin marketplace add "$catalog_root" --scope "$scope"
