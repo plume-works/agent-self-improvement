@@ -30,17 +30,14 @@ plugin_name="$(jq -er '.plugins[0].name' "$marketplace_json")"
 # path. Collect the name this root currently declares plus any registered under
 # an older name but still pointing here, so a rename does not leave a stale entry
 # shadowing the new one.
-known_marketplaces="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/known_marketplaces.json"
-stale_names=()
-if [[ -f "$known_marketplaces" ]]; then
-  mapfile -t stale_names < <(
-    jq -r --arg root "$catalog_root" '
-      to_entries[]
-      | select(.value.source.path == $root or .value.installLocation == $root)
-      | .key
-    ' "$known_marketplaces"
-  )
-fi
+mapfile -t stale_names < <(
+  claude plugin marketplace list --json \
+    | jq -r --arg root "$catalog_root" '
+        .[]
+        | select(.path == $root or .installLocation == $root)
+        | .name
+      '
+)
 
 # The sweep below removes blind, so most of its calls are expected to fail: on a
 # clean machine there is nothing registered to remove yet, and a plugin only ever
