@@ -1,2 +1,8 @@
 ansible/**/*.yml
 ansible/**/*.yaml
+
+# Verbatim third-party captures. Both directories record an exactness contract —
+# the Hermes snapshot in its README, the Notion capture as SHA-256 digests — so a
+# formatter must not rewrite them.
+docs/case-study/hermes/prompts/
+docs/case-study/scrapeshq-memory-plan/source/

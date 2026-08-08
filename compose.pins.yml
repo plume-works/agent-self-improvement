@@ -1,0 +1,15 @@
+# Digest pins for the container images this repository builds and publishes.
+#
+# Deliberately kept at the repository root, outside .devcontainer/ and docker/, so that a
+# digest-only bump does not match the `image` path filter in
+# .github/actions/paths-filter/action.yml. Those images are rebuilt on every push to main
+# and the build is not bit-reproducible, so a pin living inside a filtered path would
+# retrigger the build that produced the digest and bump itself forever.
+#
+# Renovate manages the digest below; .devcontainer/docker-compose.yml carries the same
+# image tag-only and this file overrides it (see `dockerComposeFile` in devcontainer.json).
+# The file name matches Renovate's default docker-compose pattern (`compose*.yml`), so it
+# is discovered without any manager override — keep the `compose.` prefix if renaming.
+services:
+  devcontainer:
+    image: ghcr.io/plume-works/agent-desktop:edge@sha256:dfd576e3ad4afb6b3b5dfae01582bd88f4542d7bab528eae36be158931fe001d

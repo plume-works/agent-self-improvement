@@ -10,6 +10,7 @@ parents, and paths that merely look like allowed artifacts.
 import os
 
 import pytest
+
 from selfimprove import allowlist
 
 

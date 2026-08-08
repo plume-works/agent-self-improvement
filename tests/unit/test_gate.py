@@ -9,6 +9,7 @@ session from waking itself forever.
 import time
 
 import pytest
+
 from selfimprove import capture, config, gate, store
 
 STOP = {

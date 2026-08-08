@@ -4,6 +4,7 @@ import os
 import threading
 
 import pytest
+
 from selfimprove import paths
 
 

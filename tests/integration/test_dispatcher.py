@@ -5,7 +5,6 @@ import os
 import subprocess
 
 from selfimprove import paths, store
-
 from tests.conftest import PLUGIN_ROOT, SI
 
 

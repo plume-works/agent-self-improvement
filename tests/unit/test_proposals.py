@@ -1,6 +1,7 @@
 """Proposal staging: the boundary between what a model suggests and what installs."""
 
 import pytest
+
 from selfimprove import proposals
 
 CANDIDATE = {

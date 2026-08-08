@@ -7,6 +7,7 @@ for nothing.
 """
 
 import pytest
+
 from selfimprove import markers
 
 

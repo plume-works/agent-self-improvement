@@ -12,8 +12,8 @@ import subprocess
 import sys
 
 import pytest
-from selfimprove import store
 
+from selfimprove import store
 from tests.conftest import PLUGIN_ROOT
 
 ORIGINAL = '# Project\n\n- Existing instruction.\n'

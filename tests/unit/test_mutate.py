@@ -9,6 +9,7 @@ byte-identical. After installation the result is verified by re-reading it.
 import os
 
 import pytest
+
 from selfimprove import journal, mutate, proposals
 
 ORIGINAL = '# Project\n\n- Existing instruction.\n'

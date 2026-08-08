@@ -101,21 +101,21 @@ apply one.
 
 The upstream corpus is evidence, not a drop-in runtime dependency.
 
-| Hermes prompt mechanic | Decision for this plugin | Reason |
-| --- | --- | --- |
-| “Be ACTIVE” and do not default to `Nothing to save.` | **Adapt** to reviews whose deterministic gate already named a signal | Hermes reviews run periodically over broad conversations; this plugin has a stronger pre-filter and can calibrate by signal type. |
-| Natural correction phrases and frustration as first-class signals | **Adopt** | Users rarely write a formal retention request or rationale. |
-| User facts in `USER.md`, environment facts in `MEMORY.md`, procedures in skills | **Adapt** to user/project `CLAUDE.md`, rules, and skills | The MVP must not mutate Claude-managed memory and has no plugin-owned fact store. |
-| Loaded skill → existing umbrella → support file → new umbrella | **Adopt first, second, and fourth; defer support-file mutation** | Current staging permits `SKILL.md` but not package subfiles or atomic two-file link updates. |
-| Class-level names; veto PR/error/codename/task names | **Adopt** | Prevents narrow skill proliferation. |
-| Environment failures, negative tool claims, transient errors, one-off narratives | **Adopt** | These become stale self-imposed constraints. |
-| Reject unresolved failures dressed as reliable workflows | **Adopt** | Persisted instructions must be grounded in an observed success or explicit user directive. |
-| Patch a loaded skill immediately | **Adapt** to one exact proposal | The foreground agent may recommend and stage; only the user-authorized mutator writes. |
-| Protected skills are off-limits to autonomous review | **Strengthen through architecture** | This reviewer cannot write any skill. Human-authored targets remain review-only and may receive an exact proposal for the user to accept or reject. |
-| Memory tool's atomic batch grammar | **Do not copy** | The MVP emits one candidate and one proposal; it has no memory batch. |
-| Skill tool's trigger/steps/pitfalls/verification authoring rubric | **Adopt** in the `improve` skill | This policy belongs beside exact-byte drafting and staging. |
-| Mandatory load of every partially relevant skill | **Do not copy globally** | A self-improvement plugin does not own Claude's behavior on unrelated turns. Loaded-owner preference remains local to proposal routing. |
-| Curator umbrella-building prompt | **Use as design evidence only** | Library-wide consolidation is outside this slice and has materially different permissions and recovery requirements. |
+| Hermes prompt mechanic                                                           | Decision for this plugin                                             | Reason                                                                                                                                              |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| “Be ACTIVE” and do not default to `Nothing to save.`                             | **Adapt** to reviews whose deterministic gate already named a signal | Hermes reviews run periodically over broad conversations; this plugin has a stronger pre-filter and can calibrate by signal type.                   |
+| Natural correction phrases and frustration as first-class signals                | **Adopt**                                                            | Users rarely write a formal retention request or rationale.                                                                                         |
+| User facts in `USER.md`, environment facts in `MEMORY.md`, procedures in skills  | **Adapt** to user/project `CLAUDE.md`, rules, and skills             | The MVP must not mutate Claude-managed memory and has no plugin-owned fact store.                                                                   |
+| Loaded skill → existing umbrella → support file → new umbrella                   | **Adopt first, second, and fourth; defer support-file mutation**     | Current staging permits `SKILL.md` but not package subfiles or atomic two-file link updates.                                                        |
+| Class-level names; veto PR/error/codename/task names                             | **Adopt**                                                            | Prevents narrow skill proliferation.                                                                                                                |
+| Environment failures, negative tool claims, transient errors, one-off narratives | **Adopt**                                                            | These become stale self-imposed constraints.                                                                                                        |
+| Reject unresolved failures dressed as reliable workflows                         | **Adopt**                                                            | Persisted instructions must be grounded in an observed success or explicit user directive.                                                          |
+| Patch a loaded skill immediately                                                 | **Adapt** to one exact proposal                                      | The foreground agent may recommend and stage; only the user-authorized mutator writes.                                                              |
+| Protected skills are off-limits to autonomous review                             | **Strengthen through architecture**                                  | This reviewer cannot write any skill. Human-authored targets remain review-only and may receive an exact proposal for the user to accept or reject. |
+| Memory tool's atomic batch grammar                                               | **Do not copy**                                                      | The MVP emits one candidate and one proposal; it has no memory batch.                                                                               |
+| Skill tool's trigger/steps/pitfalls/verification authoring rubric                | **Adopt** in the `improve` skill                                     | This policy belongs beside exact-byte drafting and staging.                                                                                         |
+| Mandatory load of every partially relevant skill                                 | **Do not copy globally**                                             | A self-improvement plugin does not own Claude's behavior on unrelated turns. Loaded-owner preference remains local to proposal routing.             |
+| Curator umbrella-building prompt                                                 | **Use as design evidence only**                                      | Library-wide consolidation is outside this slice and has materially different permissions and recovery requirements.                                |
 
 ## 5. Reviewer calibration
 
@@ -125,15 +125,15 @@ blanket prior to all evidence.
 
 ### 5.1 Signal-specific prior
 
-| Signal | Review stance | Required evidence |
-| --- | --- | --- |
-| `explicit_retention` | Presume the user's stated standing instruction is proposal-worthy; look for a one-off or contradiction before discarding | The user's own words and durable applicability. No successful command is required for a preference or standing rule. |
-| `explicit_correction` | Presume a durable replacement is proposal-worthy when it corrects future behavior | The corrected behavior must be stated, not inferred from silence. Do not invent a rationale. |
-| `confirmed_technique` | Actively extract the narrow reusable technique | Explicit confirmation plus enough bounded evidence to know what worked. |
-| `verified_workaround` | Propose only the verified recovery pattern, never the original failure | A compatible failure-to-success transition. |
-| `repeated_friction` | Treat repetition as a reason to inspect, not a lesson | A verified remedy or explicit durable user instruction; otherwise discard. |
-| `reusable_completion` | Look for a class-level procedure, not a narrative of this task | Verified outputs and a procedure applicable beyond the exact file or issue. |
-| `manual_force` | No positive or negative presumption | Apply the ordinary durability, verification, and ownership tests. |
+| Signal                | Review stance                                                                                                            | Required evidence                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `explicit_retention`  | Presume the user's stated standing instruction is proposal-worthy; look for a one-off or contradiction before discarding | The user's own words and durable applicability. No successful command is required for a preference or standing rule. |
+| `explicit_correction` | Presume a durable replacement is proposal-worthy when it corrects future behavior                                        | The corrected behavior must be stated, not inferred from silence. Do not invent a rationale.                         |
+| `confirmed_technique` | Actively extract the narrow reusable technique                                                                           | Explicit confirmation plus enough bounded evidence to know what worked.                                              |
+| `verified_workaround` | Propose only the verified recovery pattern, never the original failure                                                   | A compatible failure-to-success transition.                                                                          |
+| `repeated_friction`   | Treat repetition as a reason to inspect, not a lesson                                                                    | A verified remedy or explicit durable user instruction; otherwise discard.                                           |
+| `reusable_completion` | Look for a class-level procedure, not a narrative of this task                                                           | Verified outputs and a procedure applicable beyond the exact file or issue.                                          |
+| `manual_force`        | No positive or negative presumption                                                                                      | Apply the ordinary durability, verification, and ownership tests.                                                    |
 
 “Most reviews should discard” and “most reviews should update” are both forbidden as global
 instructions. The prior is determined by the named signal.
@@ -174,12 +174,12 @@ both a standing instruction and a skill.
 Before choosing propose or discard, the prompt makes the reviewer classify the candidate
 internally as one of four shapes:
 
-| Shape | Meaning | Preferred destination |
-| --- | --- | --- |
-| `user_preference` | Stable way this person wants Claude to communicate or work | User `CLAUDE.md`, unless limited to a task class |
-| `project_convention` | Stable fact or rule true of this repository | Project `CLAUDE.md` or a scoped rule |
-| `procedure` | Multi-step method for a recurring class of work | Existing skill, then a new class-level skill only if unowned |
-| `technique_or_pitfall` | A verified step, recovery, or trap within a broader procedure | Existing owner, usually a skill or rule |
+| Shape                  | Meaning                                                       | Preferred destination                                        |
+| ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| `user_preference`      | Stable way this person wants Claude to communicate or work    | User `CLAUDE.md`, unless limited to a task class             |
+| `project_convention`   | Stable fact or rule true of this repository                   | Project `CLAUDE.md` or a scoped rule                         |
+| `procedure`            | Multi-step method for a recurring class of work               | Existing skill, then a new class-level skill only if unowned |
+| `technique_or_pitfall` | A verified step, recovery, or trap within a broader procedure | Existing owner, usually a skill or rule                      |
 
 The classification need not be added to persistent output in the first slice. It is a
 reasoning step that makes destination selection consistent. If later exposed in the schema,
@@ -420,7 +420,7 @@ session.
 - [ ] `make lint` passes.
 - [ ] `make validate` passes or reports only the repository's documented missing/old-CLI skip.
 - [ ] Tests observe that the reviewer has no tools and that proposals remain inert without a
-  literal one-time authorization.
+      literal one-time authorization.
 - [ ] Tests observe that support-file paths are rejected while the feature is deferred.
 
 ### 13.3 Model quality
@@ -429,21 +429,21 @@ Using one recorded model/effort pair and at least three repetitions per fixture:
 
 - [ ] explicit retention and explicit correction proposal recall is at least 95%;
 - [ ] no unresolved-failure, negative-capability, environment-state, or inferred-preference
-  fixture produces an accepted proposal;
+      fixture produces an accepted proposal;
 - [ ] verified-workaround and confirmed-technique recall is at least 85%;
 - [ ] existing-owner cases choose a compatible owner query and never recommend a new narrow
-  skill;
+      skill;
 - [ ] valid JSON/schema rate is at least 99%; and
 - [ ] compared with the baseline prompt, the candidate does not increase the negative-fixture
-  proposal rate and either improves explicit-signal recall or already reaches the 95% floor.
+      proposal rate and either improves explicit-signal recall or already reaches the 95% floor.
 
 ### 13.4 Packaged live behavior
 
 - [ ] Ten fresh packaged sessions with the canonical explicit retention case each store one
-  valid candidate.
+      valid candidate.
 - [ ] Ten fresh packaged negative-control sessions store no candidate.
 - [ ] The existing packaged smoke and wake requirements still pass; their transport evidence
-  is reported separately from prompt-judgment evidence.
+      is reported separately from prompt-judgment evidence.
 
 If model-quality or live criteria fail, the implementation status is **Implemented;
 unverified** or **Implemented; quality gate failed**, with the observed rates in the status

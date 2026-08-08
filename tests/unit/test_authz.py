@@ -6,6 +6,7 @@ creates an authorization, and that each one works exactly once.
 """
 
 import pytest
+
 from selfimprove import authz, store
 
 EVENT = {

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rebaseWhen": "auto",
+  "packageRules": [
+    {
+      "description": "Automatically merge GitHub Actions dependency updates after Renovate observes green CI.",
+      "matchManagers": ["github-actions"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "agent-desktop is published by plume-works/agent-devcontainer, not built here, so a digest bump is an external change and gets a normal review rather than automerge. The pin lives in compose.pins.yml.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/plume-works/agent-desktop"],
+      "automerge": false
+    }
+  ]
+}

@@ -5,7 +5,7 @@
 - **Source:** [`microsoft/SkillOpt`](https://github.com/microsoft/SkillOpt)
 - **Pinned source commit:** [`374c832c5afc2ba314a7bf4be3343eb8e6ad63c7`](https://github.com/microsoft/SkillOpt/tree/374c832c5afc2ba314a7bf4be3343eb8e6ad63c7)
 - **Latest source release at inspection:** [`v0.2.0`](https://github.com/microsoft/SkillOpt/releases/tag/v0.2.0), commit [`e4ea6a6`](https://github.com/microsoft/SkillOpt/tree/e4ea6a6771e797ef820cdd8bfea64c57e0481065), 137 commits behind the pinned source
-- **Paper inspected:** [`arXiv:2605.23904v2`](https://arxiv.org/abs/2605.23904v2), *SkillOpt: Executive Strategy for Self-Evolving Agent Skills*
+- **Paper inspected:** [`arXiv:2605.23904v2`](https://arxiv.org/abs/2605.23904v2), _SkillOpt: Executive Strategy for Self-Evolving Agent Skills_
 - **Source license:** [MIT](https://github.com/microsoft/SkillOpt/blob/374c832c5afc2ba314a7bf4be3343eb8e6ad63c7/LICENSE)
 - **Related studies:** [`claude-improve`](../claude-improve/README.md), [`learning-loop`](../learning-loop/README.md), [Hermes Agent](../hermes/README.md)
 - **Related design:** [Hermes-style experiential-learning MVP](../../specs/0001-hermes-style-experiential-learning-mvp.md), [hypothetical Phase 1](../../hypothetical-extensions/specs/0002-phase-1-review-only.md), [Phase 2](../../hypothetical-extensions/specs/0003-phase-2-trusted-automatic-updates.md), and [Phase 3](../../hypothetical-extensions/specs/0004-phase-3-skill-curator.md)
@@ -43,19 +43,19 @@ No benchmark or real-backend training run was attempted. Those paths require mod
 
 At the pinned commit, the repository had:
 
-| Surface | Observed reality |
-| --- | ---: |
-| Reachable commits | 350, from 2026-05-21 through 2026-07-28 |
-| Merge commits | 74 |
-| Tracked files | 364 |
-| Core `skillopt/` files / lines | 140 / 22,890 |
-| `skillopt_sleep/` files / lines | 38 / 9,601 |
-| Test files / lines | 38 / 9,603 |
-| `test_*.py` files | 36 |
-| Plugin files / lines | 54 / 5,461 |
-| Checked-in paper skills | 6 |
-| Release tags | `v0.1.0`, `v0.2.0` |
-| Repository-controlled CI workflows | 0 |
+| Surface                            |                        Observed reality |
+| ---------------------------------- | --------------------------------------: |
+| Reachable commits                  | 350, from 2026-05-21 through 2026-07-28 |
+| Merge commits                      |                                      74 |
+| Tracked files                      |                                     364 |
+| Core `skillopt/` files / lines     |                            140 / 22,890 |
+| `skillopt_sleep/` files / lines    |                              38 / 9,601 |
+| Test files / lines                 |                              38 / 9,603 |
+| `test_*.py` files                  |                                      36 |
+| Plugin files / lines               |                              54 / 5,461 |
+| Checked-in paper skills            |                                       6 |
+| Release tags                       |                      `v0.1.0`, `v0.2.0` |
+| Repository-controlled CI workflows |                                       0 |
 
 The history is active and community-visible rather than a paper dump. Git history contained many authors, GitHub's contributors endpoint returned 41 contributors, and 137 commits had landed after `v0.2.0`. GitHub reported the pinned merge commit as verified. Both release tags are annotated but have no cryptographic tag signature.
 
@@ -63,10 +63,10 @@ The project declares itself **Alpha** in [`pyproject.toml`](https://github.com/m
 
 The repository is also much newer than its release identity suggests. The pinned source still declares Python package version `0.2.0`, despite being 137 commits beyond the `v0.2.0` source. A wheel built from the pinned commit is therefore named `skillopt-0.2.0` but is not the PyPI `0.2.0` wheel:
 
-| Artifact | Files | SHA-256 |
-| --- | ---: | --- |
-| PyPI `skillopt-0.2.0-py3-none-any.whl` | 132 | `818db802507c6f82553fd24c75aa70c953ab0a712647f60e68e4595052c4b150` |
-| Locally built pinned-commit `skillopt-0.2.0-py3-none-any.whl` | 189 | `122bc85bc4b678089ae25652c9943016d1110ff66aced1d5fbaaf3d90f6ecabe` |
+| Artifact                                                      | Files | SHA-256                                                            |
+| ------------------------------------------------------------- | ----: | ------------------------------------------------------------------ |
+| PyPI `skillopt-0.2.0-py3-none-any.whl`                        |   132 | `818db802507c6f82553fd24c75aa70c953ab0a712647f60e68e4595052c4b150` |
+| Locally built pinned-commit `skillopt-0.2.0-py3-none-any.whl` |   189 | `122bc85bc4b678089ae25652c9943016d1110ff66aced1d5fbaaf3d90f6ecabe` |
 
 The docs do warn that `main` contains post-release functionality ([`docs/sleep/README.md` lines 68–76](https://github.com/microsoft/SkillOpt/blob/374c832c5afc2ba314a7bf4be3343eb8e6ad63c7/docs/sleep/README.md#L68-L76)). The unresolved version collision still makes provenance and bug reports ambiguous: “SkillOpt 0.2.0” does not identify one source tree.
 
@@ -335,31 +335,31 @@ Claude Self-Improvement should retain the UX but route adoption through its jour
 
 ## Claims versus observed evidence
 
-| Upstream claim | Observed implementation | Assessment |
-| --- | --- | --- |
-| Skill is the trainable state; model weights stay fixed | Trainer injects evolving Markdown while using configured target/optimizer models | Implemented |
-| Candidate edits are bounded and structured | Four research operations with edit-count budget; three protected-block Sleep operations | Implemented, but count does not bound semantic size |
-| Candidate edits pass a held-out gate | Ordinary research steps and Sleep val trials use strict improvement | Implemented for those paths |
-| Train, selection, and test are separate | Main trainer uses all three; Sleep helper supports three; harvested CLI defaults to train/val and does not score test | True for paper trainer, overstated for ordinary Sleep |
-| Test is locked until final report | Main trainer evaluates `valid_unseen` after training | Implemented in normal research control flow |
-| Every slow-update candidate is selection-gated | Supported opt-in; current default force-injects into current training skill | False for checked-in default; paper checkpoints used opt-in mode |
-| Rejected edits become negative feedback | Research trainer keeps an epoch-local buffer; Sleep reports rejected edits but does not carry an equivalent optimizer buffer across nights | Implemented in research path, partial in Sleep |
-| `best_skill.md` is compact and portable | Six Markdown checkpoints are checked in; adapter/harness still determines behavior | Artifact exists; portability is empirical and conditional |
-| SkillOpt is best or tied-best on all 52 paper cells | Paper and README report this; six skills and split manifests are present | Upstream result, not independently reproduced from committed logs |
-| Sleep reviews sessions “offline” | Harvest is local; real mining/replay/judging/reflection call configured providers | “Offline” means outside normal turns, not offline from network/provider |
-| Sleep defaults are safe and bounded | Review-gated adoption and project/task limits exist | Partly true; no hard token/time/money cap, no transaction, regex-only redaction |
-| `max_tokens_per_night` caps spend | Config value exists; no cycle enforcement call was found | Not implemented |
-| Sleep cross-night slow update runs even gate-off | Module and experiment caller exist; ordinary cycle does not call it | Not implemented in user-facing nightly cycle |
-| Three-way Sleep split | Helper and task schema exist; ordinary mining omits test fraction, default is zero | Capability exists; shipping default/flow is two-way |
-| Fresh-worktree replay | `replay_mode` default comment says fresh-worktree replay is not implemented | Not implemented |
-| SessionEnd hook signals fresh data to the next cycle | Hook appends a marker; cycle has no reader | Marker implemented, integration absent |
-| Nothing live changes before adoption | Ordinary run stages; only explicit adopt or opt-in auto-adopt writes live | Implemented |
-| Adoption backs up first | Existing live files copied to staging backup | Implemented, but no rollback/recovery protocol |
-| Harvest is private/read-only | File scan itself is read-only and scoped | Local read is implemented; real backend egress and evidence retention remain privacy risks |
-| Known secrets are redacted | Broad regex redactor covers many credential forms in evidence/diagnostics | Defense in depth, not a confidentiality guarantee |
-| Claude Code integration is shipped | Valid plugin shell exists | Implemented shell; engine is a separate checkout/package and versions drift |
-| PyPI `0.2.0` represents current source | Pinned source still calls itself `0.2.0` but builds a materially different wheel | False as an identity guarantee |
-| Tests/CI validate the project | Large local suite exists; no tracked repository workflow runs it | Tests are real; CI enforcement absent |
+| Upstream claim                                         | Observed implementation                                                                                                                    | Assessment                                                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Skill is the trainable state; model weights stay fixed | Trainer injects evolving Markdown while using configured target/optimizer models                                                           | Implemented                                                                                |
+| Candidate edits are bounded and structured             | Four research operations with edit-count budget; three protected-block Sleep operations                                                    | Implemented, but count does not bound semantic size                                        |
+| Candidate edits pass a held-out gate                   | Ordinary research steps and Sleep val trials use strict improvement                                                                        | Implemented for those paths                                                                |
+| Train, selection, and test are separate                | Main trainer uses all three; Sleep helper supports three; harvested CLI defaults to train/val and does not score test                      | True for paper trainer, overstated for ordinary Sleep                                      |
+| Test is locked until final report                      | Main trainer evaluates `valid_unseen` after training                                                                                       | Implemented in normal research control flow                                                |
+| Every slow-update candidate is selection-gated         | Supported opt-in; current default force-injects into current training skill                                                                | False for checked-in default; paper checkpoints used opt-in mode                           |
+| Rejected edits become negative feedback                | Research trainer keeps an epoch-local buffer; Sleep reports rejected edits but does not carry an equivalent optimizer buffer across nights | Implemented in research path, partial in Sleep                                             |
+| `best_skill.md` is compact and portable                | Six Markdown checkpoints are checked in; adapter/harness still determines behavior                                                         | Artifact exists; portability is empirical and conditional                                  |
+| SkillOpt is best or tied-best on all 52 paper cells    | Paper and README report this; six skills and split manifests are present                                                                   | Upstream result, not independently reproduced from committed logs                          |
+| Sleep reviews sessions “offline”                       | Harvest is local; real mining/replay/judging/reflection call configured providers                                                          | “Offline” means outside normal turns, not offline from network/provider                    |
+| Sleep defaults are safe and bounded                    | Review-gated adoption and project/task limits exist                                                                                        | Partly true; no hard token/time/money cap, no transaction, regex-only redaction            |
+| `max_tokens_per_night` caps spend                      | Config value exists; no cycle enforcement call was found                                                                                   | Not implemented                                                                            |
+| Sleep cross-night slow update runs even gate-off       | Module and experiment caller exist; ordinary cycle does not call it                                                                        | Not implemented in user-facing nightly cycle                                               |
+| Three-way Sleep split                                  | Helper and task schema exist; ordinary mining omits test fraction, default is zero                                                         | Capability exists; shipping default/flow is two-way                                        |
+| Fresh-worktree replay                                  | `replay_mode` default comment says fresh-worktree replay is not implemented                                                                | Not implemented                                                                            |
+| SessionEnd hook signals fresh data to the next cycle   | Hook appends a marker; cycle has no reader                                                                                                 | Marker implemented, integration absent                                                     |
+| Nothing live changes before adoption                   | Ordinary run stages; only explicit adopt or opt-in auto-adopt writes live                                                                  | Implemented                                                                                |
+| Adoption backs up first                                | Existing live files copied to staging backup                                                                                               | Implemented, but no rollback/recovery protocol                                             |
+| Harvest is private/read-only                           | File scan itself is read-only and scoped                                                                                                   | Local read is implemented; real backend egress and evidence retention remain privacy risks |
+| Known secrets are redacted                             | Broad regex redactor covers many credential forms in evidence/diagnostics                                                                  | Defense in depth, not a confidentiality guarantee                                          |
+| Claude Code integration is shipped                     | Valid plugin shell exists                                                                                                                  | Implemented shell; engine is a separate checkout/package and versions drift                |
+| PyPI `0.2.0` represents current source                 | Pinned source still calls itself `0.2.0` but builds a materially different wheel                                                           | False as an identity guarantee                                                             |
+| Tests/CI validate the project                          | Large local suite exists; no tracked repository workflow runs it                                                                           | Tests are real; CI enforcement absent                                                      |
 
 ## Paper results and reproducibility limits
 
@@ -420,20 +420,20 @@ The correct integration posture is to pin a reviewed commit or released artifact
 
 ### Local checks at the pinned commit
 
-| Check | Result |
-| --- | --- |
-| Editable install with development dependencies | Passed |
-| `pytest -q -rs` | **557 passed, 6 skipped** in 20.70 s |
-| Deterministic researcher experiment | Passed; mock held-out `0.3333 → 1.0`, harmful edit blocked |
-| `python -m skillopt_sleep --help` | Passed |
-| Isolated `status --json` | Passed; zero-night empty state |
-| `claude plugin validate plugins/claude-code` | Passed under Claude Code `2.1.214` |
-| Claude plugin Bash syntax | Passed |
-| Isolated SessionEnd hook | Passed; one marker, exit 0 |
-| Source distribution and wheel build | Passed, with setuptools license deprecation warnings |
-| PyPI wheel download/inventory | Passed; 132 files, Sleep included, plugins absent |
-| `ruff check .` | **Failed: 181 findings** |
-| `ruff check skillopt skillopt_sleep skillopt_webui` | **Failed: 122 findings** (`51 I001`, `46 F401`, others) |
+| Check                                               | Result                                                     |
+| --------------------------------------------------- | ---------------------------------------------------------- |
+| Editable install with development dependencies      | Passed                                                     |
+| `pytest -q -rs`                                     | **557 passed, 6 skipped** in 20.70 s                       |
+| Deterministic researcher experiment                 | Passed; mock held-out `0.3333 → 1.0`, harmful edit blocked |
+| `python -m skillopt_sleep --help`                   | Passed                                                     |
+| Isolated `status --json`                            | Passed; zero-night empty state                             |
+| `claude plugin validate plugins/claude-code`        | Passed under Claude Code `2.1.214`                         |
+| Claude plugin Bash syntax                           | Passed                                                     |
+| Isolated SessionEnd hook                            | Passed; one marker, exit 0                                 |
+| Source distribution and wheel build                 | Passed, with setuptools license deprecation warnings       |
+| PyPI wheel download/inventory                       | Passed; 132 files, Sleep included, plugins absent          |
+| `ruff check .`                                      | **Failed: 181 findings**                                   |
+| `ruff check skillopt skillopt_sleep skillopt_webui` | **Failed: 122 findings** (`51 I001`, `46 F401`, others)    |
 
 The six test skips were explicit:
 
@@ -530,22 +530,22 @@ A mutable `main` plugin, stale cache version, minimum-only dependencies, and dup
 
 Claude Self-Improvement's specifications are proposed; this table compares designs, not two completed products.
 
-| Concern | SkillOpt research trainer | SkillOpt-Sleep | Claude Self-Improvement design implication |
-| --- | --- | --- | --- |
-| Intake | Curated benchmark tasks | Raw transcript digests or tasks file | Keep explicit, minimal evidence envelopes |
-| Candidate | Versioned skill text | Staged skill/memory learned blocks | Use immutable typed candidate + exact patch |
-| Authoring evidence | Training split | Mined train tasks | Never let validation/test content enter authoring |
-| Promotion | Strict selection improvement | Strict val improvement, then review/adopt | Require authorization **and** behavior gate where feasible |
-| Reporting | Unseen final test | No ordinary CLI test report | Add quarantined periodic test and canary outcomes |
-| Mutation | Research output directory | Sequential live file copies | Use journaled, hashed, recoverable mutation engine |
-| Best state | `best_skill.md` | Latest staged proposal | Use immutable artifact store + active pointer |
-| Rollback | Rejection to prior current/best | Backup only | Provide tested rollback and crash reconciliation |
-| Ownership | One optimizer-owned skill | Learned region inside human files | Preserve human/platform/agent ownership classes |
-| Privacy | Benchmark data | User/assistant transcript text | Do not persist or export transcript bodies by default |
-| Provenance | Step/history files | Reports, evidence JSONL, session IDs | Store hashes and minimal normalized evidence references |
-| Cost | Token summary | Token count recorded; cap unenforced | Hard preflight and runtime budgets with fail-closed behavior |
-| Integration | Adapters and CLI harnesses | Thin Claude plugin + separate engine | Ship one pinned, checksummed compatibility set |
-| CI | Local tests only | Same suite | Require repository-controlled cross-platform CI and package smoke tests |
+| Concern            | SkillOpt research trainer       | SkillOpt-Sleep                            | Claude Self-Improvement design implication                              |
+| ------------------ | ------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------- |
+| Intake             | Curated benchmark tasks         | Raw transcript digests or tasks file      | Keep explicit, minimal evidence envelopes                               |
+| Candidate          | Versioned skill text            | Staged skill/memory learned blocks        | Use immutable typed candidate + exact patch                             |
+| Authoring evidence | Training split                  | Mined train tasks                         | Never let validation/test content enter authoring                       |
+| Promotion          | Strict selection improvement    | Strict val improvement, then review/adopt | Require authorization **and** behavior gate where feasible              |
+| Reporting          | Unseen final test               | No ordinary CLI test report               | Add quarantined periodic test and canary outcomes                       |
+| Mutation           | Research output directory       | Sequential live file copies               | Use journaled, hashed, recoverable mutation engine                      |
+| Best state         | `best_skill.md`                 | Latest staged proposal                    | Use immutable artifact store + active pointer                           |
+| Rollback           | Rejection to prior current/best | Backup only                               | Provide tested rollback and crash reconciliation                        |
+| Ownership          | One optimizer-owned skill       | Learned region inside human files         | Preserve human/platform/agent ownership classes                         |
+| Privacy            | Benchmark data                  | User/assistant transcript text            | Do not persist or export transcript bodies by default                   |
+| Provenance         | Step/history files              | Reports, evidence JSONL, session IDs      | Store hashes and minimal normalized evidence references                 |
+| Cost               | Token summary                   | Token count recorded; cap unenforced      | Hard preflight and runtime budgets with fail-closed behavior            |
+| Integration        | Adapters and CLI harnesses      | Thin Claude plugin + separate engine      | Ship one pinned, checksummed compatibility set                          |
+| CI                 | Local tests only                | Same suite                                | Require repository-controlled cross-platform CI and package smoke tests |
 
 ## Adopt, adapt, reject
 
